@@ -512,14 +512,27 @@ export class GamePage {
     this.gameMode = mode;
     this.gemSeen = {};
     this.lastControlsKey = '';
+    const looks = getLooks();
+    const c1 = getColor(looks.p1.color);
+    const c2 = getColor(looks.p2.color);
+    const cpuColor = (c1.id === 'jade' || c1.id === 'toxic') ? getColor('amber') : getColor('jade');
+    const cpuName = (c1.id === 'jade' || c1.id === 'toxic') ? 'Amber' : 'Jade';
+
+    this.rootElement.querySelectorAll<HTMLElement>('.p1').forEach(e => e.style.setProperty('--c', c1.main));
+    this.rootElement.querySelectorAll<HTMLElement>('.p2').forEach(e => e.style.setProperty('--c', mode === 'cpu' ? cpuColor.main : c2.main));
+
     if (mode === 'online') {
       this.w1.textContent = myId === 0 ? 'You' : 'Opponent';
       this.w2.textContent = myId === 1 ? 'You' : 'Opponent';
     } else if (mode === 'cpu') {
+      this.n1.textContent = looks.p1.name || 'You';
       this.w1.textContent = 'You';
+      this.n2.textContent = cpuName;
       this.w2.textContent = `CPU · ${diff}`;
     } else {
+      this.n1.textContent = looks.p1.name || 'Player 1';
       this.w1.textContent = 'Player 1';
+      this.n2.textContent = looks.p2.name || 'Player 2';
       this.w2.textContent = 'Player 2';
     }
   }
@@ -542,6 +555,13 @@ export class GamePage {
     const s1 = state.p1;
     const s2 = state.p2;
     const kb = getKeys();
+
+    if (s1.color) {
+      this.rootElement.querySelectorAll<HTMLElement>('.p1').forEach(e => e.style.setProperty('--c', s1.color));
+    }
+    if (s2.color) {
+      this.rootElement.querySelectorAll<HTMLElement>('.p2').forEach(e => e.style.setProperty('--c', s2.color));
+    }
 
     const name1 = s1.level ? `${s1.name || 'Amber'} (Lv.${s1.level})` : (s1.name || 'Amber');
     const name2 = s2.level ? `${s2.name || 'Jade'} (Lv.${s2.level})` : (s2.name || 'Jade');

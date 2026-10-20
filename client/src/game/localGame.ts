@@ -133,17 +133,24 @@ export class LocalGameEngine {
     this.mode = mode;
     this.diff = diff;
 
-    const p1Col = customP1?.color ? getColor(customP1.color) : getColor('amber');
-    const p2Col = customP2?.color ? getColor(customP2.color) : getColor('jade');
+    const p1Col = getColor(customP1?.color || 'amber');
+    const p1Main = customP1?.color && customP1.color.startsWith('#') ? customP1.color : p1Col.main;
+    const p1Dark = customP1?.colorDark || p1Col.dark;
+    const p1Light = customP1?.colorLight || p1Col.light;
+
+    const p2Col = getColor(customP2?.color || 'jade');
+    const p2Main = customP2?.color && customP2.color.startsWith('#') ? customP2.color : p2Col.main;
+    const p2Dark = customP2?.colorDark || p2Col.dark;
+    const p2Light = customP2?.colorLight || p2Col.light;
 
     const p1 = this.createSpider(
       0,
       customP1?.name || 'Amber',
       340,
       1,
-      p1Col.main,
-      p1Col.dark,
-      p1Col.light,
+      p1Main,
+      p1Dark,
+      p1Light,
       customP1?.pattern || 'stripes',
       customP1?.acc || 'none'
     );
@@ -153,9 +160,9 @@ export class LocalGameEngine {
       customP2?.name || (mode === 'cpu' ? 'Jade' : 'Jade'),
       620,
       -1,
-      p2Col.main,
-      p2Col.dark,
-      p2Col.light,
+      p2Main,
+      p2Dark,
+      p2Light,
       customP2?.pattern || 'stripes',
       customP2?.acc || 'none'
     );

@@ -364,8 +364,16 @@ function startLocalGame(opts: MenuStartOptions) {
   if (!gamePage || !currentScene) return;
 
   const lks = getLooks();
-  const c1 = getColor(lks.p1.color);
+  const c1 = getColor(opts.playerColor?.main || lks.p1.color);
   const c2 = getColor(lks.p2.color);
+
+  // In CPU mode, if Player 1 is using Jade or Toxic green, ensure CPU chooses a contrasting color (Amber)
+  const cpuColor = opts.mode === 'cpu'
+    ? ((c1.id === 'jade' || c1.id === 'toxic') ? getColor('amber') : getColor('jade'))
+    : c2;
+  const cpuName = opts.mode === 'cpu'
+    ? ((c1.id === 'jade' || c1.id === 'toxic') ? 'Amber' : 'Jade')
+    : lks.p2.name;
 
   currentScene.isOnline = false;
   currentScene.myPlayerId = 0;
@@ -381,12 +389,12 @@ function startLocalGame(opts: MenuStartOptions) {
       acc: opts.playerAcc || lks.p1.acc
     },
     {
-      name: opts.mode === 'cpu' ? 'Jade' : lks.p2.name,
-      color: c2.main,
-      colorDark: c2.dark,
-      colorLight: c2.light,
-      pattern: lks.p2.pattern,
-      acc: lks.p2.acc
+      name: cpuName,
+      color: cpuColor.main,
+      colorDark: cpuColor.dark,
+      colorLight: cpuColor.light,
+      pattern: opts.mode === 'cpu' ? 'stripes' : lks.p2.pattern,
+      acc: opts.mode === 'cpu' ? 'none' : lks.p2.acc
     }
   );
 

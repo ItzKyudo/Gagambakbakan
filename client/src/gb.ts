@@ -161,9 +161,27 @@ export const DEF_LOOK: { p1: SpiderLook; p2: SpiderLook } = {
   p2: { name: 'Jade', color: 'jade', pattern: 'stripes', acc: 'none' }
 };
 
-export function getColor(id: string): SpiderColor {
+export function getColor(idOrHex: string): SpiderColor {
+  if (!idOrHex) return COLORS[0];
+  const q = idOrHex.toLowerCase();
   for (let i = 0; i < COLORS.length; i++) {
-    if (COLORS[i].id === id) return COLORS[i];
+    if (COLORS[i].id.toLowerCase() === q || COLORS[i].main.toLowerCase() === q) {
+      return COLORS[i];
+    }
+  }
+  for (let i = 0; i < COLORS.length; i++) {
+    if (COLORS[i].dark.toLowerCase() === q || COLORS[i].light.toLowerCase() === q) {
+      return COLORS[i];
+    }
+  }
+  if (idOrHex.startsWith('#')) {
+    return {
+      id: 'custom',
+      label: 'Custom',
+      main: idOrHex,
+      dark: idOrHex,
+      light: idOrHex
+    };
   }
   return COLORS[0];
 }
@@ -299,7 +317,10 @@ export function spiderSVGraw(look: SpiderLook): string {
 
   return `<svg viewBox="0 0 240 180" aria-hidden="true"><defs><radialGradient id="pb" cx=".4" cy=".3" r=".8"><stop offset="0" stop-color="${c.light}"/><stop offset=".5" stop-color="${c.main}"/><stop offset="1" stop-color="${c.dark}"/></radialGradient>` +
     `<radialGradient id="ph" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="${c.main}"/><stop offset="1" stop-color="${c.dark}"/></radialGradient><clipPath id="pc"><ellipse cx="90" cy="98" rx="44" ry="34"/></clipPath></defs>` +
-    `<rect x="8" y="146" width="224" height="20" rx="10" fill="#7b5b3e"/><rect x="8" y="146" width="224" height="5" rx="2.5" fill="#a58059"/>` +
+    `<g id="perch-twig"><rect x="8" y="145" width="224" height="22" rx="11" fill="#6d4c2f" stroke="${OUT}" stroke-width="1.8"/>` +
+    `<rect x="12" y="146" width="216" height="5.5" rx="2.7" fill="#9e744d"/>` +
+    `<path d="M26 156 Q62 153 98 156 M136 156 Q176 158 212 155 M76 161 Q116 163 156 161" stroke="#4a331e" stroke-width="1.4" fill="none" stroke-linecap="round"/>` +
+    `<path d="M216 144 C220 137 228 139 227 146 C223 147 218 145 216 144 Z" fill="#2ed573" stroke="${OUT}" stroke-width="1.2"/></g>` +
     `<g class="bob"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><g stroke="${OUT}" stroke-width="6.4">${far}</g><g stroke="${c.dark}" stroke-width="4">${far}</g></g>` +
     `<ellipse cx="90" cy="98" rx="44" ry="34" fill="url(#pb)"/><g clip-path="url(#pc)">${pat}</g><ellipse cx="90" cy="98" rx="44" ry="34" fill="none" stroke="${OUT}" stroke-width="2.4"/>` +
     `<ellipse cx="150" cy="92" rx="28" ry="23" fill="url(#ph)" stroke="${OUT}" stroke-width="2.4"/>` +

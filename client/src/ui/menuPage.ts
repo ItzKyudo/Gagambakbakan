@@ -237,10 +237,6 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
               <span class="ml">Settings</span>
               <small>Keys, sound, music</small>
             </button>
-            <button type="button" class="mb" id="btnGoQuit">
-              <span class="mi"><svg class="ico"><use href="#ic-quit"/></svg></span>
-              <span class="ml">Quit</span>
-            </button>
           </nav>
 
           <nav class="panel" id="pPlay" aria-label="Choose a mode" hidden>
@@ -276,36 +272,52 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
           </div>
 
           <div class="menu-sound-pod">
-            <button type="button" class="btn ghost sound-toggle-btn ${sound.enabled ? 'sound-on' : 'sound-off'}" id="btnMenuSoundToggle" aria-label="Toggle all audio">
-              <span>${sound.enabled ? '🔊 Sound: ON' : '🔇 Sound: OFF'}</span>
-            </button>
             <span class="engine-badge">PHASER 4 · COLYSEUS 0.18</span>
           </div>
         </div>
 
         <!-- FAR RIGHT: CHARACTER DISPLAY -->
         <aside class="showcase menu-right-col" aria-label="Your spider">
-          <div class="stage" id="showcaseStage">
-            ${spiderSVG(looks.p1, '-showcase')}
-          </div>
-          <div class="tag">
-            <i class="dot" style="background:${getColor(looks.p1.color).main};"></i>
-            <span id="showcaseName" style="color:var(--fg); font-weight:700;">${looks.p1.name}</span>
-            <span class="rank-lvl-tag">LVL ${expInfo.level}</span>
-          </div>
+          <div class="showcase-card">
+            <!-- PODIUM & SPIDER -->
+            <div class="showcase-podium">
+              <div class="showcase-glow" style="--spider-glow:${getColor(looks.p1.color).main};"></div>
+              <div class="stage" id="showcaseStage" role="button" tabindex="0" title="Click to customize your spider">
+                ${spiderSVG(looks.p1, '-showcase')}
+              </div>
+              <div class="showcase-reflection"></div>
+              <button type="button" class="showcase-customize-hint" id="btnQuickCustomize" title="Customize Spider">
+                <svg class="ico" width="13" height="13" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span>Customize</span>
+              </button>
+            </div>
 
-          <!-- LEVEL & ONLINE EXP PROGRESS CARD -->
-          <div class="menu-level-card">
-            <div class="mlc-top">
-              <span class="mlc-badge">LEVEL ${expInfo.level}</span>
-              <span class="mlc-exp">${expInfo.expIntoLevel} / ${expInfo.expForLevel} EXP</span>
+            <!-- CHARACTER IDENTITY BADGE -->
+            <div class="showcase-id-badge" id="badgeQuickCustomize" role="button" tabindex="0" title="Click to customize your spider" style="--badge-c:${getColor(looks.p1.color).main};">
+              <div class="sib-header">
+                <i class="sib-dot" style="background:${getColor(looks.p1.color).main}; box-shadow: 0 0 10px ${getColor(looks.p1.color).main};"></i>
+                <span class="sib-name" id="showcaseName">${looks.p1.name}</span>
+                <span class="sib-lvl-badge">LVL ${expInfo.level}</span>
+              </div>
+              <div class="sib-sub">
+                <span class="sib-rank">${getPlayerRankTitle(expInfo.level)}</span>
+                <span class="sib-color-label" style="color:${getColor(looks.p1.color).light};">${getColor(looks.p1.color).label}</span>
+              </div>
             </div>
-            <div class="mlc-track">
-              <div class="mlc-fill" style="width:${expInfo.progressPct}%;"></div>
-            </div>
-            <div class="mlc-sub">
-              <span>Online Match Progression</span>
-              <span style="color:var(--amber-light);">${unlockedCount}/${SKILLS_LIST.length} Skills</span>
+
+            <!-- LEVEL & ONLINE EXP PROGRESS CARD -->
+            <div class="menu-level-card" role="button" tabindex="0" title="View Abilities Tree">
+              <div class="mlc-top">
+                <span class="mlc-badge">LEVEL ${expInfo.level}</span>
+                <span class="mlc-exp">${expInfo.expIntoLevel} / ${expInfo.expForLevel} EXP</span>
+              </div>
+              <div class="mlc-track">
+                <div class="mlc-fill" style="width:${Math.max(5, expInfo.progressPct)}%;"></div>
+              </div>
+              <div class="mlc-sub">
+                <span class="mlc-prog-label">Skill Mastery</span>
+                <span class="mlc-skills-count">${unlockedCount} / ${SKILLS_LIST.length} Unlocked ›</span>
+              </div>
             </div>
           </div>
         </aside>
@@ -908,6 +920,23 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
         sound.playTone(440, 0.08, 'triangle', 0.04, -100);
         pMain.hidden = false;
         pQuit.hidden = true;
+      });
+
+      // Quick customize from character display
+      const openCustomize = () => {
+        sound.playTone(520, 0.08, 'triangle', 0.05, 200);
+        activeTab = 'customize';
+        render();
+      };
+      container.querySelector('#showcaseStage')?.addEventListener('click', openCustomize);
+      container.querySelector('#btnQuickCustomize')?.addEventListener('click', openCustomize);
+      container.querySelector('#badgeQuickCustomize')?.addEventListener('click', openCustomize);
+
+      // Level card opens abilities
+      container.querySelector('.menu-level-card')?.addEventListener('click', () => {
+        sound.playTone(520, 0.08, 'triangle', 0.05, 200);
+        activeTab = 'abilities';
+        render();
       });
 
       // Play Modes

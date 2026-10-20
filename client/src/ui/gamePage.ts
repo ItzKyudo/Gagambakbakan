@@ -468,7 +468,7 @@ export class GamePage {
         </span>
         <div>
           <h3>${s.name}</h3>
-          <div class="meta">${s.cd}s cooldown · ${s.use === 'hang' ? 'while dangling' : 'while clinging'}</div>
+          <div class="meta">${s.cd}s cooldown · ${s.use === 'hang' ? 'while dangling' : 'while clinging'} · <span style="color:var(--amber-light); font-weight:700;">Lvl ${s.unlock.level}</span></div>
         </div>
         <p class="desc">${s.desc}</p>
       `;
@@ -598,8 +598,10 @@ export class GamePage {
     const s2 = state.p2;
     const kb = getKeys();
 
-    if (s1.name && this.n1.textContent !== s1.name) this.n1.textContent = s1.name;
-    if (s2.name && this.n2.textContent !== s2.name) this.n2.textContent = s2.name;
+    const name1 = s1.level ? `${s1.name || 'Amber'} (Lv.${s1.level})` : (s1.name || 'Amber');
+    const name2 = s2.level ? `${s2.name || 'Jade'} (Lv.${s2.level})` : (s2.name || 'Jade');
+    if (this.n1.textContent !== name1) this.n1.textContent = name1;
+    if (this.n2.textContent !== name2) this.n2.textContent = name2;
 
     // Grip & Guard meters
     this.grip1.style.width = `${Math.max(0, Math.min(100, s1.grip))}%`;
@@ -683,9 +685,15 @@ export class GamePage {
   }
 
   /* ---------- MODALS & OVERLAYS ---------- */
-  public showModal(title: string, sub: string, buttons: Array<{ label: string; primary?: boolean; onClick: () => void }>) {
+  public showModal(title: string, sub: string, buttons: Array<{ label: string; primary?: boolean; onClick: () => void }>, extraHtml?: string) {
     this.ovTitle.textContent = title;
-    this.ovSub.textContent = sub;
+    this.ovSub.innerHTML = sub;
+    if (extraHtml) {
+      const extraDiv = document.createElement('div');
+      extraDiv.className = 'ov-extra';
+      extraDiv.innerHTML = extraHtml;
+      this.ovSub.appendChild(extraDiv);
+    }
     this.ovBtns.innerHTML = '';
 
     buttons.forEach((b) => {

@@ -122,6 +122,7 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
     s.colorLight = s.colorLight || (id === 0 ? '#ffd694' : '#b0f2e3');
     s.pattern = s.pattern || 'stripes';
     s.acc = s.acc || 'none';
+    s.level = s.level || 1;
     s.connected = false;
     s.sessionId = s.sessionId || '';
     s.x = x;
@@ -156,6 +157,7 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
     s.pounce = false;
     s.atkT = 0;
     s.atkId = 0;
+    s.atkType = 0;
     s.power = 0;
     s.shield = 0;
     s.riposte = 0;
@@ -181,6 +183,7 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
     if (options.colorLight) player.colorLight = options.colorLight;
     if (options.pattern) player.pattern = options.pattern;
     if (options.acc) player.acc = options.acc;
+    if (options.level) player.level = Math.max(1, parseInt(options.level, 10) || 1);
 
     this.playerInputs.set(client.sessionId, {
       left: false,
@@ -217,9 +220,9 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
     this.battleState.p1.falls = 0;
     this.battleState.p2.falls = 0;
 
-    // Draw 3 skills for each player to draft
-    this.battleState.draftChoicesP1 = getRandomAbilities(3);
-    this.battleState.draftChoicesP2 = getRandomAbilities(3);
+    // Draw 3 skills for each player based on their level
+    this.battleState.draftChoicesP1 = getRandomAbilities(3, [], this.battleState.p1.level || 1);
+    this.battleState.draftChoicesP2 = getRandomAbilities(3, [], this.battleState.p2.level || 1);
     this.battleState.p1Drafted = false;
     this.battleState.p2Drafted = false;
     this.battleState.status = 'draft';
@@ -283,6 +286,7 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
     s.pounce = false;
     s.atkT = 0;
     s.atkId = 0;
+    s.atkType = 0;
     s.power = 0;
     s.shield = 0;
     s.riposte = 0;
@@ -841,6 +845,12 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
         s.pounce = false;
         s.atkT = ATK.wind * 0.55;
         s.atkId++;
+        const prev = s.atkType ?? 0;
+        let next = Math.floor(Math.random() * 3);
+        if (next === prev) {
+          next = (prev + 1 + Math.floor(Math.random() * 2)) % 3;
+        }
+        s.atkType = next;
         this.emitSound('swing');
       }
       return;
@@ -928,6 +938,12 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
     } else if (free && inp.strike && this.cool[id] <= 0 && !s.blocking) {
       s.atkT = 0.0001;
       s.atkId++;
+      const prev = s.atkType ?? 0;
+      let next = Math.floor(Math.random() * 3);
+      if (next === prev) {
+        next = (prev + 1 + Math.floor(Math.random() * 2)) % 3;
+      }
+      s.atkType = next;
       this.emitSound('swing');
     }
   }

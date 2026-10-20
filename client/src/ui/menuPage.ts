@@ -2,7 +2,7 @@ import { sound } from '../audio';
 import {
   COLORS, PATTERNS, ACCS, DEF_LOOK, getColor, getLooks, saveLooks, randomLook, spiderSVG,
   getSettings, saveSettings, setMode, getKeys, saveKeys, defaultKeys, keyLabel, ACTIONS, RESERVED_KEYS,
-  getProgress, saveProgress, isUnlocked, getUnlockNeed, getUnlockedIds,
+  getProgress, saveProgress, isUnlocked, getUnlockNeed, getUnlockedIds, getExpProgress,
   type PlayerKeys
 } from '../gb';
 import { SKILLS_LIST } from '../game/abilities';
@@ -160,6 +160,7 @@ export function renderMenuPage(container: HTMLElement, onStart: (opts: MenuStart
     const looks = getLooks();
     const st = getSettings();
     const prog = getProgress();
+    const expInfo = getExpProgress(prog.onlineExp);
     const unlockedCount = getUnlockedIds(prog).length;
 
     return `
@@ -195,7 +196,7 @@ export function renderMenuPage(container: HTMLElement, onStart: (opts: MenuStart
             <button type="button" class="mb" id="btnGoAbilities">
               <span class="mi"><svg class="ico"><use href="#ic-gem"/></svg></span>
               <span class="ml">Abilities</span>
-              <small id="abCount">${unlockedCount} of ${SKILLS_LIST.length} unlocked</small>
+              <small id="abCount">Level ${expInfo.level} · ${unlockedCount} of ${SKILLS_LIST.length} unlocked</small>
             </button>
             <button type="button" class="mb" id="btnGoSettings">
               <span class="mi"><svg class="ico"><use href="#ic-gear"/></svg></span>
@@ -249,7 +250,22 @@ export function renderMenuPage(container: HTMLElement, onStart: (opts: MenuStart
           <div class="tag">
             <i class="dot" style="background:${getColor(looks.p1.color).main};"></i>
             <span id="showcaseName" style="color:var(--fg); font-weight:700;">${looks.p1.name}</span>
-            <span>YOU</span>
+            <span class="rank-lvl-tag">LVL ${expInfo.level}</span>
+          </div>
+
+          <!-- LEVEL & ONLINE EXP PROGRESS CARD -->
+          <div class="menu-level-card">
+            <div class="mlc-top">
+              <span class="mlc-badge">LEVEL ${expInfo.level}</span>
+              <span class="mlc-exp">${expInfo.expIntoLevel} / ${expInfo.expForLevel} EXP</span>
+            </div>
+            <div class="mlc-track">
+              <div class="mlc-fill" style="width:${expInfo.progressPct}%;"></div>
+            </div>
+            <div class="mlc-sub">
+              <span>Online Match Progression</span>
+              <span style="color:var(--amber-light);">${unlockedCount}/${SKILLS_LIST.length} Skills</span>
+            </div>
           </div>
         </aside>
       </main>
@@ -328,6 +344,7 @@ export function renderMenuPage(container: HTMLElement, onStart: (opts: MenuStart
   function renderAbilitiesView(): string {
     const prog = getProgress();
     const unlocked = getUnlockedIds(prog);
+    const expInfo = getExpProgress(prog.onlineExp);
 
     return `
       <div class="page" style="max-width:760px; margin-inline:auto;">
@@ -335,16 +352,30 @@ export function renderMenuPage(container: HTMLElement, onStart: (opts: MenuStart
           <h1>Abilities</h1>
           <button type="button" class="btn ghost" id="btnBackToMain">Menu</button>
         </header>
-        <p class="note">
-          <span class="count" id="count" style="color:var(--amber-light); font-family:var(--label); font-size:18px; font-weight:700;">${unlocked.length} of ${SKILLS_LIST.length} unlocked</span>
-          &middot; At the start of every match you are dealt 3 random cards from the abilities you have unlocked, and you keep 2 of them.
-        </p>
+
+        <!-- LEVEL & ONLINE PROGRESS BANNER -->
+        <div class="abilities-exp-banner">
+          <div class="aeb-badge">
+            <span class="aeb-badge-lbl">PLAYER LEVEL</span>
+            <span class="aeb-badge-num">${expInfo.level}</span>
+          </div>
+          <div class="aeb-details">
+            <div class="aeb-row">
+              <span class="aeb-title">${unlocked.length} of ${SKILLS_LIST.length} Abilities Unlocked</span>
+              <span class="aeb-exp">${expInfo.expIntoLevel} / ${expInfo.expForLevel} EXP (Level ${expInfo.level + 1})</span>
+            </div>
+            <div class="aeb-track">
+              <div class="aeb-fill" style="width:${expInfo.progressPct}%;"></div>
+            </div>
+            <p class="aeb-note">Abilities are unlocked by leveling up through Online matches. Each match deals 3 random cards from your unlocked arsenal.</p>
+          </div>
+        </div>
 
         <div class="cards" id="grid">
           ${SKILLS_LIST.map(s => {
             const open = isUnlocked(s.id, prog);
             const nd = getUnlockNeed(s.id);
-            const pct = Math.round(100 * nd.have / nd.need);
+            const pct = Math.min(100, Math.round(100 * expInfo.level / s.unlock.level));
 
             return `
               <article class="skill ${open ? '' : 'locked'}">
@@ -355,15 +386,19 @@ export function renderMenuPage(container: HTMLElement, onStart: (opts: MenuStart
                   <svg class="glyph" aria-hidden="true"><use href="#${open ? s.icon : 'ic-lock'}"/></svg>
                 </span>
                 <div>
-                  <h3>${s.name}</h3>
-                  <div class="meta">${open ? `${s.cd}s cooldown · ${s.use === 'hang' ? 'while dangling' : 'while clinging'}` : 'Locked'}</div>
+                  <div style="display:flex; justify-content:space-between; align-items:baseline; gap:8px;">
+                    <h3>${s.name}</h3>
+                    <span class="lvl-tag ${open ? 'unlocked' : 'locked'}">Lvl ${s.unlock.level}</span>
+                  </div>
+                  <div class="meta">${open ? `${s.cd}s cooldown · ${s.use === 'hang' ? 'while dangling' : 'while clinging'}` : `Locked · Requires Level ${s.unlock.level}`}</div>
                 </div>
-                ${open ? `<p class="desc">${s.desc}</p>` : `
+                <p class="desc">${s.desc}</p>
+                ${!open ? `
                   <div class="prog">
-                    <span>${nd.text} (${nd.have}/${nd.need})</span>
+                    <span>${nd.text} (Level ${expInfo.level} / ${s.unlock.level})</span>
                     <div class="track"><i style="width:${pct}%;"></i></div>
                   </div>
-                `}
+                ` : ''}
               </article>
             `;
           }).join('')}
@@ -379,6 +414,8 @@ export function renderMenuPage(container: HTMLElement, onStart: (opts: MenuStart
     const st = getSettings();
     const kb = getKeys();
     const prog = getProgress();
+    const expInfo = getExpProgress(prog.onlineExp);
+    const unlockedCount = getUnlockedIds(prog).length;
 
     return `
       <div class="page" style="max-width:760px; margin-inline:auto;">
@@ -444,11 +481,23 @@ export function renderMenuPage(container: HTMLElement, onStart: (opts: MenuStart
 
         <!-- PROGRESS -->
         <section class="sec" aria-label="Progress">
-          <h2>Progress</h2>
-          <p class="note">Played: ${prog.played} matches &middot; Won: ${prog.wins} matches</p>
+          <h2>Progress & Levels</h2>
+          <div class="settings-prog-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-block:12px; background:var(--surface-2); padding:14px; border-radius:8px; border:1px solid var(--line);">
+            <div>
+              <div style="font-family:var(--label); font-size:12px; color:var(--muted); text-transform:uppercase;">Player Level</div>
+              <div style="font-family:var(--display); font-size:22px; color:var(--amber-light);">Level ${expInfo.level}</div>
+              <div style="font-size:12px; color:var(--fg);">${expInfo.totalExp} Total EXP</div>
+            </div>
+            <div>
+              <div style="font-family:var(--label); font-size:12px; color:var(--muted); text-transform:uppercase;">Online Matches</div>
+              <div style="font-family:var(--display); font-size:22px; color:var(--jade-light);">${prog.onlineWins}W / ${prog.onlinePlayed}P</div>
+              <div style="font-size:12px; color:var(--muted);">${unlockedCount} of ${SKILLS_LIST.length} Skills · Offline: ${prog.wins}W / ${prog.played}P</div>
+            </div>
+          </div>
+          <p class="note" style="margin-bottom:12px;">EXP is earned only from Online matches. Each level unlocks new battle abilities.</p>
           <label class="row" style="grid-template-columns:auto 1fr; gap:8px;">
             <input type="checkbox" id="chkUnlockAll" ${prog.unlockAll ? 'checked' : ''} style="width:20px;height:20px;accent-color:var(--amber)">
-            <span>Unlock every ability (for testing)</span>
+            <span>Unlock every ability (testing mode)</span>
           </label>
           <div class="btns"><button type="button" class="btn ghost" id="btnResetProg">Reset progress</button></div>
         </section>
@@ -741,8 +790,8 @@ export function renderMenuPage(container: HTMLElement, onStart: (opts: MenuStart
       });
 
       container.querySelector('#btnResetProg')?.addEventListener('click', () => {
-        if (confirm('Reset your match stats and unlock progress?')) {
-          saveProgress({ played: 0, wins: 0, unlockAll: false });
+        if (confirm('Reset your match stats, online EXP, and unlock progress?')) {
+          saveProgress({ played: 0, wins: 0, unlockAll: false, onlineExp: 0, onlinePlayed: 0, onlineWins: 0 });
           sound.playTone(320, 0.15, 'sawtooth', 0.05, -120);
           render();
         }

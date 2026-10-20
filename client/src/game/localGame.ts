@@ -47,6 +47,7 @@ export interface LocalPlayerState {
   pounce: boolean;
   atkT: number;
   atkId: number;
+  atkType: number;
   power: number;
   shield: number;
   riposte: number;
@@ -103,7 +104,7 @@ export class LocalGameEngine {
   public onFx?: (fx: any) => void;
   public onShake?: (shake: { amount: number }) => void;
   public onRoundWon?: (data: { winner: number; round: number; p1Wins: number; p2Wins: number }) => void;
-  public onMatchEnd?: (data: { winner: number; winnerName: string; p1Wins: number; p2Wins: number; unlocked: AbilityId[] }) => void;
+  public onMatchEnd?: (data: { winner: number; winnerName: string; p1Wins: number; p2Wins: number; unlocked?: AbilityId[] }) => void;
 
   private tapTimes: [number[], number[]] = [[], []];
   private tapBuf: [boolean, boolean] = [false, false];
@@ -225,6 +226,7 @@ export class LocalGameEngine {
       pounce: false,
       atkT: 0,
       atkId: 0,
+      atkType: 0,
       power: 0,
       shield: 0,
       riposte: 0,
@@ -335,6 +337,7 @@ export class LocalGameEngine {
     s.pounce = false;
     s.atkT = 0;
     s.atkId = 0;
+    s.atkType = 0;
     s.power = 0;
     s.shield = 0;
     s.riposte = 0;
@@ -1001,6 +1004,12 @@ export class LocalGameEngine {
         s.pounce = false;
         s.atkT = ATK.wind * 0.55;
         s.atkId++;
+        const prev = s.atkType ?? 0;
+        let next = Math.floor(Math.random() * 3);
+        if (next === prev) {
+          next = (prev + 1 + Math.floor(Math.random() * 2)) % 3;
+        }
+        s.atkType = next;
         sound.play('swing');
       }
       return;
@@ -1088,6 +1097,12 @@ export class LocalGameEngine {
     } else if (free && inp.strike && this.cool[id] <= 0 && !s.blocking) {
       s.atkT = 0.0001;
       s.atkId++;
+      const prev = s.atkType ?? 0;
+      let next = Math.floor(Math.random() * 3);
+      if (next === prev) {
+        next = (prev + 1 + Math.floor(Math.random() * 2)) % 3;
+      }
+      s.atkType = next;
       sound.play('swing');
     }
   }
@@ -1142,8 +1157,8 @@ export class LocalGameEngine {
       this.state.winner = p1Wins >= 2 ? 0 : 1;
       const winnerName = this.state.winner === 0 ? this.state.p1.name : this.state.p2.name;
 
-      // Record match for progress unlocking
-      const rec = recordMatch(this.mode === 'cpu' && this.state.winner === 0);
+      // Record match for offline stats
+      recordMatch(this.mode === 'cpu' && this.state.winner === 0);
 
       if (this.onMatchEnd) {
         this.onMatchEnd({
@@ -1151,7 +1166,7 @@ export class LocalGameEngine {
           winnerName,
           p1Wins,
           p2Wins,
-          unlocked: rec.unlocked
+          unlocked: []
         });
       }
     } else {

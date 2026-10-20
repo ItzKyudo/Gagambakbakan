@@ -274,61 +274,69 @@ var GB = (function () {
   var SKILLS = [
     // Balance notes: cooldown scales with how much a skill gives. Quick utility is 3 to 6 s, a hit worth about one strike (20 grip) is about 7 s,
     // and anything that wins a whole exchange (full guard, a stun plus a free hit) is 9 s or more.
-    { id: 'dash', name: 'Dash', cd: 3, use: 'stand', icon: 'ic-dash', unlock: { t: 'start' },
+    { id: 'dash', name: 'Dash', cd: 3, use: 'stand', icon: 'ic-dash', unlock: { level: 1 },
       desc: 'A quick hop with a moment of invulnerability.' },
-    { id: 'web', name: 'Web', cd: 5, use: 'stand', icon: 'ic-web', unlock: { t: 'start' },
+    { id: 'web', name: 'Web', cd: 5, use: 'stand', icon: 'ic-web', unlock: { level: 1 },
       desc: 'Tangles and slows your rival for 1.6 seconds. A perfect block reflects it.' },
-    { id: 'surge', name: 'Surge', cd: 5, use: 'hang', icon: 'ic-surge', unlock: { t: 'start' },
+    { id: 'surge', name: 'Surge', cd: 5, use: 'hang', icon: 'ic-surge', unlock: { level: 1 },
       desc: 'Only while dangling: one big pull worth about six taps.' },
-    { id: 'power', name: 'Power Strike', cd: 8, use: 'stand', icon: 'ic-power', unlock: { t: 'start' },
+    { id: 'power', name: 'Power Strike', cd: 8, use: 'stand', icon: 'ic-power', unlock: { level: 1 },
       desc: 'Your next strike within 5 seconds hits for 36 grip and shoves much harder.' },
-    { id: 'shield', name: 'Iron Silk', cd: 11, use: 'stand', icon: 'ic-shield', unlock: { t: 'start' },
+    { id: 'shield', name: 'Iron Silk', cd: 11, use: 'stand', icon: 'ic-shield', unlock: { level: 1 },
       desc: 'A silk bubble that absorbs the next hit or shot within 4 seconds.' },
-    { id: 'mend', name: 'Mend', cd: 12, use: 'stand', icon: 'ic-mend', unlock: { t: 'wins', n: 1 },
+    { id: 'mend', name: 'Mend', cd: 12, use: 'stand', icon: 'ic-mend', unlock: { level: 2 },
       desc: 'Patch yourself up and restore 35 grip.' },
-    { id: 'carapace', name: 'Carapace', cd: 12, use: 'stand', icon: 'ic-carapace', unlock: { t: 'played', n: 2 },
+    { id: 'carapace', name: 'Carapace', cd: 12, use: 'stand', icon: 'ic-carapace', unlock: { level: 3 },
       desc: 'Harden your shell: your guard bar refills instantly and a guard break is cleared.' },
-    { id: 'pounce', name: 'Pounce', cd: 6, use: 'stand', icon: 'ic-pounce', unlock: { t: 'wins', n: 2 },
+    { id: 'pounce', name: 'Pounce', cd: 6, use: 'stand', icon: 'ic-pounce', unlock: { level: 4 },
       desc: 'Lunge across the twig and strike in one move.' },
-    { id: 'sweep', name: 'Sweep', cd: 8, use: 'stand', icon: 'ic-sweep', unlock: { t: 'played', n: 3 },
+    { id: 'sweep', name: 'Sweep', cd: 8, use: 'stand', icon: 'ic-sweep', unlock: { level: 5 },
       desc: 'A low leg sweep: 10 grip and a big shove. Can knock a rival off the end. You are open if it whiffs.' },
-    { id: 'spit', name: 'Venom Spit', cd: 7, use: 'stand', icon: 'ic-spit', unlock: { t: 'wins', n: 3 },
+    { id: 'spit', name: 'Venom Spit', cd: 7, use: 'stand', icon: 'ic-spit', unlock: { level: 6 },
       desc: 'A fast shot that stuns your rival for almost a second.' },
-    { id: 'anchor', name: 'Anchor Line', cd: 11, use: 'hang', icon: 'ic-anchor', unlock: { t: 'played', n: 4 },
+    { id: 'anchor', name: 'Anchor Line', cd: 11, use: 'hang', icon: 'ic-anchor', unlock: { level: 7 },
       desc: 'Only while dangling: your thread stops sinking for 2.5 seconds, so you can climb in peace.' },
-    { id: 'riposte', name: 'Riposte', cd: 11, use: 'stand', icon: 'ic-riposte', unlock: { t: 'wins', n: 4 },
+    { id: 'riposte', name: 'Riposte', cd: 11, use: 'stand', icon: 'ic-riposte', unlock: { level: 8 },
       desc: 'For 1 second, the next hit on you is cancelled and your attacker is stunned.' },
-    { id: 'tremor', name: 'Tremor', cd: 9, use: 'stand', icon: 'ic-tremor', unlock: { t: 'played', n: 5 },
+    { id: 'tremor', name: 'Tremor', cd: 9, use: 'stand', icon: 'ic-tremor', unlock: { level: 9 },
       desc: 'Shake the twig. A nearby rival who is not blocking is stunned.' },
-    { id: 'haste', name: 'Haste', cd: 10, use: 'stand', icon: 'ic-haste', unlock: { t: 'wins', n: 5 },
+    { id: 'haste', name: 'Haste', cd: 10, use: 'stand', icon: 'ic-haste', unlock: { level: 10 },
       desc: 'Move 50% faster for 3.5 seconds.' },
-    { id: 'hook', name: 'Silk Hook', cd: 7, use: 'stand', icon: 'ic-hook', unlock: { t: 'wins', n: 6 },
+    { id: 'hook', name: 'Silk Hook', cd: 7, use: 'stand', icon: 'ic-hook', unlock: { level: 11 },
       desc: 'Fire a hook that yanks your rival right up to you and stuns them briefly.' },
-    { id: 'leech', name: 'Leech Fang', cd: 7, use: 'stand', icon: 'ic-leech', unlock: { t: 'wins', n: 7 },
+    { id: 'leech', name: 'Leech Fang', cd: 7, use: 'stand', icon: 'ic-leech', unlock: { level: 12 },
       desc: 'Your next hit within 5 seconds also heals you for 20 grip.' }
   ];
   var BY_ID = {};
   SKILLS.forEach(function (s) { BY_ID[s.id] = s; });
 
+  var LVL_EXP = [0, 100, 250, 450, 700, 1000, 1350, 1750, 2200, 2700, 3250, 3850];
+  function getLvl(exp) {
+    if (!exp || exp <= 0) return 1;
+    var lvl = 1;
+    while (lvl < LVL_EXP.length && exp >= LVL_EXP[lvl]) lvl++;
+    return lvl;
+  }
+
   /* ---------- progress ---------- */
   function progress() {
     var p = lsGet('progress', {}) || {};
-    return { played: p.played | 0, wins: p.wins | 0, unlockAll: !!p.unlockAll };
+    return { played: p.played | 0, wins: p.wins | 0, unlockAll: !!p.unlockAll, onlineExp: Math.max(0, p.onlineExp | 0), onlinePlayed: Math.max(0, p.onlinePlayed | 0), onlineWins: Math.max(0, p.onlineWins | 0) };
   }
   function saveProgress(p) { lsSet('progress', p); }
   function isUnlocked(id, p) {
     var s = BY_ID[id]; if (!s) return false;
     p = p || progress();
-    if (p.unlockAll || s.unlock.t === 'start') return true;
-    if (s.unlock.t === 'wins') return p.wins >= s.unlock.n;
-    if (s.unlock.t === 'played') return p.played >= s.unlock.n;
-    return false;
+    if (p.unlockAll) return true;
+    var curLvl = getLvl(p.onlineExp);
+    return curLvl >= (s.unlock.level || 1);
   }
   function need(id) {
     var s = BY_ID[id], p = progress(), u = s.unlock;
-    if (u.t === 'start') return { have: 1, need: 1, text: 'Unlocked from the start' };
-    if (u.t === 'wins') return { have: Math.min(p.wins, u.n), need: u.n, text: 'Win ' + u.n + (u.n === 1 ? ' match' : ' matches') + ' against the CPU' };
-    return { have: Math.min(p.played, u.n), need: u.n, text: 'Play ' + u.n + ' matches' };
+    var curLvl = getLvl(p.onlineExp);
+    var req = u.level || 1;
+    if (req <= 1) return { have: 1, need: 1, text: 'Unlocked from Level 1' };
+    return { have: Math.min(curLvl, req), need: req, text: 'Requires Level ' + req + ' (Online matches)' };
   }
   function unlockedIds(p) { return SKILLS.filter(function (s) { return isUnlocked(s.id, p); }).map(function (s) { return s.id; }); }
   function recordMatch(won) {

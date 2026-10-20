@@ -608,12 +608,54 @@ export class GagambakbakanScene extends Phaser.Scene {
       let ky = Math.min(ay, fy) - 24;
 
       if (i < 2 && !s.hang) {
-        const lead = i === 0 ? 1 : 0.55;
         if (s.atkT > 0) {
-          fx = bx + f * (38 + u * 48 * lead);
-          fy = u < 0 ? lerp(STICK.y - 1, by - 38, -u) : lerp(STICK.y - 1, by + 1, u);
-          kx = (ax + fx) / 2;
-          ky = Math.min(ay, fy) - 16;
+          const atkType = (s.atkType !== undefined ? s.atkType : (s.atkId || 0)) % 3;
+          if (atkType === 0) {
+            // Animation 0: Overhead Claw Cleave (Downward Slash)
+            const lead = i === 0 ? 1 : 0.65;
+            if (u < 0) {
+              const p = -u; // windup 0 -> 1
+              fx = bx + f * (32 - p * (i === 0 ? 10 : 6));
+              fy = lerp(STICK.y - 1, by - (i === 0 ? 44 : 34), p);
+              kx = (ax + fx) / 2 + f * (i === 0 ? 4 : 0);
+              ky = Math.min(ay, fy) - (i === 0 ? 20 : 16);
+            } else {
+              fx = bx + f * (38 + u * 52 * lead);
+              fy = lerp(STICK.y - 1, by + (i === 0 ? 3 : 1), u);
+              kx = (ax + fx) / 2;
+              ky = Math.min(ay, fy) - 15;
+            }
+          } else if (atkType === 1) {
+            // Animation 1: Piercing Spear Thrust (Horizontal Dual Puncture)
+            const lead = i === 0 ? 1 : 0.85;
+            if (u < 0) {
+              const p = -u; // coil back tightly
+              fx = bx + f * (22 - p * (i === 0 ? 12 : 9));
+              fy = by - (i === 0 ? 10 : 4) - p * 3;
+              kx = bx + f * (i === 0 ? 12 : 8);
+              ky = by - (i === 0 ? 38 : 32);
+            } else {
+              fx = bx + f * (28 + u * 62 * lead);
+              fy = by - (i === 0 ? 8 : 2) - u * 2;
+              kx = (ax + fx) / 2 + f * 2;
+              ky = by - (i === 0 ? 18 : 14);
+            }
+          } else {
+            // Animation 2: Rising Uppercut (Low-to-High Scoop)
+            const lead = i === 0 ? 1 : 0.75;
+            if (u < 0) {
+              const p = -u; // drop low scraping stick
+              fx = bx + f * (32 - p * (i === 0 ? 12 : 8));
+              fy = lerp(STICK.y - 1, STICK.y + 3, p);
+              kx = (ax + fx) / 2 + f * 2;
+              ky = by - 8;
+            } else {
+              fx = bx + f * (34 + u * 48 * lead);
+              fy = lerp(STICK.y + 3, by - (i === 0 ? 48 : 36), u);
+              kx = (ax + fx) / 2 + f * (i === 0 ? 3 : 1);
+              ky = by - (i === 0 ? 60 : 48);
+            }
+          }
         } else if (s.blocking) {
           fx = bx + f * (30 + i * 10);
           fy = by - 30 - i * 6;
@@ -664,8 +706,28 @@ export class GagambakbakanScene extends Phaser.Scene {
     const f = s.face;
     const hb = s.hb || 0;
     const u = s.atkT > 0 ? this.atkProgress(s.atkT) : 0;
-    const bx = s.x + f * (s.atkT > 0 ? u * 7 : 0) - (s.blocking ? f * 3 : 0);
-    let by = STICK.y - BODY_H + (s.blocking ? 6 : 0);
+    const atkType = (s.atkType !== undefined ? s.atkType : (s.atkId || 0)) % 3;
+
+    let atkXOffset = 0;
+    let atkYOffset = 0;
+    if (s.atkT > 0) {
+      if (atkType === 0) {
+        // Overhead slash: lunges forward on strike, body rears slightly on windup
+        atkXOffset = u * 8;
+        atkYOffset = u < 0 ? -u * 3 : u * 2;
+      } else if (atkType === 1) {
+        // Spear thrust: pulls back on windup, deep thrust surge on strike
+        atkXOffset = u < 0 ? u * 5 : u * 12;
+        atkYOffset = 0;
+      } else {
+        // Rising uppercut: ducks low on windup, scoops up on strike
+        atkXOffset = u * 9;
+        atkYOffset = u < 0 ? -u * 4 : -u * 7;
+      }
+    }
+
+    const bx = s.x + f * atkXOffset - (s.blocking ? f * 3 : 0);
+    let by = STICK.y - BODY_H + (s.blocking ? 6 : 0) + atkYOffset;
     by += Math.sin(t * 3 + s.id * 2) * 1.1 * (1 - hb);
     by -= Math.abs(Math.sin((s.walkPhase || 0) * Math.PI * 2)) * 2.2 * (s.move || 0);
     if (s.stun > 0 && !s.hang) by += 3;
@@ -1035,20 +1097,125 @@ export class GagambakbakanScene extends Phaser.Scene {
     ctx.fillStyle = '#10201f';
     ctx.beginPath();
     ctx.moveTo(bx + f * 24, by + 3);
-    ctx.lineTo(bx + f * 30, by + (s.atkT > 0 ? 9 : 6));
+    let fangY = 6;
+    let fangX = 30;
+    if (s.atkT > 0) {
+      if (atkType === 0) {
+        fangY = u > 0 ? 10 : 5;
+        fangX = 30;
+      } else if (atkType === 1) {
+        fangY = 5;
+        fangX = u > 0 ? 34 : 29;
+      } else {
+        fangY = u > 0 ? 2 : 7;
+        fangX = 31;
+      }
+    }
+    ctx.lineTo(bx + f * fangX, by + fangY);
     ctx.lineTo(bx + f * 25, by + 8);
     ctx.closePath();
     ctx.fill();
 
-    // Attack slash arc
-    if (s.atkT > 0.16 && s.atkT < 0.32) {
-      ctx.strokeStyle = 'rgba(255,255,255,.55)';
-      ctx.lineWidth = 5;
+    // Attack visual effects for each randomized animation
+    if (s.atkT > 0.16 && s.atkT < 0.35) {
+      const sw = (s.atkT - 0.16) / (0.35 - 0.16);
+      const alpha = Math.sin(sw * Math.PI);
+      ctx.save();
       ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(bx + f * 22, by - 30);
-      ctx.quadraticCurveTo(bx + f * 70, by - 36, bx + f * (REACH + 4), by - 2);
-      ctx.stroke();
+
+      if (atkType === 0) {
+        // Animation 0: Overhead Claw Cleave (Downward Curved Slash)
+        ctx.globalAlpha = alpha * 0.85;
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(bx + f * 20, by - 36);
+        ctx.quadraticCurveTo(bx + f * 72, by - 40, bx + f * (REACH + 8), by + 3);
+        ctx.stroke();
+
+        ctx.globalAlpha = alpha * 0.95;
+        ctx.strokeStyle = colLight;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(bx + f * 24, by - 32);
+        ctx.quadraticCurveTo(bx + f * 70, by - 36, bx + f * (REACH + 4), by);
+        ctx.stroke();
+
+        ctx.globalAlpha = alpha * 0.35;
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(bx + f * 16, by - 26);
+        ctx.quadraticCurveTo(bx + f * 58, by - 30, bx + f * (REACH - 4), by + 6);
+        ctx.stroke();
+
+      } else if (atkType === 1) {
+        // Animation 1: Piercing Spear Thrust (Horizontal Dual Puncture + Impact Star)
+        const reachX = bx + f * (REACH + 10);
+
+        ctx.globalAlpha = alpha * 0.95;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(bx + f * 24, by - 11);
+        ctx.lineTo(reachX, by - 11);
+        ctx.stroke();
+
+        ctx.strokeStyle = colLight;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(bx + f * 34, by - 11);
+        ctx.lineTo(reachX + f * 2, by - 11);
+        ctx.stroke();
+
+        ctx.globalAlpha = alpha * 0.85;
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+        ctx.lineWidth = 3.5;
+        ctx.beginPath();
+        ctx.moveTo(bx + f * 22, by - 3);
+        ctx.lineTo(reachX - f * 4, by - 3);
+        ctx.stroke();
+
+        ctx.globalAlpha = alpha * 0.9;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(reachX - 8, by - 11); ctx.lineTo(reachX + 8, by - 11);
+        ctx.moveTo(reachX, by - 19); ctx.lineTo(reachX, by - 3);
+        ctx.stroke();
+        ctx.fillStyle = colLight;
+        ctx.beginPath();
+        ctx.arc(reachX, by - 11, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+      } else {
+        // Animation 2: Rising Uppercut (Low-to-High Crescent Scoop)
+        ctx.globalAlpha = alpha * 0.85;
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(bx + f * 22, by + 8);
+        ctx.quadraticCurveTo(bx + f * 64, by + 12, bx + f * (REACH + 6), by - 42);
+        ctx.stroke();
+
+        ctx.globalAlpha = alpha * 0.95;
+        ctx.strokeStyle = colLight;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(bx + f * 26, by + 6);
+        ctx.quadraticCurveTo(bx + f * 62, by + 8, bx + f * (REACH + 2), by - 38);
+        ctx.stroke();
+
+        ctx.globalAlpha = alpha * 0.4;
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(bx + f * 34, by + 4);
+        ctx.quadraticCurveTo(bx + f * 70, by - 2, bx + f * (REACH - 4), by - 48);
+        ctx.stroke();
+      }
+
+      ctx.restore();
     }
 
     // Block energy shield

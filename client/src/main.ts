@@ -7,7 +7,7 @@ import { GagambakbakanScene } from './game/GagambakbakanScene';
 import { LocalGameEngine, type InputState } from './game/localGame';
 import { network } from './network';
 import { sound } from './audio';
-import { getKeys, getLooks, getColor, type PlayerKeys } from './gb';
+import { getKeys, getLooks, getColor, getProgress, getLevel, recordOnlineMatch, type PlayerKeys } from './gb';
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
 
@@ -187,13 +187,16 @@ async function startOnlineGame(opts: MenuStartOptions) {
 
   try {
     let room;
+    const prog = getProgress();
+    const myLvl = getLevel(prog.onlineExp);
     const profile = {
       name: opts.playerName || `Player_${Math.floor(Math.random() * 900 + 100)}`,
       color: opts.playerColor?.main,
       colorDark: opts.playerColor?.dark,
       colorLight: opts.playerColor?.light,
       pattern: opts.playerPattern || 'stripes',
-      acc: opts.playerAcc || 'none'
+      acc: opts.playerAcc || 'none',
+      level: myLvl
     };
 
     if (opts.onlineAction === 'create') {
@@ -291,13 +294,49 @@ function getNetworkCallbacks() {
       sound.music.play('ambient');
       if (gamePage) {
         if (gamePage.isDraftOpen) gamePage.hideDraftModal();
-        const isMe = currentScene && currentScene.myPlayerId === data.winner;
+        const myId = currentScene ? currentScene.myPlayerId : 0;
+        const isMe = myId === data.winner;
+        const myWins = myId === 0 ? data.p1Wins : data.p2Wins;
+
+        // EXP and level reward specifically for online matches
+        const reward = recordOnlineMatch(isMe, myWins);
+        if (reward.leveledUp) {
+          sound.play('power_up');
+        }
+
         const title = isMe ? 'VICTORY!' : 'DEFEAT!';
-        const sub = `${data.winnerName} won the match (${data.p1Wins} - ${data.p2Wins})! Run it back?`;
+        const sub = `${data.winnerName} won the match (${data.p1Wins} - ${data.p2Wins})!`;
+
+        const rewardHtml = `
+          <div class="online-exp-reward-box">
+            <div class="exp-badge-row">
+              <span class="exp-plus-tag">+${reward.expGained} EXP</span>
+              <span class="exp-breakdown-text">(${isMe ? 'Victory +100, ' : ''}Match +${reward.matchExp}${reward.roundExp > 0 ? `, Rounds +${reward.roundExp}` : ''})</span>
+            </div>
+            <div class="exp-bar-header">
+              <span class="exp-lvl-title">Level ${reward.newLevel}</span>
+              <span class="exp-vals">${reward.progress.expIntoLevel} / ${reward.progress.expForLevel} EXP</span>
+            </div>
+            <div class="exp-progress-track">
+              <div class="exp-progress-fill" style="width:${reward.progress.progressPct}%;"></div>
+            </div>
+            ${reward.leveledUp ? `
+              <div class="level-up-alert">
+                <div class="lua-title">🎉 LEVEL UP! Reached Level ${reward.newLevel}!</div>
+                ${reward.unlockedSkills.length > 0 ? `
+                  <div class="lua-skills">
+                    ✨ New Abilities Unlocked: <strong>${reward.unlockedSkills.map(s => s.name).join(', ')}</strong>
+                  </div>
+                ` : ''}
+              </div>
+            ` : ''}
+          </div>
+        `;
+
         gamePage.showModal(title, sub, [
           { label: 'Rematch', primary: true, onClick: () => network.sendRestart() },
           { label: 'Menu', onClick: () => showMainMenu() }
-        ]);
+        ], rewardHtml);
       }
     },
     onPlayerLeft: () => {

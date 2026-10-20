@@ -19,6 +19,9 @@ export interface PlayerProfile {
   color?: string;
   colorDark?: string;
   colorLight?: string;
+  pattern?: string;
+  acc?: string;
+  level?: number;
 }
 
 export class NetworkManager {

@@ -814,7 +814,7 @@ var GB = (function () {
     hard:   { react: [0.05, 0.20], rc: 0.8, gap: [0.5, 1.0], reel: 7.0, dash: 0.35, web: 0.9 }
   };
   function mk(id, name, main, dark, light) {
-    return { id: id, name: name, main: main, dark: dark, light: light, wins: 0, falls: 0, atkId: 0, sk: ['dash', 'web'], pattern: 'stripes', acc: 'none' };
+    return { id: id, name: name, main: main, dark: dark, light: light, wins: 0, falls: 0, atkId: 0, atkType: 0, sk: ['dash', 'web'], pattern: 'stripes', acc: 'none' };
   }
   var P = [
     mk(0, 'Amber', C('--amber', '#f2a33a'), C('--amber-dark', '#8f4f14'), C('--amber-light', '#ffd694')),
@@ -828,7 +828,7 @@ var GB = (function () {
 
   function resetSpider(s, x, face) {
     Object.assign(s, {
-      x: x, face: face, drop: 0, dropV: 0, hang: false, hb: 0, grip: 100, guard: 100, atkT: 0, atkHit: false,
+      x: x, face: face, drop: 0, dropV: 0, hang: false, hb: 0, grip: 100, guard: 100, atkT: 0, atkHit: false, atkType: 0,
       cool: 0, stun: 0, kb: 0, blocking: false, blockT: 0, gLock: false, inv: 0, hitFlash: 0, ko: false,
       sink: 0, pump: 0, walkPhase: 0, move: 0, t: Math.random() * 6, cheer: false, parryT: 0,
       reelCd: 0, tapLift: TAP, tapCd: REEL_CD, sinkV: SINK, depth: FALL_DEPTH, hold: SINK / TAP, rate: 0, tapTimes: [], cds: [0, 0], cdm: [SK(s.sk[0]).cd, SK(s.sk[1]).cd], snare: 0, dashT: 0, dashDir: 0, pounce: false, power: 0, shield: 0, hasteT: 0, quake: 0, riposte: 0, leech: 0, anchorT: 0
@@ -1088,7 +1088,14 @@ var GB = (function () {
       if (!o.hang && !o.ko && Math.abs(dxn - o.x) < MINDIST && Math.abs(dxn - o.x) < Math.abs(s.x - o.x)) dxn = s.x;
       s.x = dxn; s.move = 1; s.walkPhase += dt * 6;
       parts.push({ x: s.x - s.dashDir * 10, y: BODY_Y + rnd(-10, 10), vx: -s.dashDir * 30, vy: rnd(-20, 20), life: 0.25, max: 0.25, sz: rnd(3, 6), col: s.light, g: 0 });
-      if (s.dashT <= 0 && s.pounce) { s.pounce = false; s.atkT = ATK.wind * 0.55; s.atkHit = false; s.atkId++; snd(300, 0.09, 'sine', 0.03, 220); }
+      if (s.dashT <= 0 && s.pounce) {
+        s.pounce = false; s.atkT = ATK.wind * 0.55; s.atkHit = false; s.atkId++;
+        var prev = s.atkType || 0;
+        var next = Math.floor(Math.random() * 3);
+        if (next === prev) next = (prev + 1 + Math.floor(Math.random() * 2)) % 3;
+        s.atkType = next;
+        snd(300, 0.09, 'sine', 0.03, 220);
+      }
       return;
     }
 
@@ -1138,7 +1145,12 @@ var GB = (function () {
       }
       if (s.atkT >= ATK.end) { s.atkT = 0; s.cool = 0.1; }
     } else if (free && inp.strike && s.cool <= 0 && !s.blocking) {
-      s.atkT = 0.0001; s.atkHit = false; s.atkId++; snd(300, 0.09, 'sine', 0.03, 220);
+      s.atkT = 0.0001; s.atkHit = false; s.atkId++;
+      var prev = s.atkType || 0;
+      var next = Math.floor(Math.random() * 3);
+      if (next === prev) next = (prev + 1 + Math.floor(Math.random() * 2)) % 3;
+      s.atkType = next;
+      snd(300, 0.09, 'sine', 0.03, 220);
     }
   }
 
@@ -1357,11 +1369,51 @@ var GB = (function () {
       var fy = STICK.y - 1 - Math.max(0, Math.cos(ph)) * 6 * s.move;
       var kx = (ax + fx) / 2 + f * (i < 2 ? 6 : -6), ky = Math.min(ay, fy) - 24;
       if (i < 2 && !s.hang) {
-        var lead = i === 0 ? 1 : 0.55;
         if (s.atkT > 0) {
-          fx = bx + f * (38 + u * 48 * lead);
-          fy = u < 0 ? mix(STICK.y - 1, by - 38, -u) : mix(STICK.y - 1, by + 1, u);
-          kx = (ax + fx) / 2; ky = Math.min(ay, fy) - 16;
+          var atkType = (s.atkType !== undefined ? s.atkType : (s.atkId || 0)) % 3;
+          if (atkType === 0) {
+            var lead = i === 0 ? 1 : 0.65;
+            if (u < 0) {
+              var p = -u;
+              fx = bx + f * (32 - p * (i === 0 ? 10 : 6));
+              fy = mix(STICK.y - 1, by - (i === 0 ? 44 : 34), p);
+              kx = (ax + fx) / 2 + f * (i === 0 ? 4 : 0);
+              ky = Math.min(ay, fy) - (i === 0 ? 20 : 16);
+            } else {
+              fx = bx + f * (38 + u * 52 * lead);
+              fy = mix(STICK.y - 1, by + (i === 0 ? 3 : 1), u);
+              kx = (ax + fx) / 2;
+              ky = Math.min(ay, fy) - 15;
+            }
+          } else if (atkType === 1) {
+            var lead = i === 0 ? 1 : 0.85;
+            if (u < 0) {
+              var p = -u;
+              fx = bx + f * (22 - p * (i === 0 ? 12 : 9));
+              fy = by - (i === 0 ? 10 : 4) - p * 3;
+              kx = bx + f * (i === 0 ? 12 : 8);
+              ky = by - (i === 0 ? 38 : 32);
+            } else {
+              fx = bx + f * (28 + u * 62 * lead);
+              fy = by - (i === 0 ? 8 : 2) - u * 2;
+              kx = (ax + fx) / 2 + f * 2;
+              ky = by - (i === 0 ? 18 : 14);
+            }
+          } else {
+            var lead = i === 0 ? 1 : 0.75;
+            if (u < 0) {
+              var p = -u;
+              fx = bx + f * (32 - p * (i === 0 ? 12 : 8));
+              fy = mix(STICK.y - 1, STICK.y + 3, p);
+              kx = (ax + fx) / 2 + f * 2;
+              ky = by - 8;
+            } else {
+              fx = bx + f * (34 + u * 48 * lead);
+              fy = mix(STICK.y + 3, by - (i === 0 ? 48 : 36), u);
+              kx = (ax + fx) / 2 + f * (i === 0 ? 3 : 1);
+              ky = by - (i === 0 ? 60 : 48);
+            }
+          }
         } else if (s.blocking) {
           fx = bx + f * (30 + i * 10); fy = by - 30 - i * 6; kx = bx + f * (16 + i * 6); ky = by - 50;
         } else if (s.cheer) {
@@ -1382,8 +1434,21 @@ var GB = (function () {
 
   function drawSpider(s) {
     var f = s.face, hb = s.hb, t = s.t, u = s.atkT > 0 ? atkU(s.atkT) : 0;
-    var bx = s.x + f * (s.atkT > 0 ? u * 7 : 0) - (s.blocking ? f * 3 : 0);
-    var by = STICK.y - BODY_H + (s.blocking ? 6 : 0);
+    var atkType = (s.atkType !== undefined ? s.atkType : (s.atkId || 0)) % 3;
+    var atkXOffset = 0, atkYOffset = 0;
+    if (s.atkT > 0) {
+      if (atkType === 0) {
+        atkXOffset = u * 8;
+        atkYOffset = u < 0 ? -u * 3 : u * 2;
+      } else if (atkType === 1) {
+        atkXOffset = u < 0 ? u * 5 : u * 12;
+      } else {
+        atkXOffset = u * 9;
+        atkYOffset = u < 0 ? -u * 4 : -u * 7;
+      }
+    }
+    var bx = s.x + f * atkXOffset - (s.blocking ? f * 3 : 0);
+    var by = STICK.y - BODY_H + (s.blocking ? 6 : 0) + atkYOffset;
     by += Math.sin(t * 3 + s.id * 2) * 1.1 * (1 - hb);
     by -= Math.abs(Math.sin(s.walkPhase * Math.PI * 2)) * 2.2 * s.move;
     if (s.stun > 0 && !s.hang) by += 3;
@@ -1452,11 +1517,42 @@ var GB = (function () {
       [-1, 1].forEach(function (sg) { ctx.beginPath(); ctx.moveTo(hx2 + sg * 11, hb + 3); ctx.lineTo(hx2 + sg * 8, hb - 14); ctx.lineTo(hx2 + sg * 2, hb); ctx.closePath(); ctx.fill(); ctx.stroke(); });
     }
     ctx.fillStyle = '#10201f';
-    ctx.beginPath(); ctx.moveTo(bx + f * 24, by + 3); ctx.lineTo(bx + f * 30, by + (s.atkT > 0 ? 9 : 6)); ctx.lineTo(bx + f * 25, by + 8); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(bx + f * 24, by + 3);
+    var fangY = 6, fangX = 30;
+    if (s.atkT > 0) {
+      if (atkType === 0) { fangY = u > 0 ? 10 : 5; fangX = 30; }
+      else if (atkType === 1) { fangY = 5; fangX = u > 0 ? 34 : 29; }
+      else { fangY = u > 0 ? 2 : 7; fangX = 31; }
+    }
+    ctx.lineTo(bx + f * fangX, by + fangY); ctx.lineTo(bx + f * 25, by + 8); ctx.closePath(); ctx.fill();
 
-    if (s.atkT > ATK.wind && s.atkT < ATK.act + 0.06) {
-      ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 5; ctx.lineCap = 'round';
-      ctx.beginPath(); ctx.moveTo(bx + f * 22, by - 30); ctx.quadraticCurveTo(bx + f * 70, by - 36, bx + f * (REACH + 4), by - 2); ctx.stroke();
+    if (s.atkT > 0.16 && s.atkT < 0.35) {
+      var sw = (s.atkT - 0.16) / (0.35 - 0.16);
+      var alpha = Math.sin(sw * Math.PI);
+      ctx.save(); ctx.lineCap = 'round';
+      if (atkType === 0) {
+        ctx.globalAlpha = alpha * 0.85; ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 5;
+        ctx.beginPath(); ctx.moveTo(bx + f * 20, by - 36); ctx.quadraticCurveTo(bx + f * 72, by - 40, bx + f * (REACH + 8), by + 3); ctx.stroke();
+        ctx.globalAlpha = alpha * 0.95; ctx.strokeStyle = s.light; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.moveTo(bx + f * 24, by - 32); ctx.quadraticCurveTo(bx + f * 70, by - 36, bx + f * (REACH + 4), by); ctx.stroke();
+      } else if (atkType === 1) {
+        var reachX = bx + f * (REACH + 10);
+        ctx.globalAlpha = alpha * 0.95; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.moveTo(bx + f * 24, by - 11); ctx.lineTo(reachX, by - 11); ctx.stroke();
+        ctx.strokeStyle = s.light; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(bx + f * 34, by - 11); ctx.lineTo(reachX + f * 2, by - 11); ctx.stroke();
+        ctx.globalAlpha = alpha * 0.85; ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 3.5;
+        ctx.beginPath(); ctx.moveTo(bx + f * 22, by - 3); ctx.lineTo(reachX - f * 4, by - 3); ctx.stroke();
+        ctx.globalAlpha = alpha * 0.9; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(reachX - 8, by - 11); ctx.lineTo(reachX + 8, by - 11); ctx.moveTo(reachX, by - 19); ctx.lineTo(reachX, by - 3); ctx.stroke();
+        ctx.fillStyle = s.light; ctx.beginPath(); ctx.arc(reachX, by - 11, 3, 0, 7); ctx.fill();
+      } else {
+        ctx.globalAlpha = alpha * 0.85; ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 5;
+        ctx.beginPath(); ctx.moveTo(bx + f * 22, by + 8); ctx.quadraticCurveTo(bx + f * 64, by + 12, bx + f * (REACH + 6), by - 42); ctx.stroke();
+        ctx.globalAlpha = alpha * 0.95; ctx.strokeStyle = s.light; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.moveTo(bx + f * 26, by + 6); ctx.quadraticCurveTo(bx + f * 62, by + 8, bx + f * (REACH + 2), by - 38); ctx.stroke();
+      }
+      ctx.restore();
     }
     if (s.blocking) {
       var sx = bx + f * 16, sy = by - 4;

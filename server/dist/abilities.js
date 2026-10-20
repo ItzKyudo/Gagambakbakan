@@ -11,7 +11,7 @@ exports.ABILITIES = {
         cd: 3,
         use: 'stand',
         icon: 'ic-dash',
-        unlock: { t: 'start' },
+        unlock: { level: 1 },
         desc: 'A quick hop with a moment of invulnerability.'
     },
     web: {
@@ -20,7 +20,7 @@ exports.ABILITIES = {
         cd: 5,
         use: 'stand',
         icon: 'ic-web',
-        unlock: { t: 'start' },
+        unlock: { level: 1 },
         desc: 'Tangles and slows your rival for 1.6 seconds. A perfect block reflects it.'
     },
     surge: {
@@ -29,7 +29,7 @@ exports.ABILITIES = {
         cd: 5,
         use: 'hang',
         icon: 'ic-surge',
-        unlock: { t: 'start' },
+        unlock: { level: 1 },
         desc: 'Only while dangling: one big pull worth about six taps.'
     },
     power: {
@@ -38,7 +38,7 @@ exports.ABILITIES = {
         cd: 8,
         use: 'stand',
         icon: 'ic-power',
-        unlock: { t: 'start' },
+        unlock: { level: 1 },
         desc: 'Your next strike within 5 seconds hits for 36 grip and shoves much harder.'
     },
     shield: {
@@ -47,7 +47,7 @@ exports.ABILITIES = {
         cd: 11,
         use: 'stand',
         icon: 'ic-shield',
-        unlock: { t: 'start' },
+        unlock: { level: 1 },
         desc: 'A silk bubble that absorbs the next hit or shot within 4 seconds.'
     },
     mend: {
@@ -56,7 +56,7 @@ exports.ABILITIES = {
         cd: 12,
         use: 'stand',
         icon: 'ic-mend',
-        unlock: { t: 'wins', n: 1 },
+        unlock: { level: 2 },
         desc: 'Patch yourself up and restore 35 grip.'
     },
     carapace: {
@@ -65,7 +65,7 @@ exports.ABILITIES = {
         cd: 12,
         use: 'stand',
         icon: 'ic-carapace',
-        unlock: { t: 'played', n: 2 },
+        unlock: { level: 3 },
         desc: 'Harden your shell: your guard bar refills instantly and a guard break is cleared.'
     },
     pounce: {
@@ -74,7 +74,7 @@ exports.ABILITIES = {
         cd: 6,
         use: 'stand',
         icon: 'ic-pounce',
-        unlock: { t: 'wins', n: 2 },
+        unlock: { level: 4 },
         desc: 'Lunge across the twig and strike in one move.'
     },
     sweep: {
@@ -83,7 +83,7 @@ exports.ABILITIES = {
         cd: 8,
         use: 'stand',
         icon: 'ic-sweep',
-        unlock: { t: 'played', n: 3 },
+        unlock: { level: 5 },
         desc: 'A low leg sweep: 10 grip and a big shove. Can knock a rival off the end. You are open if it whiffs.'
     },
     spit: {
@@ -92,7 +92,7 @@ exports.ABILITIES = {
         cd: 7,
         use: 'stand',
         icon: 'ic-spit',
-        unlock: { t: 'wins', n: 3 },
+        unlock: { level: 6 },
         desc: 'A fast shot that stuns your rival for almost a second.'
     },
     anchor: {
@@ -101,7 +101,7 @@ exports.ABILITIES = {
         cd: 11,
         use: 'hang',
         icon: 'ic-anchor',
-        unlock: { t: 'played', n: 4 },
+        unlock: { level: 7 },
         desc: 'Only while dangling: your thread stops sinking for 2.5 seconds, so you can climb in peace.'
     },
     riposte: {
@@ -110,7 +110,7 @@ exports.ABILITIES = {
         cd: 11,
         use: 'stand',
         icon: 'ic-riposte',
-        unlock: { t: 'wins', n: 4 },
+        unlock: { level: 8 },
         desc: 'For 1 second, the next hit on you is cancelled and your attacker is stunned.'
     },
     tremor: {
@@ -119,7 +119,7 @@ exports.ABILITIES = {
         cd: 9,
         use: 'stand',
         icon: 'ic-tremor',
-        unlock: { t: 'played', n: 5 },
+        unlock: { level: 9 },
         desc: 'Shake the twig. A nearby rival who is not blocking is stunned.'
     },
     haste: {
@@ -128,7 +128,7 @@ exports.ABILITIES = {
         cd: 10,
         use: 'stand',
         icon: 'ic-haste',
-        unlock: { t: 'wins', n: 5 },
+        unlock: { level: 10 },
         desc: 'Move 50% faster for 3.5 seconds.'
     },
     hook: {
@@ -137,7 +137,7 @@ exports.ABILITIES = {
         cd: 7,
         use: 'stand',
         icon: 'ic-hook',
-        unlock: { t: 'wins', n: 6 },
+        unlock: { level: 11 },
         desc: 'Fire a hook that yanks your rival right up to you and stuns them briefly.'
     },
     leech: {
@@ -146,7 +146,7 @@ exports.ABILITIES = {
         cd: 7,
         use: 'stand',
         icon: 'ic-leech',
-        unlock: { t: 'wins', n: 7 },
+        unlock: { level: 12 },
         desc: 'Your next hit within 5 seconds also heals you for 20 grip.'
     }
 };
@@ -182,7 +182,10 @@ function shuffle(arr) {
     }
     return a;
 }
-function getRandomAbilities(count = 3, exclude = []) {
-    const pool = exports.ALL_ABILITY_IDS.filter(id => !exclude.includes(id));
-    return shuffle(pool).slice(0, count);
+function getRandomAbilities(count = 3, exclude = [], maxLevel = 12) {
+    const pool = exports.SKILLS_LIST
+        .filter(s => s.unlock.level <= maxLevel && !exclude.includes(s.id))
+        .map(s => s.id);
+    const finalPool = pool.length >= count ? pool : exports.ALL_ABILITY_IDS;
+    return shuffle(finalPool).slice(0, count);
 }

@@ -8,6 +8,7 @@ export interface PlayerStateData {
   colorLight: string;
   pattern: string;      // 'stripes' | 'dots' | 'chevron' | 'plain'
   acc: string;          // 'none' | 'band' | 'crown' | 'horns'
+  level: number;        // Player online level
   
   // Position & movement
   x: number;
@@ -52,6 +53,7 @@ export interface PlayerStateData {
   pounce: boolean;
   atkT: number;
   atkId: number;
+  atkType: number;
 
   // Active ability buffs & states
   power: number;        // Power strike buff duration

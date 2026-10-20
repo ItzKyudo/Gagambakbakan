@@ -1,4 +1,4 @@
-import { ABILITIES, SKILLS_LIST, type AbilityId, shuffle } from './game/abilities';
+import { ABILITIES, SKILLS_LIST, type AbilityId, type AbilityDef, shuffle } from './game/abilities';
 
 export interface SpiderColor {
   id: string;
@@ -42,6 +42,9 @@ export interface ProgressData {
   played: number;
   wins: number;
   unlockAll: boolean;
+  onlineExp: number;
+  onlinePlayed: number;
+  onlineWins: number;
 }
 
 const PFX = 'gb-';
@@ -362,13 +365,84 @@ export function keyLabel(code: string): string {
   return code;
 }
 
+/* ---------- levels and exp progression ---------- */
+export const LEVEL_EXP_TABLE = [
+  0,    // Level 1: 0 EXP
+  100,  // Level 2: 100 EXP
+  250,  // Level 3: 250 EXP (+150)
+  450,  // Level 4: 450 EXP (+200)
+  700,  // Level 5: 700 EXP (+250)
+  1000, // Level 6: 1000 EXP (+300)
+  1350, // Level 7: 1350 EXP (+350)
+  1750, // Level 8: 1750 EXP (+400)
+  2200, // Level 9: 2200 EXP (+450)
+  2700, // Level 10: 2700 EXP (+500)
+  3250, // Level 11: 3250 EXP (+550)
+  3850  // Level 12: 3850 EXP (+600, all 16 skills unlocked)
+];
+
+export function getExpRequiredForLevel(level: number): number {
+  if (level <= 1) return 0;
+  if (level <= LEVEL_EXP_TABLE.length) {
+    return LEVEL_EXP_TABLE[level - 1];
+  }
+  let exp = LEVEL_EXP_TABLE[LEVEL_EXP_TABLE.length - 1];
+  for (let l = LEVEL_EXP_TABLE.length + 1; l <= level; l++) {
+    exp += 600 + (l - 12) * 50;
+  }
+  return exp;
+}
+
+export function getLevel(totalExp: number): number {
+  if (!totalExp || totalExp <= 0) return 1;
+  let lvl = 1;
+  while (true) {
+    const nextReq = getExpRequiredForLevel(lvl + 1);
+    if (totalExp < nextReq) break;
+    lvl++;
+  }
+  return lvl;
+}
+
+export interface ExpProgressInfo {
+  level: number;
+  totalExp: number;
+  currentLevelExp: number;
+  nextLevelExp: number;
+  expIntoLevel: number;
+  expForLevel: number;
+  progressPct: number;
+}
+
+export function getExpProgress(totalExp: number): ExpProgressInfo {
+  const level = getLevel(totalExp);
+  const currentLevelExp = getExpRequiredForLevel(level);
+  const nextLevelExp = getExpRequiredForLevel(level + 1);
+  const expIntoLevel = Math.max(0, totalExp - currentLevelExp);
+  const expForLevel = Math.max(1, nextLevelExp - currentLevelExp);
+  const progressPct = Math.min(100, Math.floor((expIntoLevel / expForLevel) * 100));
+
+  return {
+    level,
+    totalExp,
+    currentLevelExp,
+    nextLevelExp,
+    expIntoLevel,
+    expForLevel,
+    progressPct
+  };
+}
+
 /* ---------- progress ---------- */
 export function getProgress(): ProgressData {
   const p = lsGet<any>('progress', {}) || {};
   return {
     played: p.played | 0,
     wins: p.wins | 0,
-    unlockAll: !!p.unlockAll
+    unlockAll: !!p.unlockAll,
+    onlineExp: Math.max(0, p.onlineExp | 0),
+    onlinePlayed: Math.max(0, p.onlinePlayed | 0),
+    onlineWins: Math.max(0, p.onlineWins | 0)
   };
 }
 
@@ -380,29 +454,23 @@ export function isUnlocked(id: AbilityId, p?: ProgressData): boolean {
   const s = ABILITIES[id];
   if (!s) return false;
   p = p || getProgress();
-  if (p.unlockAll || s.unlock.t === 'start') return true;
-  if (s.unlock.t === 'wins' && s.unlock.n !== undefined) return p.wins >= s.unlock.n;
-  if (s.unlock.t === 'played' && s.unlock.n !== undefined) return p.played >= s.unlock.n;
-  return false;
+  if (p.unlockAll) return true;
+  const currentLvl = getLevel(p.onlineExp);
+  return currentLvl >= (s.unlock.level ?? 1);
 }
 
 export function getUnlockNeed(id: AbilityId): { have: number; need: number; text: string } {
   const s = ABILITIES[id];
   const p = getProgress();
-  const u = s.unlock;
-  if (u.t === 'start') return { have: 1, need: 1, text: 'Unlocked from the start' };
-  const n = u.n || 1;
-  if (u.t === 'wins') {
-    return {
-      have: Math.min(p.wins, n),
-      need: n,
-      text: `Win ${n} ${n === 1 ? 'match' : 'matches'} against the CPU`
-    };
+  const currentLvl = getLevel(p.onlineExp);
+  const reqLvl = s.unlock.level ?? 1;
+  if (reqLvl <= 1) {
+    return { have: 1, need: 1, text: 'Unlocked from Level 1' };
   }
   return {
-    have: Math.min(p.played, n),
-    need: n,
-    text: `Play ${n} matches`
+    have: Math.min(currentLvl, reqLvl),
+    need: reqLvl,
+    text: `Requires Level ${reqLvl} (Online matches)`
   };
 }
 
@@ -410,14 +478,57 @@ export function getUnlockedIds(p?: ProgressData): AbilityId[] {
   return SKILLS_LIST.filter(s => isUnlocked(s.id, p)).map(s => s.id);
 }
 
-export function recordMatch(won: boolean): { unlocked: AbilityId[] } {
-  const before = getUnlockedIds();
+export function recordMatch(won: boolean): void {
   const p = getProgress();
   p.played++;
   if (won) p.wins++;
   saveProgress(p);
-  const after = getUnlockedIds(p);
-  return { unlocked: after.filter(id => !before.includes(id)) };
+}
+
+export interface OnlineMatchReward {
+  expGained: number;
+  matchExp: number;
+  winExp: number;
+  roundExp: number;
+  oldLevel: number;
+  newLevel: number;
+  leveledUp: boolean;
+  unlockedSkills: AbilityDef[];
+  progress: ExpProgressInfo;
+}
+
+export function recordOnlineMatch(won: boolean, myRoundsWon: number): OnlineMatchReward {
+  const p = getProgress();
+  const oldExp = p.onlineExp;
+  const oldLevel = getLevel(oldExp);
+
+  const matchExp = 60;
+  const winExp = won ? 100 : 0;
+  const roundExp = Math.min(2, Math.max(0, myRoundsWon)) * 20;
+  const expGained = matchExp + winExp + roundExp;
+
+  p.onlineExp += expGained;
+  p.onlinePlayed++;
+  if (won) p.onlineWins++;
+  saveProgress(p);
+
+  const newLevel = getLevel(p.onlineExp);
+  const leveledUp = newLevel > oldLevel;
+  const unlockedSkills = SKILLS_LIST.filter(
+    s => s.unlock.level > oldLevel && s.unlock.level <= newLevel
+  );
+
+  return {
+    expGained,
+    matchExp,
+    winExp,
+    roundExp,
+    oldLevel,
+    newLevel,
+    leveledUp,
+    unlockedSkills,
+    progress: getExpProgress(p.onlineExp)
+  };
 }
 
 export function drawSkillsCount(n: number): AbilityId[] {

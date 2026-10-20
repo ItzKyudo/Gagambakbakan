@@ -1,4 +1,10 @@
-import { ABILITIES, SKILLS_LIST, type AbilityId, type AbilityDef, shuffle } from './game/abilities';
+import {
+  ABILITIES,
+  ALL_ABILITY_IDS,
+  isNodeAvailableToUnlock,
+  type AbilityId,
+  shuffle
+} from './game/abilities';
 
 export interface SpiderColor {
   id: string;
@@ -45,6 +51,7 @@ export interface ProgressData {
   onlineExp: number;
   onlinePlayed: number;
   onlineWins: number;
+  unlockedSkills?: string[];
 }
 
 const PFX = 'gb-';
@@ -436,13 +443,18 @@ export function getExpProgress(totalExp: number): ExpProgressInfo {
 /* ---------- progress ---------- */
 export function getProgress(): ProgressData {
   const p = lsGet<any>('progress', {}) || {};
+  let unlockedSkills: string[] = p.unlockedSkills;
+  if (!Array.isArray(unlockedSkills) || unlockedSkills.length === 0) {
+    unlockedSkills = ['dash', 'web', 'surge'];
+  }
   return {
     played: p.played | 0,
     wins: p.wins | 0,
     unlockAll: !!p.unlockAll,
     onlineExp: Math.max(0, p.onlineExp | 0),
     onlinePlayed: Math.max(0, p.onlinePlayed | 0),
-    onlineWins: Math.max(0, p.onlineWins | 0)
+    onlineWins: Math.max(0, p.onlineWins | 0),
+    unlockedSkills
   };
 }
 
@@ -450,13 +462,24 @@ export function saveProgress(p: ProgressData): void {
   lsSet('progress', p);
 }
 
+export function getAbilityPoints(p?: ProgressData): { total: number; spent: number; available: number } {
+  p = p || getProgress();
+  const currentLvl = getLevel(p.onlineExp);
+  // Level 1 starts with 2 points so player starts with 3 skills total ('dash' + 2 picks).
+  // Each subsequent level (+1) awards +1 Ability Point.
+  const total = currentLvl + 1;
+  const unlocked = p.unlockedSkills && p.unlockedSkills.length > 0 ? p.unlockedSkills : ['dash'];
+  // 'dash' is the core origin node and is free. Every other unlocked skill costs 1 point.
+  const spent = Math.max(0, unlocked.filter(id => id !== 'dash').length);
+  const available = Math.max(0, total - spent);
+  return { total, spent, available };
+}
+
 export function isUnlocked(id: AbilityId, p?: ProgressData): boolean {
-  const s = ABILITIES[id];
-  if (!s) return false;
   p = p || getProgress();
   if (p.unlockAll) return true;
-  const currentLvl = getLevel(p.onlineExp);
-  return currentLvl >= (s.unlock.level ?? 1);
+  const list = p.unlockedSkills || ['dash', 'web', 'surge'];
+  return list.includes(id);
 }
 
 export function getUnlockNeed(id: AbilityId): { have: number; need: number; text: string } {
@@ -475,7 +498,34 @@ export function getUnlockNeed(id: AbilityId): { have: number; need: number; text
 }
 
 export function getUnlockedIds(p?: ProgressData): AbilityId[] {
-  return SKILLS_LIST.filter(s => isUnlocked(s.id, p)).map(s => s.id);
+  p = p || getProgress();
+  if (p.unlockAll) return ALL_ABILITY_IDS;
+  return (p.unlockedSkills || ['dash', 'web', 'surge']) as AbilityId[];
+}
+
+export function acquireSkill(id: AbilityId): { success: boolean; reason?: string } {
+  const p = getProgress();
+  const unlocked = p.unlockedSkills || ['dash'];
+  if (unlocked.includes(id)) {
+    return { success: false, reason: 'Already unlocked' };
+  }
+  if (!isNodeAvailableToUnlock(id, unlocked as AbilityId[])) {
+    return { success: false, reason: 'Path not connected' };
+  }
+  const pts = getAbilityPoints(p);
+  if (pts.available <= 0) {
+    return { success: false, reason: 'No ability points available' };
+  }
+  unlocked.push(id);
+  p.unlockedSkills = unlocked;
+  saveProgress(p);
+  return { success: true };
+}
+
+export function respecWeb(): void {
+  const p = getProgress();
+  p.unlockedSkills = ['dash'];
+  saveProgress(p);
 }
 
 export function recordMatch(won: boolean): void {
@@ -493,7 +543,7 @@ export interface OnlineMatchReward {
   oldLevel: number;
   newLevel: number;
   leveledUp: boolean;
-  unlockedSkills: AbilityDef[];
+  pointsGained: number;
   progress: ExpProgressInfo;
 }
 
@@ -514,9 +564,7 @@ export function recordOnlineMatch(won: boolean, myRoundsWon: number): OnlineMatc
 
   const newLevel = getLevel(p.onlineExp);
   const leveledUp = newLevel > oldLevel;
-  const unlockedSkills = SKILLS_LIST.filter(
-    s => s.unlock.level > oldLevel && s.unlock.level <= newLevel
-  );
+  const pointsGained = leveledUp ? (newLevel - oldLevel) : 0;
 
   return {
     expGained,
@@ -526,7 +574,7 @@ export function recordOnlineMatch(won: boolean, myRoundsWon: number): OnlineMatc
     oldLevel,
     newLevel,
     leveledUp,
-    unlockedSkills,
+    pointsGained,
     progress: getExpProgress(p.onlineExp)
   };
 }

@@ -172,10 +172,11 @@ class BattleRoom extends colyseus_1.Room {
             player.colorLight = options.colorLight;
         if (options.pattern)
             player.pattern = options.pattern;
-        if (options.acc)
-            player.acc = options.acc;
         if (options.level)
             player.level = Math.max(1, parseInt(options.level, 10) || 1);
+        if (Array.isArray(options.unlockedSkills) && options.unlockedSkills.length > 0) {
+            player.unlockedSkills = options.unlockedSkills;
+        }
         this.playerInputs.set(client.sessionId, {
             left: false,
             right: false,
@@ -207,9 +208,9 @@ class BattleRoom extends colyseus_1.Room {
         this.battleState.p2.wins = 0;
         this.battleState.p1.falls = 0;
         this.battleState.p2.falls = 0;
-        // Draw 3 skills for each player based on their level
-        this.battleState.draftChoicesP1 = (0, abilities_1.getRandomAbilities)(3, [], this.battleState.p1.level || 1);
-        this.battleState.draftChoicesP2 = (0, abilities_1.getRandomAbilities)(3, [], this.battleState.p2.level || 1);
+        // Draw 3 skills for each player based on their unlocked web skills (or level fallback)
+        this.battleState.draftChoicesP1 = (0, abilities_1.getRandomAbilities)(3, [], this.battleState.p1.unlockedSkills || this.battleState.p1.level || 1);
+        this.battleState.draftChoicesP2 = (0, abilities_1.getRandomAbilities)(3, [], this.battleState.p2.unlockedSkills || this.battleState.p2.level || 1);
         this.battleState.p1Drafted = false;
         this.battleState.p2Drafted = false;
         this.battleState.status = 'draft';

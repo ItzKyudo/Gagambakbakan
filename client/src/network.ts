@@ -22,6 +22,7 @@ export interface PlayerProfile {
   pattern?: string;
   acc?: string;
   level?: number;
+  unlockedSkills?: string[];
 }
 
 export class NetworkManager {

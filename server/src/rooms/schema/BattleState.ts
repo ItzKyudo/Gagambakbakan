@@ -9,6 +9,7 @@ export interface PlayerStateData {
   pattern: string;      // 'stripes' | 'dots' | 'chevron' | 'plain'
   acc: string;          // 'none' | 'band' | 'crown' | 'horns'
   level: number;        // Player online level
+  unlockedSkills?: string[]; // Player unlocked ability web skills
   
   // Position & movement
   x: number;

@@ -2,10 +2,17 @@ import { sound } from '../audio';
 import {
   COLORS, PATTERNS, ACCS, DEF_LOOK, getColor, getLooks, saveLooks, randomLook, spiderSVG,
   getSettings, saveSettings, setMode, getKeys, saveKeys, defaultKeys, keyLabel, ACTIONS, RESERVED_KEYS,
-  getProgress, saveProgress, isUnlocked, getUnlockNeed, getUnlockedIds, getExpProgress,
+  getProgress, saveProgress, getUnlockedIds, getExpProgress,
+  getAbilityPoints, acquireSkill, respecWeb,
   type PlayerKeys
 } from '../gb';
-import { SKILLS_LIST } from '../game/abilities';
+import {
+  SKILLS_LIST,
+  ABILITIES,
+  WEB_EDGES,
+  isNodeAvailableToUnlock,
+  type AbilityId
+} from '../game/abilities';
 
 export interface MenuStartOptions {
   mode: 'online' | 'cpu' | '2p';
@@ -27,6 +34,17 @@ export function renderMenuPage(container: HTMLElement, onStart: (opts: MenuStart
   let customizePlayer: 'p1' | 'p2' = 'p1';
   let listeningKey: { player: 'p1' | 'p2'; action: string } | null = null;
   let onlineModalOpen = false;
+  let selectedNodeId: AbilityId = 'dash';
+
+  function getPlayerRankTitle(level: number): string {
+    if (level <= 1) return 'Stick Novice';
+    if (level <= 2) return 'Twig Brawler';
+    if (level <= 4) return 'Silk Striker';
+    if (level <= 6) return 'Venom Weaver';
+    if (level <= 8) return 'Pond Duelist';
+    if (level <= 10) return 'Canopy Master';
+    return 'Twig Grandmaster';
+  }
 
   // Arm ambient music on user interaction
   sound.music.arm('ambient');
@@ -339,70 +357,278 @@ export function renderMenuPage(container: HTMLElement, onStart: (opts: MenuStart
   }
 
   /* ====================================================
-     3. ABILITIES VIEW (Matching abilities.html)
+     3. ABILITIES VIEW (Redesigned & Properly Aligned)
+     ==================================================== */
+  /* ====================================================
+     3. ABILITIES SPIDER WEB VIEW
      ==================================================== */
   function renderAbilitiesView(): string {
     const prog = getProgress();
-    const unlocked = getUnlockedIds(prog);
     const expInfo = getExpProgress(prog.onlineExp);
+    const pts = getAbilityPoints(prog);
+    const unlockedIds = getUnlockedIds(prog);
+    const rankTitle = getPlayerRankTitle(expInfo.level);
+
+    // Edges SVG
+    const edgesSVG = WEB_EDGES.map(([aId, bId]) => {
+      const a = ABILITIES[aId];
+      const b = ABILITIES[bId];
+      if (!a || !b) return '';
+      const aUnlocked = unlockedIds.includes(aId);
+      const bUnlocked = unlockedIds.includes(bId);
+
+      let edgeClass = 'silk-edge edge-locked';
+      if (aUnlocked && bUnlocked) {
+        edgeClass = 'silk-edge edge-active';
+      } else if (
+        (aUnlocked && isNodeAvailableToUnlock(bId, unlockedIds)) ||
+        (bUnlocked && isNodeAvailableToUnlock(aId, unlockedIds))
+      ) {
+        edgeClass = 'silk-edge edge-available';
+      }
+
+      return `<line class="${edgeClass}" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" />`;
+    }).join('');
+
+    // Nodes SVG
+    const nodesSVG = SKILLS_LIST.map(s => {
+      const isUnlockedNode = unlockedIds.includes(s.id);
+      const isAvail = isNodeAvailableToUnlock(s.id, unlockedIds);
+      const isSelected = selectedNodeId === s.id;
+      const isCenter = s.id === 'dash';
+
+      let fillCol = '#0d1817';
+      let strokeCol = 'rgba(52, 80, 75, 0.6)';
+      let iconCol = 'rgba(149, 170, 161, 0.35)';
+
+      if (isUnlockedNode) {
+        fillCol = '#112322';
+        strokeCol = s.sectorColor;
+        iconCol = s.sectorColor;
+      } else if (isAvail) {
+        fillCol = '#231d14';
+        strokeCol = '#f2a33a';
+        iconCol = '#ffd694';
+      }
+
+      return `
+        <g class="web-node ${isSelected ? 'selected' : ''}" data-id="${s.id}" transform="translate(${s.x}, ${s.y})" cursor="pointer" tabindex="0" role="button" aria-label="${s.name}">
+          <!-- Enlarged hit target -->
+          <circle cx="0" cy="0" r="32" fill="transparent" />
+
+          <!-- Selection Halo -->
+          ${isSelected ? `
+            <circle class="node-select-halo" cx="0" cy="0" r="32" fill="none" stroke="#f2a33a" stroke-width="2.2" stroke-dasharray="6 4" />
+          ` : ''}
+
+          <!-- Available Beacon Pulse -->
+          ${!isUnlockedNode && isAvail ? `
+            <circle class="node-avail-pulse" cx="0" cy="0" r="26" fill="none" stroke="#f2a33a" stroke-width="2" />
+          ` : ''}
+
+          <!-- Base Shape -->
+          ${isCenter ? `
+            <circle cx="0" cy="0" r="25" fill="#142624" stroke="#ffd694" stroke-width="3" />
+            <circle cx="0" cy="0" r="20" fill="none" stroke="rgba(255, 214, 148, 0.45)" stroke-width="1.5" stroke-dasharray="3 3" />
+          ` : `
+            <polygon class="node-gem-shape" points="0,-24 17,-17 24,0 17,17 0,24 -17,17 -24,0 -17,-17" fill="${fillCol}" stroke="${strokeCol}" stroke-width="${isUnlockedNode ? '2.8' : (isAvail ? '2.4' : '1.5')}" />
+          `}
+
+          <!-- Icon Glyph -->
+          <use href="#${s.icon}" x="-13" y="-13" width="26" height="26" fill="${iconCol}" />
+
+          <!-- Corner Badges -->
+          ${!isUnlockedNode && !isAvail ? `
+            <g transform="translate(10, 10)">
+              <circle cx="0" cy="0" r="7.5" fill="#160e0d" stroke="#e8593f" stroke-width="1.2" />
+              <use href="#ic-lock" x="-4.5" y="-4.5" width="9" height="9" fill="#ff9d8a" />
+            </g>
+          ` : ''}
+          ${!isUnlockedNode && isAvail ? `
+            <g transform="translate(11, -11)">
+              <circle cx="0" cy="0" r="7.5" fill="#2a1e0b" stroke="#f2a33a" stroke-width="1.2" />
+              <text x="0" y="3.5" text-anchor="middle" font-size="9.5" font-weight="900" fill="#ffd694">1</text>
+            </g>
+          ` : ''}
+          ${isUnlockedNode && !isCenter ? `
+            <g transform="translate(11, -11)">
+              <circle cx="0" cy="0" r="7" fill="#0d2420" stroke="#4cc7b2" stroke-width="1.2" />
+              <text x="0" y="3" text-anchor="middle" font-size="8.5" font-weight="900" fill="#4cc7b2">✓</text>
+            </g>
+          ` : ''}
+
+          <!-- Name Tag -->
+          <text class="node-label ${isUnlockedNode ? 'unlocked' : (isAvail ? 'available' : 'locked')}" x="0" y="38" text-anchor="middle" font-family="'Cinzel', serif" font-weight="700" font-size="11" letter-spacing="0.8">${s.name.toUpperCase()}</text>
+        </g>
+      `;
+    }).join('');
+
+    // Detail Panel for Selected Node
+    const sel = ABILITIES[selectedNodeId] || ABILITIES.dash;
+    const selUnlocked = unlockedIds.includes(sel.id);
+    const selAvailable = isNodeAvailableToUnlock(sel.id, unlockedIds);
+
+    let actionHtml = '';
+    if (selUnlocked) {
+      actionHtml = `
+        <div class="ac-acquired-banner">
+          <svg class="ico mini" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" fill="none"/></svg>
+          <span>SKILL ACQUIRED &amp; EQUIPPED</span>
+        </div>
+      `;
+    } else if (selAvailable) {
+      if (pts.available > 0) {
+        actionHtml = `
+          <button type="button" class="btn-acquire-action" id="btnAcquireSkill" data-id="${sel.id}">
+            <span>⚡ ACQUIRE FOR 1 POINT</span>
+          </button>
+        `;
+      } else {
+        actionHtml = `
+          <div class="ac-locked-banner warning">
+            <span>PATH REACHED • 0 POINTS AVAILABLE</span>
+            <small>Level up in Online Matches to earn +1 Ability Point.</small>
+          </div>
+        `;
+      }
+    } else {
+      actionHtml = `
+        <div class="ac-locked-banner">
+          <svg class="ico mini" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 11V8a4 4 0 018 0v3" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+          <span>LOCKED — PATH NOT REACHED</span>
+          <small>Unlock adjacent connecting skills in the spider web first.</small>
+        </div>
+      `;
+    }
 
     return `
-      <div class="page" style="max-width:760px; margin-inline:auto;">
-        <header class="page-top">
-          <h1>Abilities</h1>
-          <button type="button" class="btn ghost" id="btnBackToMain">Menu</button>
+      <div class="spider-web-view">
+        <!-- TOP HEADER: NAV & POINTS HUD -->
+        <header class="swv-header">
+          <button type="button" class="swv-back-btn" id="btnBackToMain">
+            <svg class="ico" viewBox="0 0 24 24"><path d="M10 5l-7 7 7 7M3 12h18"/></svg>
+            <span>Menu</span>
+          </button>
+
+          <div class="swv-title-block">
+            <h1 class="swv-title"><span class="a">SPIDER WEB</span> <span class="j">OF ABILITIES</span></h1>
+            <div class="swv-sectors-pill">
+              <span class="sec-pill aerial">▲ Aerial Silk</span>
+              <span class="sec-pill control">◀ Venom Control</span>
+              <span class="sec-pill assault">▶ Mandible Assault</span>
+              <span class="sec-pill vitality">▼ Carapace Bulwark</span>
+            </div>
+          </div>
+
+          <div class="swv-right-hud">
+            <div class="swv-points-badge ${pts.available > 0 ? 'has-points' : ''}" title="${pts.available} Ability Points ready to allocate">
+              <span class="sp-icon">⚡</span>
+              <div class="sp-info">
+                <span class="sp-val">${pts.available}</span>
+                <span class="sp-lbl">ABILITY ${pts.available === 1 ? 'POINT' : 'POINTS'}</span>
+              </div>
+            </div>
+            <button type="button" class="btn-respec" id="btnRespecWeb" title="Refund all spent ability points and rebuild your web">
+              ↻ Respec Web
+            </button>
+          </div>
         </header>
 
-        <!-- LEVEL & ONLINE PROGRESS BANNER -->
-        <div class="abilities-exp-banner">
-          <div class="aeb-badge">
-            <span class="aeb-badge-lbl">PLAYER LEVEL</span>
-            <span class="aeb-badge-num">${expInfo.level}</span>
-          </div>
-          <div class="aeb-details">
-            <div class="aeb-row">
-              <span class="aeb-title">${unlocked.length} of ${SKILLS_LIST.length} Abilities Unlocked</span>
-              <span class="aeb-exp">${expInfo.expIntoLevel} / ${expInfo.expForLevel} EXP (Level ${expInfo.level + 1})</span>
-            </div>
-            <div class="aeb-track">
-              <div class="aeb-fill" style="width:${expInfo.progressPct}%;"></div>
-            </div>
-            <p class="aeb-note">Abilities are unlocked by leveling up through Online matches. Each match deals 3 random cards from your unlocked arsenal.</p>
-          </div>
-        </div>
+        <!-- STAGE: SVG CANVAS & FLOATING DETAIL CARD -->
+        <div class="swv-stage">
+          <svg class="swv-svg-canvas" viewBox="0 0 1000 760" preserveAspectRatio="xMidYMid meet">
+            <defs>
+              <filter id="glow-teal" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="3" result="blur" />
+                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+              </filter>
+              <radialGradient id="hub-glow" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#ffd694" stop-opacity="0.25"/>
+                <stop offset="100%" stop-color="#ffd694" stop-opacity="0"/>
+              </radialGradient>
+            </defs>
 
-        <div class="cards" id="grid">
-          ${SKILLS_LIST.map(s => {
-            const open = isUnlocked(s.id, prog);
-            const nd = getUnlockNeed(s.id);
-            const pct = Math.min(100, Math.round(100 * expInfo.level / s.unlock.level));
+            <!-- Atmospheric Spider Web Background Threads -->
+            <g class="web-backdrop-threads" stroke="rgba(76, 199, 178, 0.08)" stroke-width="1" fill="none">
+              <circle cx="500" cy="380" r="135" stroke-dasharray="3 4"/>
+              <circle cx="500" cy="380" r="245" stroke-dasharray="4 5"/>
+              <circle cx="500" cy="380" r="340" stroke-dasharray="4 6"/>
+              <circle cx="500" cy="380" r="420" stroke-dasharray="5 7"/>
 
-            return `
-              <article class="skill ${open ? '' : 'locked'}">
-                <span class="pgem ${open ? '' : 'locked'}">
-                  <svg class="shape" viewBox="0 0 100 100" aria-hidden="true">
-                    <polygon points="50,3 91,26.5 91,73.5 50,97 9,73.5 9,26.5"/>
-                  </svg>
-                  <svg class="glyph" aria-hidden="true"><use href="#${open ? s.icon : 'ic-lock'}"/></svg>
-                </span>
-                <div>
-                  <div style="display:flex; justify-content:space-between; align-items:baseline; gap:8px;">
-                    <h3>${s.name}</h3>
-                    <span class="lvl-tag ${open ? 'unlocked' : 'locked'}">Lvl ${s.unlock.level}</span>
-                  </div>
-                  <div class="meta">${open ? `${s.cd}s cooldown · ${s.use === 'hang' ? 'while dangling' : 'while clinging'}` : `Locked · Requires Level ${s.unlock.level}`}</div>
+              <line x1="500" y1="380" x2="160" y2="40" stroke="rgba(76, 199, 178, 0.05)"/>
+              <line x1="500" y1="380" x2="840" y2="40" stroke="rgba(76, 199, 178, 0.05)"/>
+              <line x1="500" y1="380" x2="160" y2="720" stroke="rgba(76, 199, 178, 0.05)"/>
+              <line x1="500" y1="380" x2="840" y2="720" stroke="rgba(76, 199, 178, 0.05)"/>
+            </g>
+
+            <!-- Center Glow behind Dash -->
+            <circle cx="500" cy="380" r="105" fill="url(#hub-glow)" pointer-events="none"/>
+
+            <!-- Sector Cardinal Labels -->
+            <g class="web-sector-legends" pointer-events="none" font-family="'Cinzel', serif" font-weight="800" font-size="11.5" letter-spacing="2.5" opacity="0.75">
+              <text x="500" y="24" text-anchor="middle" fill="#5aa9f0">▲ AERIAL SILK</text>
+              <text x="500" y="750" text-anchor="middle" fill="#9ccc3c">▼ CARAPACE BULWARK</text>
+              <text x="24" y="384" text-anchor="middle" fill="#4cc7b2" transform="rotate(-90 24 384)">◀ VENOM CONTROL</text>
+              <text x="976" y="384" text-anchor="middle" fill="#f2a33a" transform="rotate(90 976 384)">▶ MANDIBLE ASSAULT</text>
+            </g>
+
+            <!-- Silk Edges Layer -->
+            <g class="web-edges-layer">
+              ${edgesSVG}
+            </g>
+
+            <!-- Web Nodes Layer -->
+            <g class="web-nodes-layer">
+              ${nodesSVG}
+            </g>
+          </svg>
+
+          <!-- Floating Detail Card (Assassin's Creed Origins Style) -->
+          <aside class="swv-detail-panel" aria-label="Selected Ability Details">
+            <span class="ac-sector-tag" style="color:${sel.sectorColor}; border-color:${sel.sectorColor}66; background:${sel.sectorColor}1a;">${sel.sectorName}</span>
+
+            <div class="ac-card-head">
+              <div class="ac-gem-preview" style="color:${selUnlocked ? sel.sectorColor : (selAvailable ? '#f2a33a' : 'rgba(149, 170, 161, 0.5)')}">
+                <svg viewBox="0 0 100 100" style="width:100%;height:100%;">
+                  <polygon points="50,3 91,26.5 91,73.5 50,97 9,73.5 9,26.5" fill="rgba(14,26,25,0.9)" stroke="currentColor" stroke-width="4"/>
+                  <use href="#${sel.icon}" x="25" y="25" width="50" height="50" fill="currentColor"/>
+                </svg>
+              </div>
+              <div>
+                <h2 class="ac-name">${sel.name}</h2>
+                <div class="ac-chips">
+                  <span class="ac-chip cd">⏱ ${sel.cd}s Cooldown</span>
+                  <span class="ac-chip stance ${sel.use}">${sel.use === 'hang' ? '⚓ Dangling only' : '🌿 Clinging'}</span>
                 </div>
-                <p class="desc">${s.desc}</p>
-                ${!open ? `
-                  <div class="prog">
-                    <span>${nd.text} (Level ${expInfo.level} / ${s.unlock.level})</span>
-                    <div class="track"><i style="width:${pct}%;"></i></div>
-                  </div>
-                ` : ''}
-              </article>
-            `;
-          }).join('')}
+              </div>
+            </div>
+
+            <p class="ac-desc">${sel.desc}</p>
+
+            <div class="ac-tip-box">
+              <span class="ac-tip-label">💡 COMBAT TACTIC</span>
+              ${sel.tip}
+            </div>
+
+            <div class="ac-action-area">
+              ${actionHtml}
+            </div>
+          </aside>
         </div>
+
+        <!-- BOTTOM BAR: LEVEL & EXP PROGRESS HUD -->
+        <footer class="swv-bottom-bar">
+          <div class="sbb-exp-group">
+            <span class="sbb-lvl">LVL ${expInfo.level} • ${rankTitle}</span>
+            <div class="sbb-track" title="${expInfo.expIntoLevel} / ${expInfo.expForLevel} EXP towards Level ${expInfo.level + 1}">
+              <div class="sbb-fill" style="width:${expInfo.progressPct}%;"></div>
+            </div>
+            <span class="sbb-exp-val">${expInfo.expIntoLevel} / ${expInfo.expForLevel} EXP</span>
+          </div>
+          <span class="sbb-hint">
+            🕸️ Level up in <strong>Online Matches</strong> (+60 Play · +100 Win · +20/Round) to earn Ability Points
+          </span>
+        </footer>
       </div>
     `;
   }
@@ -791,8 +1017,53 @@ export function renderMenuPage(container: HTMLElement, onStart: (opts: MenuStart
 
       container.querySelector('#btnResetProg')?.addEventListener('click', () => {
         if (confirm('Reset your match stats, online EXP, and unlock progress?')) {
-          saveProgress({ played: 0, wins: 0, unlockAll: false, onlineExp: 0, onlinePlayed: 0, onlineWins: 0 });
+          saveProgress({ played: 0, wins: 0, unlockAll: false, onlineExp: 0, onlinePlayed: 0, onlineWins: 0, unlockedSkills: ['dash', 'web', 'surge'] });
           sound.playTone(320, 0.15, 'sawtooth', 0.05, -120);
+          render();
+        }
+      });
+    }
+
+    if (activeTab === 'abilities') {
+      // Node Selection on Spider Web
+      container.querySelectorAll<SVGElement>('.web-node[data-id]').forEach(node => {
+        const onSelect = () => {
+          const id = node.dataset.id as AbilityId;
+          if (id && ABILITIES[id]) {
+            selectedNodeId = id;
+            sound.playTone(580, 0.06, 'triangle', 0.04, 150);
+            render();
+          }
+        };
+
+        node.addEventListener('click', onSelect);
+        node.addEventListener('keydown', (e: KeyboardEvent) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onSelect();
+          }
+        });
+      });
+
+      // Acquire Skill Button
+      container.querySelector('#btnAcquireSkill')?.addEventListener('click', () => {
+        const res = acquireSkill(selectedNodeId);
+        if (res.success) {
+          // Play triumphant acquisition audio chime
+          sound.playTone(520, 0.1, 'triangle', 0.05, 200);
+          setTimeout(() => sound.playTone(780, 0.18, 'triangle', 0.05, 100), 100);
+          render();
+        } else {
+          sound.playTone(280, 0.15, 'sawtooth', 0.05, -80);
+        }
+      });
+
+      // Respec Web Button
+      container.querySelector('#btnRespecWeb')?.addEventListener('click', () => {
+        if (confirm('Refund all spent ability points and reset web back to starter Dash?')) {
+          respecWeb();
+          selectedNodeId = 'dash';
+          sound.playTone(400, 0.14, 'triangle', 0.04, -120);
           render();
         }
       });

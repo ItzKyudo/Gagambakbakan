@@ -7,7 +7,7 @@ import { GagambakbakanScene } from './game/GagambakbakanScene';
 import { LocalGameEngine, type InputState } from './game/localGame';
 import { network } from './network';
 import { sound } from './audio';
-import { getKeys, getLooks, getColor, getProgress, getLevel, recordOnlineMatch, type PlayerKeys } from './gb';
+import { getKeys, getLooks, getColor, getProgress, getLevel, getUnlockedIds, recordOnlineMatch, type PlayerKeys } from './gb';
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
 
@@ -196,7 +196,8 @@ async function startOnlineGame(opts: MenuStartOptions) {
       colorLight: opts.playerColor?.light,
       pattern: opts.playerPattern || 'stripes',
       acc: opts.playerAcc || 'none',
-      level: myLvl
+      level: myLvl,
+      unlockedSkills: getUnlockedIds(prog)
     };
 
     if (opts.onlineAction === 'create') {
@@ -323,11 +324,9 @@ function getNetworkCallbacks() {
             ${reward.leveledUp ? `
               <div class="level-up-alert">
                 <div class="lua-title">🎉 LEVEL UP! Reached Level ${reward.newLevel}!</div>
-                ${reward.unlockedSkills.length > 0 ? `
-                  <div class="lua-skills">
-                    ✨ New Abilities Unlocked: <strong>${reward.unlockedSkills.map(s => s.name).join(', ')}</strong>
-                  </div>
-                ` : ''}
+                <div class="lua-skills">
+                  🕸️ +${reward.pointsGained} Ability Point earned! Visit the Abilities Web to unlock new skills.
+                </div>
               </div>
             ` : ''}
           </div>

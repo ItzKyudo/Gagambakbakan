@@ -13,6 +13,7 @@ import {
   isNodeAvailableToUnlock,
   type AbilityId
 } from '../game/abilities';
+import { network } from '../network';
 
 export interface MenuStartOptions {
   mode: 'online' | 'cpu' | '2p';
@@ -811,11 +812,18 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
      ==================================================== */
   function renderOnlineModal(): string {
     if (!onlineModalOpen) return '';
+    const serverHost = network.serverUrl.replace(/^https?:\/\//, '').replace(/^wss?:\/\//, '').replace(/\/.*$/, '');
     return `
       <div class="pick" style="z-index:90; padding:20px;" role="dialog" aria-modal="true">
         <div class="pick-in" style="max-width:440px; margin:auto; background:var(--surface); border:2px solid var(--line); border-radius:12px; padding:24px; gap:16px;">
-          <h2 style="font-family:var(--display); font-size:28px;">Multiplayer Online</h2>
-          <p class="note">Enter a room code to join friends, or click Quick Match to auto-match on Colyseus server.</p>
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h2 style="font-family:var(--display); font-size:28px; margin:0;">Multiplayer Online</h2>
+            <div style="display:flex; align-items:center; gap:6px; font-size:11px; padding:4px 8px; background:rgba(76,199,178,0.12); border:1px solid rgba(76,199,178,0.3); border-radius:12px; color:#4cc7b2;">
+              <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#4cc7b2; box-shadow:0 0 6px #4cc7b2;"></span>
+              <span>Online</span>
+            </div>
+          </div>
+          <p class="note" style="margin:0;">Duel players worldwide! Join an existing match via room code or click Quick Match to auto-pair.</p>
 
           <div style="display:grid; gap:10px;">
             <button type="button" class="btn primary" id="btnOnlineQuick">Quick Match</button>
@@ -823,11 +831,15 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
           </div>
 
           <div style="display:flex; gap:8px; align-items:center;">
-            <input type="text" id="txtJoinCode" placeholder="Room Code (4 chars)" maxlength="8" style="flex:1; padding:10px; font-family:var(--label); font-size:18px; text-transform:uppercase; background:var(--surface-2); border:1px solid var(--line); border-radius:4px; color:var(--fg);">
+            <input type="text" id="txtJoinCode" placeholder="Room Code (e.g. FIGHT)" maxlength="8" style="flex:1; padding:10px; font-family:var(--label); font-size:18px; text-transform:uppercase; background:var(--surface-2); border:1px solid var(--line); border-radius:4px; color:var(--fg);">
             <button type="button" class="btn" id="btnOnlineJoin">Join</button>
           </div>
 
-          <button type="button" class="btn ghost" id="btnOnlineClose" style="margin-top:8px;">Close</button>
+          <div style="font-size:11px; color:var(--muted); text-align:center; opacity:0.85;">
+            Server: <span style="color:var(--accent); font-weight:600;">${serverHost}</span>
+          </div>
+
+          <button type="button" class="btn ghost" id="btnOnlineClose" style="margin-top:4px;">Close</button>
         </div>
       </div>
     `;

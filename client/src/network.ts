@@ -25,20 +25,68 @@ export interface PlayerProfile {
   unlockedSkills?: string[];
 }
 
+export const PRODUCTION_SERVER_URL = 'https://gagambakbakan.onrender.com';
+export const LOCAL_SERVER_URL = 'http://localhost:2567';
+
 export class NetworkManager {
   private client: Client | null = null;
   public room: Room | null = null;
   public myPlayerId: number = -1; // 0 for Amber, 1 for Jade
-  public serverUrl: string = 'ws://localhost:2567';
+  public serverUrl: string = PRODUCTION_SERVER_URL;
 
   constructor() {
-    // If running in browser and on a different host, derive ws URL
-    if (typeof window !== 'undefined') {
-      const isHttps = window.location.protocol === 'https:';
-      const wsProto = isHttps ? 'wss:' : 'ws:';
-      const host = window.location.hostname || 'localhost';
-      // Default colyseus server port is 2567
-      this.serverUrl = `${wsProto}//${host}:2567`;
+    this.serverUrl = this.resolveServerUrl();
+  }
+
+  public resolveServerUrl(): string {
+    // 1. URL parameter override: ?server=local or ?server=render or custom URL
+    if (typeof window !== 'undefined' && window.location) {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const serverParam = params.get('server');
+        if (serverParam) {
+          if (serverParam === 'local') return LOCAL_SERVER_URL;
+          if (serverParam === 'render' || serverParam === 'prod') return PRODUCTION_SERVER_URL;
+          return serverParam;
+        }
+
+        // 2. localStorage override
+        const stored = localStorage.getItem('gb_server_url');
+        if (stored) return stored;
+      } catch (e) {
+        // ignore storage errors
+      }
+    }
+
+    // 3. Vite environment variable
+    if (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_SERVER_URL) {
+      return (import.meta as any).env.VITE_SERVER_URL;
+    }
+
+    // 4. Default to Render production server
+    return PRODUCTION_SERVER_URL;
+  }
+
+  public setServerUrl(url: string) {
+    this.serverUrl = url;
+    this.client = null;
+    try {
+      localStorage.setItem('gb_server_url', url);
+    } catch {}
+  }
+
+  public async pingServer(): Promise<{ ok: boolean; status?: string; latency?: number; error?: string }> {
+    const start = performance.now();
+    try {
+      const httpBase = this.serverUrl.replace(/^ws(s)?:/, 'http$1:');
+      const res = await fetch(`${httpBase}/health`, { signal: AbortSignal.timeout(6000) });
+      if (res.ok) {
+        const data = await res.json();
+        return { ok: true, status: data.status, latency: Math.round(performance.now() - start) };
+      }
+      return { ok: false, error: `HTTP ${res.status}` };
+    } catch (err: any) {
+      return { ok: false, error: err.message || 'Timeout' };
     }
   }
 

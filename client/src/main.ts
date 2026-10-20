@@ -181,7 +181,8 @@ async function startOnlineGame(opts: MenuStartOptions) {
   currentScene.isOnline = true;
   sound.music.play('ambient');
 
-  gamePage.showModal('Connecting...', 'Searching for an opponent on Colyseus server...', [
+  const serverHost = network.serverUrl.replace(/^https?:\/\//, '').replace(/^wss?:\/\//, '').replace(/\/.*$/, '');
+  gamePage.showModal('Connecting...', `Connecting to Gagambakbakan Battle Server (${serverHost})...\n\nNote: If the server was idle, Render free tier takes ~30-50s to wake up.`, [
     { label: 'Cancel', onClick: () => showMainMenu() }
   ]);
 
@@ -213,8 +214,9 @@ async function startOnlineGame(opts: MenuStartOptions) {
     }
 
     if (room && (!currentScene.gameState || currentScene.gameState.status === 'waiting')) {
-      gamePage.setRoomCode(opts.roomCode || room.roomId.slice(0, 5).toUpperCase());
-      gamePage.showModal('Waiting for Opponent', 'Share your room code or wait for player 2...', [
+      const displayCode = opts.roomCode || (room.roomId || (room as any).id || '').slice(0, 5).toUpperCase();
+      gamePage.setRoomCode(displayCode);
+      gamePage.showModal('Waiting for Opponent', `Room Code: ${displayCode}\n\nShare this code with your friend, or wait for another player to join...`, [
         { label: 'Leave', onClick: () => showMainMenu() }
       ]);
     }
@@ -231,8 +233,12 @@ async function startOnlineGame(opts: MenuStartOptions) {
 
   } catch (err: any) {
     console.error('Online match error:', err);
-    gamePage.showModal('Connection Failed', err.message || 'Could not connect to Colyseus server. Is it running on port 2567?', [
-      { label: 'Play vs CPU', primary: true, onClick: () => startGame({ mode: 'cpu', diff: 'normal' }) },
+    const errText = err?.message
+      ? `${err.message}\n\n(Tip: Render free instances spin down when inactive. If the server is currently waking up, please wait a moment and click Try Again!)`
+      : 'Could not connect to the Gagambakbakan battle server. The server may still be waking up.';
+    gamePage.showModal('Connection Issue', errText, [
+      { label: 'Try Again', primary: true, onClick: () => startOnlineGame(opts) },
+      { label: 'Play vs CPU', onClick: () => startGame({ mode: 'cpu', diff: 'normal' }) },
       { label: 'Menu', onClick: () => showMainMenu() }
     ]);
   }

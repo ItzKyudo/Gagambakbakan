@@ -60,7 +60,7 @@ export class NetworkManager {
 
     // 3. Vite environment variable
     if (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_SERVER_URL) {
-      return (import.meta as any).env.VITE_SERVER_URL;
+      return (import.meta as any).env.SERVER_URL;
     }
 
     // 4. Default to Render production server

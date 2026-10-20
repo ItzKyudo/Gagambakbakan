@@ -1,4 +1,4 @@
-export const STICK = { l: 130, r: 830, y: 240, th: 22 };
+export const STICK = { l: 100, r: 1100, y: 240, th: 22 };
 export const POND_Y = 478;
 export const BODY_H = 30;
 export const BODY_Y = STICK.y + STICK.th + BODY_H; // 292
@@ -20,7 +20,7 @@ export const DASH_CD = 3;
 export const WEB_CD = 5;
 export const SURGE_CD = 6;
 
-export const CANVAS_WIDTH = 960;
+export const CANVAS_WIDTH = 1200;
 export const CANVAS_HEIGHT = 560;
 
 export const COLORS = {

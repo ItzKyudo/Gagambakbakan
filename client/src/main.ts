@@ -257,7 +257,7 @@ function getNetworkCallbacks() {
           const myChoices = myId === 0 ? state.draftChoicesP1 : state.draftChoicesP2;
           const myName = myId === 0 ? state.p1.name : state.p2.name;
 
-          if (!myDrafted && myChoices && myChoices.length >= 3 && !gamePage.isDraftOpen) {
+          if (!myDrafted && myChoices && myChoices.length >= 1 && !gamePage.isDraftOpen) {
             gamePage.showDraftModal(myChoices, state.round || 1, myName || 'Player', (skills) => {
               network.sendSelectSkills(skills);
             });

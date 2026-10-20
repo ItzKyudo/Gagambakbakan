@@ -29,12 +29,25 @@ export interface MenuStartOptions {
   playerAcc?: string;
 }
 
-export function renderMenuPage(container: HTMLElement, onStart: (opts: MenuStartOptions) => void) {
+export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuStartOptions) => void) {
   let activeTab: 'main' | 'customize' | 'abilities' | 'settings' = 'main';
   let customizePlayer: 'p1' | 'p2' = 'p1';
   let listeningKey: { player: 'p1' | 'p2'; action: string } | null = null;
   let onlineModalOpen = false;
   let selectedNodeId: AbilityId = 'dash';
+  let panX = -40;
+  let panY = 0;
+  let zoomScale = 1.0;
+  let isPanelCollapsed = false;
+  let abilitiesKeyHandler: ((e: KeyboardEvent) => void) | null = null;
+
+  const onStart = (opts: MenuStartOptions) => {
+    if (abilitiesKeyHandler) {
+      window.removeEventListener('keydown', abilitiesKeyHandler);
+      abilitiesKeyHandler = null;
+    }
+    rawOnStart(opts);
+  };
 
   function getPlayerRankTitle(level: number): string {
     if (level <= 1) return 'Stick Novice';
@@ -184,6 +197,9 @@ export function renderMenuPage(container: HTMLElement, onStart: (opts: MenuStart
     return `
       <!-- TOP CENTER TITLE WITH NO CONTAINER -->
       <header class="menu-title-header">
+        <button type="button" class="menu-corner-sound-btn sound-toggle-btn ${sound.enabled ? 'sound-on' : 'sound-off'}" id="btnCornerSoundToggle" title="Toggle Sound (Mute/Unmute)">
+          ${sound.enabled ? '🔊 Sound: ON' : '🔇 Sound: OFF'}
+        </button>
         <svg class="title-twig" viewBox="0 0 300 78" aria-hidden="true">
           <rect x="6" y="8" width="288" height="14" rx="7" fill="#7b5b3e"/>
           <rect x="6" y="8" width="288" height="4" rx="2" fill="#a58059"/>
@@ -258,6 +274,13 @@ export function renderMenuPage(container: HTMLElement, onStart: (opts: MenuStart
               <span class="ml">Back</span>
             </button>
           </div>
+
+          <div class="menu-sound-pod">
+            <button type="button" class="btn ghost sound-toggle-btn ${sound.enabled ? 'sound-on' : 'sound-off'}" id="btnMenuSoundToggle" aria-label="Toggle all audio">
+              <span>${sound.enabled ? '🔊 Sound: ON' : '🔇 Sound: OFF'}</span>
+            </button>
+            <span class="engine-badge">PHASER 4 · COLYSEUS 0.18</span>
+          </div>
         </div>
 
         <!-- FAR RIGHT: CHARACTER DISPLAY -->
@@ -301,7 +324,10 @@ export function renderMenuPage(container: HTMLElement, onStart: (opts: MenuStart
       <div class="page" style="max-width:560px; margin-inline:auto;">
         <header class="page-top">
           <h1>Customize</h1>
-          <button type="button" class="btn ghost" id="btnBackToMain">Menu</button>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <button type="button" class="btn ghost sound-toggle-btn ${sound.enabled ? 'sound-on' : 'sound-off'}" id="btnCustomSoundToggle" title="Toggle Sound (Music & SFX)">${sound.enabled ? '🔊 Sound On' : '🔇 Sound Off'}</button>
+            <button type="button" class="btn ghost" id="btnBackToMain">Menu</button>
+          </div>
         </header>
         <p class="note">Design your spider, then go back to the menu to see it. Changes save automatically.</p>
 
@@ -404,7 +430,10 @@ export function renderMenuPage(container: HTMLElement, onStart: (opts: MenuStart
     }
 
     return `
-      <span class="ac-sector-tag" style="color:${sel.sectorColor}; border-color:${sel.sectorColor}66; background:${sel.sectorColor}1a;">${sel.sectorName}</span>
+      <div class="ac-card-top-row">
+        <span class="ac-sector-tag" style="color:${sel.sectorColor}; border-color:${sel.sectorColor}66; background:${sel.sectorColor}1a;">${sel.sectorName}</span>
+        <button type="button" class="ac-close-btn" id="btnCloseDetailCard" title="Minimize details panel">✕</button>
+      </div>
 
       <div class="ac-card-head">
         <div class="ac-gem-preview">
@@ -486,9 +515,7 @@ export function renderMenuPage(container: HTMLElement, onStart: (opts: MenuStart
           <!-- Inner visual group with pointer-events: none that scales smoothly in place -->
           <g class="node-visual">
             <!-- Selection Halo -->
-            ${isSelected ? `
-              <circle class="node-select-halo" cx="0" cy="0" r="32" fill="none" stroke="#f2a33a" stroke-width="2.2" stroke-dasharray="6 4" />
-            ` : ''}
+            <circle class="node-select-halo" cx="0" cy="0" r="32" fill="none" stroke="#f2a33a" stroke-width="2.2" stroke-dasharray="6 4" />
 
             <!-- Available Beacon Pulse -->
             ${!isUnlockedNode && isAvail ? `
@@ -497,14 +524,13 @@ export function renderMenuPage(container: HTMLElement, onStart: (opts: MenuStart
 
             <!-- Base Shape -->
             ${isCenter ? `
-              <circle cx="0" cy="0" r="25" fill="#142624" stroke="#ffd694" stroke-width="3" />
-              <circle cx="0" cy="0" r="20" fill="none" stroke="rgba(255, 214, 148, 0.45)" stroke-width="1.5" stroke-dasharray="3 3" />
+              <polygon class="node-gem-shape" points="0,-27 23.4,-13.5 23.4,13.5 0,27 -23.4,13.5 -23.4,-13.5" fill="#142624" stroke="#ffd694" stroke-width="3" />
             ` : `
-              <polygon class="node-gem-shape" points="0,-24 17,-17 24,0 17,17 0,24 -17,17 -24,0 -17,-17" fill="${fillCol}" stroke="${strokeCol}" stroke-width="${isUnlockedNode ? '2.8' : (isAvail ? '2.4' : '1.5')}" />
+              <polygon class="node-gem-shape" points="0,-26 22.5,-13 22.5,13 0,26 -22.5,13 -22.5,-13" fill="${fillCol}" stroke="${strokeCol}" stroke-width="${isUnlockedNode ? '2.8' : (isAvail ? '2.4' : '1.5')}" />
             `}
 
             <!-- Extracted Ability Card Art -->
-            <image href="/abilities/${s.id}.png" x="-16" y="-14" width="32" height="28" preserveAspectRatio="xMidYMid meet" style="opacity:${isUnlockedNode ? 1 : (isAvail ? 0.92 : 0.38)}; filter:${isUnlockedNode ? 'none' : (isAvail ? 'contrast(1.08) brightness(0.95)' : 'grayscale(1) brightness(0.4)')}; border-radius: 4px;" />
+            <image href="/abilities/${s.id}.png" x="-22" y="-24" width="44" height="48" preserveAspectRatio="xMidYMid meet" style="opacity:${isUnlockedNode ? 1 : (isAvail ? 0.95 : 0.4)}; filter:${isUnlockedNode ? `drop-shadow(0 0 6px ${strokeCol})` : (isAvail ? 'contrast(1.08) brightness(0.95)' : 'grayscale(1) brightness(0.4)')};" />
 
             <!-- Corner Badges -->
             ${!isUnlockedNode && !isAvail ? `
@@ -563,12 +589,34 @@ export function renderMenuPage(container: HTMLElement, onStart: (opts: MenuStart
             <button type="button" class="btn-respec" id="btnRespecWeb" title="Refund all spent ability points and rebuild your web">
               ↻ Respec Web
             </button>
+            <button type="button" class="btn ghost sound-toggle-btn ${sound.enabled ? 'sound-on' : 'sound-off'}" id="btnWebSoundToggle" title="Toggle Sound (Music & SFX)">
+              ${sound.enabled ? '🔊 Sound On' : '🔇 Sound Off'}
+            </button>
           </div>
         </header>
 
         <!-- STAGE: SVG CANVAS & FLOATING DETAIL CARD -->
-        <div class="swv-stage">
-          <svg class="swv-svg-canvas" viewBox="0 0 1000 760" preserveAspectRatio="xMidYMid meet">
+        <div class="swv-stage" id="swvStage">
+          <!-- Canvas Navigation Controls (Bottom Left) -->
+          <div class="swv-nav-hud">
+            <div class="swv-zoom-group">
+              <button type="button" class="swv-hud-btn" id="btnZoomIn" title="Zoom In (+)">+</button>
+              <button type="button" class="swv-hud-btn" id="btnZoomOut" title="Zoom Out (−)">−</button>
+              <button type="button" class="swv-hud-btn" id="btnZoomFit" title="Fit Entire Web (0 / F)">⛶ Fit</button>
+              <button type="button" class="swv-hud-btn" id="btnZoomCenter" title="Center Selected Node (C)">◎ Focus</button>
+            </div>
+            <div class="swv-hud-help">
+              <span class="hud-help-icon">🕸</span>
+              <span><strong>Drag</strong> to Pan · <strong>Scroll</strong> to Zoom · <strong>Arrows/WASD</strong> to Move · <strong>Space</strong> to Unlock</span>
+            </div>
+          </div>
+
+          <!-- Unhide Tab when Panel is Collapsed -->
+          <button type="button" class="swv-open-card-tab ${isPanelCollapsed ? 'visible' : ''}" id="btnOpenCardTab" title="Show Ability Details">
+            <span>◀ Skill Details</span>
+          </button>
+
+          <svg class="swv-svg-canvas" id="swvSvgCanvas" viewBox="0 0 1100 800" preserveAspectRatio="xMidYMid meet">
             <defs>
               <filter id="glow-teal" x="-20%" y="-20%" width="140%" height="140%">
                 <feGaussianBlur stdDeviation="3" result="blur" />
@@ -580,43 +628,38 @@ export function renderMenuPage(container: HTMLElement, onStart: (opts: MenuStart
               </radialGradient>
             </defs>
 
-            <!-- Atmospheric Spider Web Background Threads -->
-            <g class="web-backdrop-threads" stroke="rgba(76, 199, 178, 0.08)" stroke-width="1" fill="none">
-              <circle cx="500" cy="380" r="135" stroke-dasharray="3 4"/>
-              <circle cx="500" cy="380" r="245" stroke-dasharray="4 5"/>
-              <circle cx="500" cy="380" r="340" stroke-dasharray="4 6"/>
-              <circle cx="500" cy="380" r="420" stroke-dasharray="5 7"/>
+            <!-- Interactive Viewport Transform Group -->
+            <g id="webViewport" class="web-viewport" transform="translate(${panX}, ${panY}) scale(${zoomScale})">
+              <!-- Atmospheric Spider Web Background Threads -->
+              <g class="web-backdrop-threads" stroke="rgba(76, 199, 178, 0.08)" stroke-width="1" fill="none">
+                <circle cx="500" cy="380" r="135" stroke-dasharray="3 4"/>
+                <circle cx="500" cy="380" r="245" stroke-dasharray="4 5"/>
+                <circle cx="500" cy="380" r="340" stroke-dasharray="4 6"/>
+                <circle cx="500" cy="380" r="430" stroke-dasharray="5 7"/>
 
-              <line x1="500" y1="380" x2="160" y2="40" stroke="rgba(76, 199, 178, 0.05)"/>
-              <line x1="500" y1="380" x2="840" y2="40" stroke="rgba(76, 199, 178, 0.05)"/>
-              <line x1="500" y1="380" x2="160" y2="720" stroke="rgba(76, 199, 178, 0.05)"/>
-              <line x1="500" y1="380" x2="840" y2="720" stroke="rgba(76, 199, 178, 0.05)"/>
-            </g>
+                <line x1="500" y1="380" x2="160" y2="40" stroke="rgba(76, 199, 178, 0.05)"/>
+                <line x1="500" y1="380" x2="840" y2="40" stroke="rgba(76, 199, 178, 0.05)"/>
+                <line x1="500" y1="380" x2="160" y2="720" stroke="rgba(76, 199, 178, 0.05)"/>
+                <line x1="500" y1="380" x2="840" y2="720" stroke="rgba(76, 199, 178, 0.05)"/>
+              </g>
 
-            <!-- Center Glow behind Dash -->
-            <circle cx="500" cy="380" r="105" fill="url(#hub-glow)" pointer-events="none"/>
+              <!-- Center Glow behind Dash -->
+              <circle cx="500" cy="380" r="105" fill="url(#hub-glow)" pointer-events="none"/>
 
-            <!-- Sector Cardinal Labels -->
-            <g class="web-sector-legends" pointer-events="none" font-family="'Cinzel', serif" font-weight="800" font-size="11.5" letter-spacing="2.5" opacity="0.75">
-              <text x="500" y="24" text-anchor="middle" fill="#5aa9f0">▲ AERIAL SILK</text>
-              <text x="500" y="750" text-anchor="middle" fill="#9ccc3c">▼ CARAPACE BULWARK</text>
-              <text x="24" y="384" text-anchor="middle" fill="#4cc7b2" transform="rotate(-90 24 384)">◀ VENOM CONTROL</text>
-              <text x="976" y="384" text-anchor="middle" fill="#f2a33a" transform="rotate(90 976 384)">▶ MANDIBLE ASSAULT</text>
-            </g>
+              <!-- Silk Edges Layer -->
+              <g class="web-edges-layer">
+                ${edgesSVG}
+              </g>
 
-            <!-- Silk Edges Layer -->
-            <g class="web-edges-layer">
-              ${edgesSVG}
-            </g>
-
-            <!-- Web Nodes Layer -->
-            <g class="web-nodes-layer">
-              ${nodesSVG}
+              <!-- Web Nodes Layer -->
+              <g class="web-nodes-layer">
+                ${nodesSVG}
+              </g>
             </g>
           </svg>
 
           <!-- Floating Detail Card (Assassin's Creed Origins Style) -->
-          <aside class="swv-detail-panel" id="swvDetailPanel" aria-label="Selected Ability Details">
+          <aside class="swv-detail-panel ${isPanelCollapsed ? 'collapsed' : ''}" id="swvDetailPanel" aria-label="Selected Ability Details">
             ${renderDetailCardHtml(selectedNodeId)}
           </aside>
         </div>
@@ -652,13 +695,28 @@ export function renderMenuPage(container: HTMLElement, onStart: (opts: MenuStart
       <div class="page" style="max-width:760px; margin-inline:auto;">
         <header class="page-top">
           <h1>Settings</h1>
-          <button type="button" class="btn ghost" id="btnBackToMain">Menu</button>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <button type="button" class="btn ghost sound-toggle-btn ${sound.enabled ? 'sound-on' : 'sound-off'}" id="btnSettingsSoundToggle" title="Toggle Sound (Music & SFX)">${sound.enabled ? '🔊 Sound On' : '🔇 Sound Off'}</button>
+            <button type="button" class="btn ghost" id="btnBackToMain">Menu</button>
+          </div>
         </header>
         <p class="note">Changes save automatically.</p>
 
         <!-- SOUND & MUSIC -->
         <section class="sec" aria-label="Sound and music">
           <h2>Sound &amp; music</h2>
+          <div class="row master-sound-row" style="background:var(--surface-2); padding:10px 14px; border-radius:6px; border:1px solid var(--line); margin-bottom:12px; display:flex; align-items:center; justify-content:space-between;">
+            <label class="t" style="font-weight:700; font-size:15px; cursor:pointer; display:flex; align-items:center; gap:10px;">
+              <input type="checkbox" id="chkMasterSound" ${sound.enabled ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--jade);">
+              <span>Master Sound (${sound.enabled ? 'ON' : 'OFF'})</span>
+            </label>
+            <div style="display:flex; align-items:center; gap:12px;">
+              <span class="pct" style="color:${sound.enabled ? 'var(--jade-light)' : 'var(--muted)'}; font-weight:700;">${sound.enabled ? '🔊 Active' : '🔇 Muted'}</span>
+              <button type="button" class="btn ghost sound-toggle-btn ${sound.enabled ? 'sound-on' : 'sound-off'}" id="btnQuickSoundToggle">
+                ${sound.enabled ? 'Mute All' : 'Unmute All'}
+              </button>
+            </div>
+          </div>
           <div class="row">
             <label class="t"><input type="checkbox" id="chkSfx" ${st.sfx ? 'checked' : ''}> Sound effects</label>
             <span class="pct" id="sfxP">${Math.round(st.sfxVol * 100)}%</span>
@@ -767,15 +825,41 @@ export function renderMenuPage(container: HTMLElement, onStart: (opts: MenuStart
      EVENT BINDINGS
      ==================================================== */
   function bindEvents() {
+    if (abilitiesKeyHandler) {
+      window.removeEventListener('keydown', abilitiesKeyHandler);
+      abilitiesKeyHandler = null;
+    }
+
     // Top menu back buttons
-    const btnBack = container.querySelector('#btnBackToMain');
-    if (btnBack) {
-      btnBack.addEventListener('click', () => {
+    container.querySelectorAll('#btnBackToMain').forEach(btn => {
+      btn.addEventListener('click', () => {
         sound.playTone(440, 0.08, 'triangle', 0.04, -100);
         activeTab = 'main';
         render();
       });
-    }
+    });
+
+    // Universal sound toggle buttons
+    const handleSoundToggle = () => {
+      const isNowOn = sound.toggle();
+      if (isNowOn) {
+        sound.playTone(580, 0.08, 'triangle', 0.04, 150);
+      }
+      render();
+    };
+
+    container.querySelectorAll('#btnMenuSoundToggle, #btnCornerSoundToggle, #btnCustomSoundToggle, #btnSettingsSoundToggle, #btnWebSoundToggle, #btnQuickSoundToggle').forEach(btn => {
+      btn.addEventListener('click', handleSoundToggle);
+    });
+
+    const chkMasterSound = container.querySelector('#chkMasterSound') as HTMLInputElement | null;
+    chkMasterSound?.addEventListener('change', () => {
+      sound.enabled = chkMasterSound.checked;
+      if (sound.enabled) {
+        sound.playTone(580, 0.08, 'triangle', 0.04, 150);
+      }
+      render();
+    });
 
     if (activeTab === 'main') {
       const pMain = container.querySelector('#pMain') as HTMLElement;
@@ -954,13 +1038,22 @@ export function renderMenuPage(container: HTMLElement, onStart: (opts: MenuStart
 
       chkSfx?.addEventListener('change', () => {
         st.sfx = chkSfx.checked;
+        if (st.sfx) st.sound = true;
+        else if (!st.music) st.sound = false;
         saveSettings(st);
-        sound.enabled = st.sfx;
+        if (st.sfx && st.sound) {
+          sound.playTone(600, 0.08, 'triangle', 0.04, 150);
+        }
+        render();
       });
 
       rngSfx?.addEventListener('input', () => {
         st.sfxVol = parseInt(rngSfx.value, 10) / 100;
         if (sfxP) sfxP.textContent = `${rngSfx.value}%`;
+        if (st.sfxVol > 0 && (!st.sound || !st.sfx)) {
+          st.sound = true;
+          st.sfx = true;
+        }
         saveSettings(st);
       });
 
@@ -971,16 +1064,29 @@ export function renderMenuPage(container: HTMLElement, onStart: (opts: MenuStart
 
       chkMus?.addEventListener('change', () => {
         st.music = chkMus.checked;
+        if (st.music) st.sound = true;
+        else if (!st.sfx) st.sound = false;
         saveSettings(st);
-        if (st.music) sound.music.play('ambient');
-        else sound.music.stop();
+        if (st.music && st.sound) {
+          sound.music.play('ambient');
+        } else {
+          sound.music.stop();
+        }
+        render();
       });
 
       rngMus?.addEventListener('input', () => {
         st.musicVol = parseInt(rngMus.value, 10) / 100;
         if (musP) musP.textContent = `${rngMus.value}%`;
+        if (st.musicVol > 0 && (!st.sound || !st.music)) {
+          st.sound = true;
+          st.music = true;
+        }
         saveSettings(st);
         sound.music.setVolume(st.musicVol);
+        if (st.music && st.sound && st.musicVol > 0) {
+          sound.music.play('ambient');
+        }
       });
 
       // CPU difficulty radio
@@ -1030,55 +1136,351 @@ export function renderMenuPage(container: HTMLElement, onStart: (opts: MenuStart
     }
 
     if (activeTab === 'abilities') {
+      const stage = container.querySelector<HTMLElement>('#swvStage');
       const detailPanel = container.querySelector<HTMLElement>('#swvDetailPanel');
+      const openCardTab = container.querySelector<HTMLElement>('#btnOpenCardTab');
 
-      const bindAcquireAction = () => {
-        const btn = container.querySelector('#btnAcquireSkill') as HTMLButtonElement | null;
-        if (!btn) return;
-        btn.onclick = () => {
-          const targetId = (btn.dataset.id as AbilityId) || selectedNodeId;
-          const res = acquireSkill(targetId);
+      const setPanelCollapsed = (collapsed: boolean) => {
+        isPanelCollapsed = collapsed;
+        if (detailPanel) {
+          detailPanel.classList.toggle('collapsed', isPanelCollapsed);
+        }
+        if (openCardTab) {
+          openCardTab.classList.toggle('visible', isPanelCollapsed);
+        }
+      };
+
+      const applyViewport = (anim = false) => {
+        const vp = container.querySelector<SVGGElement>('#webViewport');
+        if (!vp) return;
+        if (anim) {
+          vp.classList.add('animating');
+          setTimeout(() => vp.classList.remove('animating'), 360);
+        } else {
+          vp.classList.remove('animating');
+        }
+        vp.setAttribute('transform', `translate(${panX.toFixed(1)}, ${panY.toFixed(1)}) scale(${zoomScale.toFixed(3)})`);
+      };
+
+      const centerOnNode = (id: AbilityId) => {
+        const sel = ABILITIES[id] || ABILITIES.dash;
+        const targetCenterX = isPanelCollapsed ? 550 : 440;
+        const targetCenterY = 400;
+        panX = targetCenterX - sel.x * zoomScale;
+        panY = targetCenterY - sel.y * zoomScale;
+        panX = Math.max(-650, Math.min(550, panX));
+        panY = Math.max(-550, Math.min(550, panY));
+        applyViewport(true);
+      };
+
+      const fitWeb = () => {
+        panX = isPanelCollapsed ? 0 : -40;
+        panY = 0;
+        zoomScale = 1.0;
+        applyViewport(true);
+      };
+
+      const bindDetailCardActions = () => {
+        const btnAcquire = container.querySelector('#btnAcquireSkill') as HTMLButtonElement | null;
+        if (btnAcquire) {
+          btnAcquire.onclick = () => {
+            const targetId = (btnAcquire.dataset.id as AbilityId) || selectedNodeId;
+            const res = acquireSkill(targetId);
+            if (res.success) {
+              selectedNodeId = targetId;
+              sound.playTone(520, 0.1, 'triangle', 0.05, 200);
+              setTimeout(() => sound.playTone(780, 0.18, 'triangle', 0.05, 100), 100);
+              render();
+            } else {
+              sound.playTone(280, 0.15, 'sawtooth', 0.05, -80);
+            }
+          };
+        }
+
+        const btnClose = container.querySelector<HTMLButtonElement>('#btnCloseDetailCard');
+        if (btnClose) {
+          btnClose.onclick = () => {
+            sound.playTone(400, 0.06, 'triangle', 0.03, -100);
+            setPanelCollapsed(true);
+          };
+        }
+      };
+
+      bindDetailCardActions();
+
+      openCardTab?.addEventListener('click', () => {
+        sound.playTone(540, 0.06, 'triangle', 0.03, 100);
+        setPanelCollapsed(false);
+      });
+
+      const selectNode = (id: AbilityId, panTo = false) => {
+        if (!id || !ABILITIES[id]) return;
+        selectedNodeId = id;
+
+        container.querySelectorAll<SVGElement>('.web-node').forEach(node => {
+          node.classList.toggle('selected', node.dataset.id === id);
+        });
+
+        if (detailPanel) {
+          detailPanel.innerHTML = renderDetailCardHtml(id);
+          bindDetailCardActions();
+        }
+
+        sound.playTone(580, 0.05, 'triangle', 0.04, 120);
+
+        if (panTo) {
+          centerOnNode(id);
+        }
+      };
+
+      // Drag to pan variables
+      let isDragging = false;
+      let startX = 0;
+      let startY = 0;
+      let initialPanX = 0;
+      let initialPanY = 0;
+      let dragDist = 0;
+
+      if (stage) {
+        stage.addEventListener('pointerdown', (e: PointerEvent) => {
+          if (e.button !== 0) return;
+          const target = e.target as HTMLElement | SVGElement;
+          if (target.closest('.swv-nav-hud, .swv-detail-panel, .swv-header, .swv-bottom-bar, .swv-open-card-tab')) {
+            return;
+          }
+
+          isDragging = true;
+          dragDist = 0;
+          startX = e.clientX;
+          startY = e.clientY;
+          initialPanX = panX;
+          initialPanY = panY;
+          stage.classList.add('dragging');
+          stage.setPointerCapture(e.pointerId);
+        });
+
+        stage.addEventListener('pointermove', (e: PointerEvent) => {
+          if (!isDragging) return;
+          const dx = e.clientX - startX;
+          const dy = e.clientY - startY;
+          dragDist = Math.hypot(dx, dy);
+
+          const rect = stage.getBoundingClientRect();
+          const ratio = 1100 / (rect.width || 1100);
+
+          panX = initialPanX + dx * ratio;
+          panY = initialPanY + dy * ratio;
+          panX = Math.max(-650, Math.min(550, panX));
+          panY = Math.max(-550, Math.min(550, panY));
+          applyViewport(false);
+        });
+
+        const onPointerUp = (e: PointerEvent) => {
+          if (!isDragging) return;
+          isDragging = false;
+          stage.classList.remove('dragging');
+          try {
+            stage.releasePointerCapture(e.pointerId);
+          } catch {}
+        };
+
+        stage.addEventListener('pointerup', onPointerUp);
+        stage.addEventListener('pointercancel', onPointerUp);
+
+        // Wheel Zoom (anchored to cursor)
+        stage.addEventListener('wheel', (e: WheelEvent) => {
+          e.preventDefault();
+          const rect = stage.getBoundingClientRect();
+          const mouseX = e.clientX - rect.left;
+          const mouseY = e.clientY - rect.top;
+
+          const svgX = (mouseX / (rect.width || 1100)) * 1100;
+          const svgY = (mouseY / (rect.height || 800)) * 800;
+
+          const zoomFactor = e.deltaY < 0 ? 1.15 : 0.87;
+          const oldZoom = zoomScale;
+          const newZoom = Math.max(0.55, Math.min(2.5, oldZoom * zoomFactor));
+
+          panX = svgX - (svgX - panX) * (newZoom / oldZoom);
+          panY = svgY - (svgY - panY) * (newZoom / oldZoom);
+          zoomScale = newZoom;
+
+          panX = Math.max(-650, Math.min(550, panX));
+          panY = Math.max(-550, Math.min(550, panY));
+          applyViewport(false);
+        }, { passive: false });
+      }
+
+      // HUD Zoom Buttons
+      container.querySelector('#btnZoomIn')?.addEventListener('click', () => {
+        zoomScale = Math.min(2.5, zoomScale * 1.25);
+        applyViewport(true);
+        sound.playTone(600, 0.05, 'triangle', 0.03, 100);
+      });
+
+      container.querySelector('#btnZoomOut')?.addEventListener('click', () => {
+        zoomScale = Math.max(0.55, zoomScale * 0.8);
+        applyViewport(true);
+        sound.playTone(450, 0.05, 'triangle', 0.03, -100);
+      });
+
+      container.querySelector('#btnZoomFit')?.addEventListener('click', () => {
+        fitWeb();
+        sound.playTone(550, 0.06, 'triangle', 0.03);
+      });
+
+      container.querySelector('#btnZoomCenter')?.addEventListener('click', () => {
+        centerOnNode(selectedNodeId);
+        sound.playTone(620, 0.06, 'triangle', 0.04, 150);
+      });
+
+      // Node interaction
+      container.querySelectorAll<SVGElement>('.web-node[data-id]').forEach(node => {
+        const id = node.dataset.id as AbilityId;
+        if (!id || !ABILITIES[id]) return;
+
+        // Hover: preview skill in details panel without losing selection halo
+        node.addEventListener('mouseenter', () => {
+          if (detailPanel) {
+            detailPanel.innerHTML = renderDetailCardHtml(id);
+            bindDetailCardActions();
+          }
+        });
+
+        // Click: select node if not dragged
+        node.addEventListener('click', () => {
+          if (dragDist > 6) return;
+          selectNode(id, false);
+        });
+      });
+
+      // Directional traversal
+      const getNextNodeInDirection = (currentId: AbilityId, dir: 'up' | 'down' | 'left' | 'right'): AbilityId | null => {
+        const current = ABILITIES[currentId];
+        if (!current) return null;
+
+        let bestId: AbilityId | null = null;
+        let bestScore = Infinity;
+
+        for (const candidate of SKILLS_LIST) {
+          if (candidate.id === currentId) continue;
+          const dx = candidate.x - current.x;
+          const dy = candidate.y - current.y;
+          const dist = Math.hypot(dx, dy);
+
+          const isDirectEdge = WEB_EDGES.some(
+            ([a, b]) => (a === currentId && b === candidate.id) || (b === currentId && a === candidate.id)
+          );
+          const edgeMultiplier = isDirectEdge ? 0.6 : 1.0;
+
+          let isValidDirection = false;
+          let score = dist * edgeMultiplier;
+
+          if (dir === 'up') {
+            if (dy < -15 && Math.abs(dx) <= Math.abs(dy) * 1.8) {
+              isValidDirection = true;
+              score += Math.abs(dx) * 0.5;
+            }
+          } else if (dir === 'down') {
+            if (dy > 15 && Math.abs(dx) <= Math.abs(dy) * 1.8) {
+              isValidDirection = true;
+              score += Math.abs(dx) * 0.5;
+            }
+          } else if (dir === 'left') {
+            if (dx < -15 && Math.abs(dy) <= Math.abs(dx) * 1.8) {
+              isValidDirection = true;
+              score += Math.abs(dy) * 0.5;
+            }
+          } else if (dir === 'right') {
+            if (dx > 15 && Math.abs(dy) <= Math.abs(dx) * 1.8) {
+              isValidDirection = true;
+              score += Math.abs(dy) * 0.5;
+            }
+          }
+
+          if (isValidDirection && score < bestScore) {
+            bestScore = score;
+            bestId = candidate.id;
+          }
+        }
+
+        // Secondary fallback if cone was too strict
+        if (!bestId) {
+          for (const candidate of SKILLS_LIST) {
+            if (candidate.id === currentId) continue;
+            const dx = candidate.x - current.x;
+            const dy = candidate.y - current.y;
+            const dist = Math.hypot(dx, dy);
+
+            let isValid = false;
+            if (dir === 'up' && dy < -10) isValid = true;
+            if (dir === 'down' && dy > 10) isValid = true;
+            if (dir === 'left' && dx < -10) isValid = true;
+            if (dir === 'right' && dx > 10) isValid = true;
+
+            if (isValid && dist < bestScore) {
+              bestScore = dist;
+              bestId = candidate.id;
+            }
+          }
+        }
+
+        return bestId;
+      };
+
+      // Keyboard navigation
+      abilitiesKeyHandler = (e: KeyboardEvent) => {
+        const targetTag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+        if (targetTag === 'input' || targetTag === 'textarea') return;
+
+        const k = e.key;
+        if (k === 'ArrowUp' || k === 'w' || k === 'W') {
+          e.preventDefault();
+          const next = getNextNodeInDirection(selectedNodeId, 'up');
+          if (next) selectNode(next, false);
+        } else if (k === 'ArrowDown' || k === 's' || k === 'S') {
+          e.preventDefault();
+          const next = getNextNodeInDirection(selectedNodeId, 'down');
+          if (next) selectNode(next, false);
+        } else if (k === 'ArrowLeft' || k === 'a' || k === 'A') {
+          e.preventDefault();
+          const next = getNextNodeInDirection(selectedNodeId, 'left');
+          if (next) selectNode(next, false);
+        } else if (k === 'ArrowRight' || k === 'd' || k === 'D') {
+          e.preventDefault();
+          const next = getNextNodeInDirection(selectedNodeId, 'right');
+          if (next) selectNode(next, false);
+        } else if (k === ' ' || k === 'Enter') {
+          e.preventDefault();
+          const res = acquireSkill(selectedNodeId);
           if (res.success) {
-            selectedNodeId = targetId;
             sound.playTone(520, 0.1, 'triangle', 0.05, 200);
             setTimeout(() => sound.playTone(780, 0.18, 'triangle', 0.05, 100), 100);
             render();
           } else {
             sound.playTone(280, 0.15, 'sawtooth', 0.05, -80);
           }
-        };
+        } else if (k === 'f' || k === 'F' || k === '0') {
+          e.preventDefault();
+          fitWeb();
+        } else if (k === 'c' || k === 'C') {
+          e.preventDefault();
+          centerOnNode(selectedNodeId);
+        } else if (k === '+' || k === '=') {
+          e.preventDefault();
+          zoomScale = Math.min(2.5, zoomScale * 1.25);
+          applyViewport(true);
+        } else if (k === '-' || k === '_') {
+          e.preventDefault();
+          zoomScale = Math.max(0.55, zoomScale * 0.8);
+          applyViewport(true);
+        } else if (k === 'Escape') {
+          e.preventDefault();
+          setPanelCollapsed(!isPanelCollapsed);
+        }
       };
 
-      bindAcquireAction();
-
-      // Node Selection & Smooth Hover Preview on Spider Web
-      container.querySelectorAll<SVGElement>('.web-node[data-id]').forEach(node => {
-        const id = node.dataset.id as AbilityId;
-        if (!id || !ABILITIES[id]) return;
-
-        // Hover: update detail panel to preview this skill smoothly without re-rendering SVG
-        node.addEventListener('mouseenter', () => {
-          if (detailPanel) {
-            detailPanel.innerHTML = renderDetailCardHtml(id);
-            bindAcquireAction();
-          }
-        });
-
-        // Click / Enter: select this node as the persistent active node
-        const onSelect = () => {
-          selectedNodeId = id;
-          sound.playTone(580, 0.06, 'triangle', 0.04, 150);
-          render();
-        };
-
-        node.addEventListener('click', onSelect);
-        node.addEventListener('keydown', (e: KeyboardEvent) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            onSelect();
-          }
-        });
-      });
+      window.addEventListener('keydown', abilitiesKeyHandler);
 
       // Respec Web Button
       container.querySelector('#btnRespecWeb')?.addEventListener('click', () => {

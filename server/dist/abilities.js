@@ -340,6 +340,6 @@ function getRandomAbilities(count = 3, exclude = [], maxLevelOrPool = 12) {
             .filter(s => s.unlock.level <= maxLevelOrPool && !exclude.includes(s.id))
             .map(s => s.id);
     }
-    const finalPool = pool.length >= count ? pool : exports.ALL_ABILITY_IDS;
-    return shuffle(finalPool).slice(0, count);
+    const finalPool = pool.length > 0 ? pool : exports.ALL_ABILITY_IDS;
+    return shuffle(finalPool).slice(0, Math.min(count, finalPool.length));
 }

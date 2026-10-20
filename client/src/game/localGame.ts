@@ -260,9 +260,10 @@ export class LocalGameEngine {
     this.state.status = 'draft';
     this.state.stateT = 0;
 
-    // In CPU mode, CPU immediately picks 2 random choices
+    // In CPU mode, CPU picks 2 choices (from unlocked pool or fallback pair)
     if (this.mode === 'cpu') {
-      const cpuPicked = drawSkills(unlocked, 2);
+      const cpuPool = unlocked.length >= 2 ? unlocked : ['dash', 'web'];
+      const cpuPicked = drawSkills(cpuPool as AbilityId[], 2);
       this.state.p2.skill1 = cpuPicked[0] || 'dash';
       this.state.p2.skill2 = cpuPicked[1] || 'web';
       this.state.p2.cd1max = ABILITIES[this.state.p2.skill1 as AbilityId]?.cd || 3;
@@ -274,9 +275,9 @@ export class LocalGameEngine {
   public confirmDraft(playerId: number, skills: string[]) {
     const s = playerId === 0 ? this.state.p1 : this.state.p2;
     s.skill1 = skills[0] || 'dash';
-    s.skill2 = skills[1] || 'web';
+    s.skill2 = skills[1] || '';
     s.cd1max = ABILITIES[s.skill1 as AbilityId]?.cd || 3;
-    s.cd2max = ABILITIES[s.skill2 as AbilityId]?.cd || 5;
+    s.cd2max = s.skill2 ? (ABILITIES[s.skill2 as AbilityId]?.cd || 5) : 0;
 
     if (playerId === 0) this.state.p1Drafted = true;
     if (playerId === 1) this.state.p2Drafted = true;
@@ -289,8 +290,8 @@ export class LocalGameEngine {
   public startRound() {
     this.state.p1.falls = 0;
     this.state.p2.falls = 0;
-    this.resetSpiderRound(this.state.p1, 340, 1);
-    this.resetSpiderRound(this.state.p2, 620, -1);
+    this.resetSpiderRound(this.state.p1, 440, 1);
+    this.resetSpiderRound(this.state.p2, 760, -1);
     this.state.webs = [];
     this.state.status = 'ready';
     this.state.stateT = 0;
@@ -1061,8 +1062,8 @@ export class LocalGameEngine {
       v = ((inp.right ? 1 : 0) - (inp.left ? 1 : 0)) * SPEED * (s.blocking ? 0.35 : 1) * (s.snare > 0 ? 0.4 : 1) * (s.hasteT > 0 ? 1.5 : 1);
     }
     if (wait && free && s.stun <= 0) {
-      let wtx = s.id === 0 ? 340 : 620;
-      if (Math.abs(wtx - o.x) < 260) wtx = o.x < 480 ? 750 : 210;
+      let wtx = s.id === 0 ? 440 : 760;
+      if (Math.abs(wtx - o.x) < 300) wtx = o.x < 600 ? 950 : 250;
       const wdx = wtx - s.x;
       v = Math.abs(wdx) > 3 ? Math.sign(wdx) * SPEED * 1.3 : 0;
     }

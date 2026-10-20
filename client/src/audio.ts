@@ -1,12 +1,33 @@
-import { playSound, getSettings, saveSettings, music } from './gb';
+import { playSound, getSettings, saveSettings, music, getAudioContext } from './gb';
 
 class SoundEngine {
   public get enabled(): boolean {
-    return getSettings().sfx;
+    const s = getSettings();
+    return !!(s.sound && (s.sfx || s.music));
   }
 
   public set enabled(val: boolean) {
-    saveSettings({ ...getSettings(), sfx: val });
+    const s = getSettings();
+    s.sound = val;
+    s.sfx = val;
+    s.music = val;
+    saveSettings(s);
+    if (!val) {
+      music.stop();
+    } else {
+      const c = getAudioContext();
+      if (c && c.state === 'suspended') {
+        c.resume().then(() => {
+          if (this.enabled) music.start();
+        }).catch(() => {});
+      }
+      music.start();
+    }
+  }
+
+  public toggle(): boolean {
+    this.enabled = !this.enabled;
+    return this.enabled;
   }
 
   public playTone(freq: number, duration: number, type: OscillatorType = 'square', volume: number = 0.05, slide?: number) {

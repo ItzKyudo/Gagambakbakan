@@ -22,6 +22,7 @@ export interface SpiderLook {
 }
 
 export interface GameSettings {
+  sound: boolean;
   sfx: boolean;
   sfxVol: number;
   music: boolean;
@@ -75,6 +76,7 @@ function lsSet<T>(k: string, v: T): void {
 
 /* ---------- settings ---------- */
 export const DEF_SET: GameSettings = {
+  sound: true,
   sfx: true,
   sfxVol: 0.7,
   music: true,
@@ -85,6 +87,7 @@ export const DEF_SET: GameSettings = {
 export function getSettings(): GameSettings {
   const s = lsGet<Partial<GameSettings>>('settings', {}) || {};
   const o: GameSettings = {
+    sound: typeof s.sound === 'boolean' ? s.sound : (typeof s.sfx === 'boolean' ? s.sfx : DEF_SET.sound),
     sfx: typeof s.sfx === 'boolean' ? s.sfx : DEF_SET.sfx,
     sfxVol: typeof s.sfxVol === 'number' ? s.sfxVol : DEF_SET.sfxVol,
     music: typeof s.music === 'boolean' ? s.music : DEF_SET.music,
@@ -750,6 +753,9 @@ function musicSchedule(): void {
   const c = getAudioContext();
   if (!c || !mus.on) return;
   const step = mus.track === 'duel' ? 0.1 : 0.32;
+  if (mus.next < c.currentTime) {
+    mus.next = c.currentTime + 0.05;
+  }
   while (mus.next < c.currentTime + 0.5) {
     (mus.track === 'duel' ? duelStep : ambientStep)(c, mus.next, mus.step++);
     mus.next += step;
@@ -758,8 +764,9 @@ function musicSchedule(): void {
 
 export function startTrack(track: 'ambient' | 'duel'): void {
   const s = getSettings();
-  if (!s.music) {
-    mus.track = track;
+  mus.track = track;
+  if (!s.sound || !s.music || s.musicVol <= 0) {
+    stopTrack();
     return;
   }
   const c = getAudioContext();
@@ -773,34 +780,41 @@ export function startTrack(track: 'ambient' | 'duel'): void {
     // ignore
   }
 
-  mus.track = track;
   mus.gain = c.createGain();
   mus.gain.gain.value = s.musicVol * (track === 'duel' ? 0.4 : 0.3);
   mus.gain.connect(c.destination);
   mus.on = true;
   mus.step = 0;
   mus.next = c.currentTime + 0.1;
+  if (mus.timer) clearInterval(mus.timer);
   mus.timer = setInterval(musicSchedule, 100);
 }
 
 export function stopTrack(): void {
-  if (!mus.on) return;
+  if (!mus.on && !mus.timer && !mus.gain) return;
   mus.on = false;
-  if (mus.timer) clearInterval(mus.timer);
+  if (mus.timer) {
+    clearInterval(mus.timer);
+    mus.timer = null;
+  }
   const g = mus.gain;
-  if (g && getAudioContext()) {
+  mus.gain = null;
+  const c = getAudioContext();
+  if (g && c) {
     try {
-      g.gain.setTargetAtTime(0, getAudioContext()!.currentTime, 0.15);
+      g.gain.cancelScheduledValues(c.currentTime);
+      g.gain.setValueAtTime(g.gain.value, c.currentTime);
+      g.gain.linearRampToValueAtTime(0.0001, c.currentTime + 0.04);
       setTimeout(() => {
         try { g.disconnect(); } catch {}
-      }, 1500);
+      }, 70);
     } catch {}
   }
 }
 
 export const music = {
-  start: (t?: 'ambient' | 'duel') => startTrack(t || mus.track),
-  play: (t: 'ambient' | 'duel') => { mus.track = t; startTrack(t); },
+  start: (t?: 'ambient' | 'duel') => startTrack(t || mus.track || 'ambient'),
+  play: (t?: 'ambient' | 'duel') => { if (t) mus.track = t; startTrack(mus.track || 'ambient'); },
   stop: stopTrack,
   setVolume: (v: number) => {
     if (mus.gain) {
@@ -808,6 +822,7 @@ export const music = {
     }
   },
   arm: (track: 'ambient' | 'duel' = 'ambient') => {
+    mus.track = track;
     const evs = ['pointerdown', 'mousedown', 'touchstart', 'click', 'keydown'];
     const done = () => {
       const c = getAudioContext();
@@ -818,14 +833,20 @@ export const music = {
       return false;
     };
     const kickMusic = () => {
+      const s = getSettings();
       const c = getAudioContext();
-      music.play(track);
+      if (s.sound && s.music && s.musicVol > 0) {
+        startTrack(mus.track || track);
+      }
       if (c && c.state !== 'running') {
         c.resume().then(done).catch(() => {});
       }
       done();
     };
-    music.play(track);
+    const s0 = getSettings();
+    if (s0.sound && s0.music && s0.musicVol > 0) {
+      startTrack(track);
+    }
     const c0 = getAudioContext();
     if (c0) c0.onstatechange = () => { done(); };
     if (!done()) {
@@ -836,10 +857,11 @@ export const music = {
 
 export function beep(f?: number): void {
   const s = getSettings();
-  if (!s.sfx) return;
+  if (!s.sound || !s.sfx || s.sfxVol <= 0) return;
   const c = getAudioContext();
   if (!c) return;
   try {
+    if (c.state === 'suspended') c.resume().catch(() => {});
     const o = c.createOscillator();
     const g = c.createGain();
     const n = c.currentTime;
@@ -856,7 +878,7 @@ export function beep(f?: number): void {
 
 export function playSound(f: number, d: number, type: OscillatorType = 'square', v: number = 0.05, slide?: number): void {
   const s = getSettings();
-  if (!s.sfx) return;
+  if (!s.sound || !s.sfx || s.sfxVol <= 0) return;
   const c = getAudioContext();
   if (!c) return;
   try {

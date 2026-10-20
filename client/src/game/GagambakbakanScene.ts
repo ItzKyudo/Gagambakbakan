@@ -68,7 +68,7 @@ export class GagambakbakanScene extends Phaser.Scene {
 
   private createFlies() {
     this.flies = [];
-    for (let i = 0; i < 18; i++) {
+    for (let i = 0; i < 22; i++) {
       this.flies.push({
         x: Math.random() * CANVAS_WIDTH,
         y: 120 + Math.random() * 330,
@@ -82,7 +82,7 @@ export class GagambakbakanScene extends Phaser.Scene {
     this.grain = [];
     let s = 3;
     const r = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
-    for (let i = 0; i < 70; i++) {
+    for (let i = 0; i < 100; i++) {
       this.grain.push({
         x: STICK.l - 10 + r() * (STICK.r - STICK.l + 20),
         y: STICK.y + 4 + r() * (STICK.th - 8),
@@ -115,22 +115,23 @@ export class GagambakbakanScene extends Phaser.Scene {
     }
 
     // Moon glow & disc
-    const mg = b.createRadialGradient(770, 105, 10, 770, 105, 160);
+    const moonX = CANVAS_WIDTH - 210;
+    const mg = b.createRadialGradient(moonX, 105, 10, moonX, 105, 160);
     mg.addColorStop(0, 'rgba(233,239,216,.5)');
     mg.addColorStop(1, 'rgba(233,239,216,0)');
     b.fillStyle = mg;
     b.beginPath();
-    b.arc(770, 105, 160, 0, Math.PI * 2);
+    b.arc(moonX, 105, 160, 0, Math.PI * 2);
     b.fill();
 
     b.fillStyle = '#e9efd8';
     b.beginPath();
-    b.arc(770, 105, 40, 0, Math.PI * 2);
+    b.arc(moonX, 105, 40, 0, Math.PI * 2);
     b.fill();
 
     // Moon craters
     b.fillStyle = 'rgba(120,130,110,.18)';
-    [[758, 98, 9], [782, 116, 6], [770, 90, 4]].forEach(([cx, cy, cr]) => {
+    [[moonX - 12, 98, 9], [moonX + 12, 116, 6], [moonX, 90, 4]].forEach(([cx, cy, cr]) => {
       b.beginPath();
       b.arc(cx, cy, cr, 0, Math.PI * 2);
       b.fill();
@@ -483,7 +484,7 @@ export class GagambakbakanScene extends Phaser.Scene {
     ctx.lineCap = 'round';
 
     // Shoots with leaves
-    [[290, -14, 30], [660, 12, 34]].forEach(([tx, dx, dy]) => {
+    [[270, -14, 30], [540, -12, 28], [880, 12, 34]].forEach(([tx, dx, dy]) => {
       ctx.strokeStyle = COLORS.barkDark;
       ctx.lineWidth = 4;
       ctx.beginPath();
@@ -528,7 +529,7 @@ export class GagambakbakanScene extends Phaser.Scene {
     ctx.stroke();
 
     // Bark knots
-    [[360, 13, 5], [560, 9, 4], [740, 14, 6]].forEach(([kx, ky, kr]) => {
+    [[240, 13, 5], [460, 9, 4], [740, 14, 6], [960, 11, 5]].forEach(([kx, ky, kr]) => {
       ctx.fillStyle = 'rgba(40,25,15,.55)';
       ctx.beginPath();
       ctx.ellipse(kx, y + ky, kr + 3, kr, 0, 0, Math.PI * 2);
@@ -569,7 +570,7 @@ export class GagambakbakanScene extends Phaser.Scene {
         ctx.lineWidth = 4;
         ctx.lineCap = 'round';
         ctx.beginPath();
-        ctx.ellipse(s.x, STICK.y + STICK.th + 6, k * 260, 10 + k * 8, 0, 0, Math.PI * 2);
+        ctx.ellipse(s.x, STICK.y + STICK.th + 6, k * 340, 10 + k * 8, 0, 0, Math.PI * 2);
         ctx.stroke();
         ctx.restore();
       }
@@ -1365,8 +1366,8 @@ export class GagambakbakanScene extends Phaser.Scene {
     // Water surface ripples
     ctx.strokeStyle = 'rgba(190,235,240,.18)';
     ctx.lineWidth = 1;
-    for (let r = 0; r < 5; r++) {
-      const rx = (r * 211 + 90) % CANVAS_WIDTH;
+    for (let r = 0; r < 7; r++) {
+      const rx = (r * 185 + 90) % CANVAS_WIDTH;
       const ph = (t * 0.4 + r * 0.37) % 1;
       ctx.beginPath();
       ctx.ellipse(rx, POND_Y + 26 + r * 9, 10 + ph * 34, 2 + ph * 5, 0, 0, Math.PI * 2);
@@ -1377,7 +1378,7 @@ export class GagambakbakanScene extends Phaser.Scene {
 
     // Lily pads
     ctx.fillStyle = 'rgba(52,104,64,.95)';
-    [[170, 0], [470, 1.4], [800, 2.6]].forEach(([px, offset]) => {
+    [[180, 0], [480, 1.4], [780, 2.6], [1040, 0.8]].forEach(([px, offset]) => {
       ctx.beginPath();
       ctx.ellipse(px, POND_Y + 14 + Math.sin(t * 1.2 + offset) * 1.2, 26, 6, 0, 0, Math.PI * 2);
       ctx.fill();

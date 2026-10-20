@@ -2,7 +2,7 @@ import { Room, Client } from 'colyseus';
 import { BattleStateData, PlayerStateData, WebStateData } from './schema/BattleState';
 import { ABILITIES, getRandomAbilities, AbilityId } from '../abilities';
 
-const STICK = { l: 130, r: 830, y: 240, th: 22 };
+const STICK = { l: 100, r: 1100, y: 240, th: 22 };
 const POND_Y = 478, BODY_H = 30;
 const BODY_Y = STICK.y + STICK.th + BODY_H;
 const LBL_Y = BODY_Y + 46;
@@ -79,12 +79,12 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
       const choices = isP1 ? this.battleState.draftChoicesP1 : this.battleState.draftChoicesP2;
 
       const s1 = data.skills && data.skills[0] && choices.includes(data.skills[0]) ? data.skills[0] : (choices[0] || 'dash');
-      const s2 = data.skills && data.skills[1] && choices.includes(data.skills[1]) ? data.skills[1] : (choices[1] || 'web');
+      const s2 = data.skills && data.skills[1] && choices.includes(data.skills[1]) ? data.skills[1] : (choices[1] || '');
 
       target.skill1 = s1;
       target.skill2 = s2;
       target.cd1max = ABILITIES[s1 as AbilityId]?.cd || 3;
-      target.cd2max = ABILITIES[s2 as AbilityId]?.cd || 5;
+      target.cd2max = s2 ? (ABILITIES[s2 as AbilityId]?.cd || 5) : 0;
 
       if (isP1) this.battleState.p1Drafted = true;
       if (isP2) this.battleState.p2Drafted = true;
@@ -243,8 +243,8 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
   private startRound() {
     this.battleState.p1.falls = 0;
     this.battleState.p2.falls = 0;
-    this.resetSpiderRound(this.battleState.p1, 340, 1);
-    this.resetSpiderRound(this.battleState.p2, 620, -1);
+    this.resetSpiderRound(this.battleState.p1, 440, 1);
+    this.resetSpiderRound(this.battleState.p2, 760, -1);
     this.battleState.webs = [];
     this.battleState.status = 'ready';
     this.battleState.stateT = 0;
@@ -904,8 +904,8 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
       v = ((inp.right ? 1 : 0) - (inp.left ? 1 : 0)) * SPEED * (s.blocking ? 0.35 : 1) * (s.snare > 0 ? 0.4 : 1) * (s.hasteT > 0 ? 1.5 : 1);
     }
     if (wait && free && s.stun <= 0) {
-      let wtx = s.id === 0 ? 340 : 620;
-      if (Math.abs(wtx - o.x) < 260) wtx = o.x < 480 ? 750 : 210;
+      let wtx = s.id === 0 ? 440 : 760;
+      if (Math.abs(wtx - o.x) < 300) wtx = o.x < 600 ? 950 : 250;
       const wdx = wtx - s.x;
       v = Math.abs(wdx) > 3 ? Math.sign(wdx) * SPEED * 1.3 : 0;
     }

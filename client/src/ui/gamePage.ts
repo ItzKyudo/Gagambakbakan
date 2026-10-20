@@ -59,12 +59,15 @@ export class GamePage {
   private gi1b!: HTMLElement;
   private gi2a!: HTMLElement;
   private gi2b!: HTMLElement;
-
-  // Key guide references
-  private kp1!: HTMLElement;
-  private kp2!: HTMLElement;
-  private ctlBody!: HTMLElement;
-  private bToggleCtl!: HTMLButtonElement;
+  private gcd1a!: HTMLElement;
+  private gcd1b!: HTMLElement;
+  private gcd2a!: HTMLElement;
+  private gcd2b!: HTMLElement;
+  private gkb1a!: HTMLElement;
+  private gkb1b!: HTMLElement;
+  private gkb2a!: HTMLElement;
+  private gkb2b!: HTMLElement;
+  private lastControlsKey: string = '';
 
   private gemSeen: Record<string, string> = {};
   public isPaused: boolean = false;
@@ -100,52 +103,65 @@ export class GamePage {
         </defs>
       </svg>
 
-      <div class="wrap">
-        <!-- TOP HEADER -->
-        <header class="top">
-          <h1><span class="a">Gagam</span><span class="j">bakbakan</span></h1>
-          <div style="display:flex; align-items:center; gap:8px;">
-            <span id="roomBadge" class="status-badge" style="display:none;"><span class="status-dot"></span> <span id="roomCodeText"></span></span>
-            <button class="btn ghost" id="btnSoundToggle" type="button">${sound.enabled ? '🔊 Sound On' : '🔇 Sound Off'}</button>
-            <button class="btn ghost" id="btnBackMenu" type="button">Menu</button>
-          </div>
-        </header>
-
-        <!-- HUD STRIP -->
-        <section class="hud" id="hud" aria-label="Match status">
-          <div class="fighter p1">
-            <div class="fhead"><i class="swatch"></i><span id="n1">Amber</span><span class="who" id="w1">You</span><span class="pips" id="pips1"><i class="pip"></i><i class="pip"></i></span></div>
-            <div class="meter"><span>Grip</span><div class="bar" id="gb1"><i id="grip1"></i></div></div>
-            <div class="meter"><span>Guard</span><div class="bar guard"><i id="guard1"></i></div></div>
-          </div>
-
-          <div class="center">
-            <div id="roundLbl">Round 1</div>
-            <div class="best">First to 2 rounds</div>
-          </div>
-
-          <div class="fighter p2">
-            <div class="fhead"><i class="swatch"></i><span id="n2">Jade</span><span class="who" id="w2">CPU</span><span class="pips" id="pips2"><i class="pip"></i><i class="pip"></i></span></div>
-            <div class="meter"><span>Grip</span><div class="bar" id="gb2"><i id="grip2"></i></div></div>
-            <div class="meter"><span>Guard</span><div class="bar guard"><i id="guard2"></i></div></div>
-          </div>
-        </section>
-
-        <!-- ARENA -->
+      <!-- FULLSCREEN GAME ARENA WRAPPER -->
+      <div class="game-screen-fullscreen">
         <div class="arena" id="arena">
           <div id="phaserContainer" style="width:100%; height:100%;"></div>
+
+          <!-- IN-GAME HUD & STATS (INSIDE & ABOVE THE GAME SCREEN) -->
+          <div class="in-game-hud-overlay">
+            <header class="in-game-top-bar">
+              <div class="in-game-top-left">
+                <h1 class="in-game-logo"><span class="a">Gagam</span><span class="j">bakbakan</span></h1>
+                <span id="roomBadge" class="status-badge" style="display:none;"><span class="status-dot"></span> <span id="roomCodeText"></span></span>
+              </div>
+              <div class="in-game-top-right">
+                <button class="btn ghost sound-toggle-btn ${sound.enabled ? 'sound-on' : 'sound-off'}" id="btnSoundToggle" type="button">${sound.enabled ? '🔊 Sound On' : '🔇 Sound Off'}</button>
+                <button class="btn ghost" id="bPause" type="button">Pause</button>
+                <button class="btn ghost" id="btnBackMenu" type="button">Menu</button>
+              </div>
+            </header>
+
+            <!-- FIGHTER STATS (GRIP & GUARD BARS, NAMES, ROUND) -->
+            <section class="hud in-game-hud" id="hud" aria-label="Match status">
+              <div class="fighter p1">
+                <div class="fhead"><i class="swatch"></i><span id="n1">Amber</span><span class="who" id="w1">You</span><span class="pips" id="pips1"><i class="pip"></i><i class="pip"></i></span></div>
+                <div class="meter"><span>Grip</span><div class="bar" id="gb1"><i id="grip1"></i></div></div>
+                <div class="meter"><span>Guard</span><div class="bar guard"><i id="guard1"></i></div></div>
+              </div>
+
+              <div class="center">
+                <div id="roundLbl">Round 1</div>
+                <div class="best">First to 2 rounds</div>
+              </div>
+
+              <div class="fighter p2">
+                <div class="fhead"><i class="swatch"></i><span id="n2">Jade</span><span class="who" id="w2">CPU</span><span class="pips" id="pips2"><i class="pip"></i><i class="pip"></i></span></div>
+                <div class="meter"><span>Grip</span><div class="bar" id="gb2"><i id="grip2"></i></div></div>
+                <div class="meter"><span>Guard</span><div class="bar guard"><i id="guard2"></i></div></div>
+              </div>
+            </section>
+          </div>
 
           <!-- AMBER ABILITIES RAIL (BOTTOM LEFT) -->
           <div class="rail l p1" aria-label="Amber skills">
             <button class="gem" id="g1a" data-slot="0" tabindex="-1" type="button" aria-label="Skill 1">
               <svg class="shape bg" viewBox="0 0 100 100" aria-hidden="true"><polygon points="50,3 91,26.5 91,73.5 50,97 9,73.5 9,26.5"/></svg>
-              <svg class="shape fill" viewBox="0 0 100 100" aria-hidden="true"><polygon points="50,3 91,26.5 91,73.5 50,97 9,73.5 9,26.5"/></svg>
-              <svg class="glyph" id="gi1a" aria-hidden="true"><use href="#ic-dash"/></svg>
+              <div class="gem-icon-frame">
+                <img class="gem-ability-icon" id="gi1a" src="/abilities/dash.png" alt="Dash" />
+                <div class="gem-cd-wipe" id="gw1a"></div>
+              </div>
+              <span class="gem-cd-num" id="gcd1a"></span>
+              <span class="gem-key-badge" id="gkb1a">Q</span>
             </button>
             <button class="gem" id="g1b" data-slot="1" tabindex="-1" type="button" aria-label="Skill 2">
               <svg class="shape bg" viewBox="0 0 100 100" aria-hidden="true"><polygon points="50,3 91,26.5 91,73.5 50,97 9,73.5 9,26.5"/></svg>
-              <svg class="shape fill" viewBox="0 0 100 100" aria-hidden="true"><polygon points="50,3 91,26.5 91,73.5 50,97 9,73.5 9,26.5"/></svg>
-              <svg class="glyph" id="gi1b" aria-hidden="true"><use href="#ic-web"/></svg>
+              <div class="gem-icon-frame">
+                <img class="gem-ability-icon" id="gi1b" src="/abilities/web.png" alt="Web" />
+                <div class="gem-cd-wipe" id="gw1b"></div>
+              </div>
+              <span class="gem-cd-num" id="gcd1b"></span>
+              <span class="gem-key-badge" id="gkb1b">E</span>
             </button>
           </div>
 
@@ -153,13 +169,21 @@ export class GamePage {
           <div class="rail r p2" aria-hidden="true">
             <div class="gem" id="g2a">
               <svg class="shape bg" viewBox="0 0 100 100" aria-hidden="true"><polygon points="50,3 91,26.5 91,73.5 50,97 9,73.5 9,26.5"/></svg>
-              <svg class="shape fill" viewBox="0 0 100 100" aria-hidden="true"><polygon points="50,3 91,26.5 91,73.5 50,97 9,73.5 9,26.5"/></svg>
-              <svg class="glyph" id="gi2a" aria-hidden="true"><use href="#ic-dash"/></svg>
+              <div class="gem-icon-frame">
+                <img class="gem-ability-icon" id="gi2a" src="/abilities/dash.png" alt="Dash" />
+                <div class="gem-cd-wipe" id="gw2a"></div>
+              </div>
+              <span class="gem-cd-num" id="gcd2a"></span>
+              <span class="gem-key-badge" id="gkb2a"></span>
             </div>
             <div class="gem" id="g2b">
               <svg class="shape bg" viewBox="0 0 100 100" aria-hidden="true"><polygon points="50,3 91,26.5 91,73.5 50,97 9,73.5 9,26.5"/></svg>
-              <svg class="shape fill" viewBox="0 0 100 100" aria-hidden="true"><polygon points="50,3 91,26.5 91,73.5 50,97 9,73.5 9,26.5"/></svg>
-              <svg class="glyph" id="gi2b" aria-hidden="true"><use href="#ic-web"/></svg>
+              <div class="gem-icon-frame">
+                <img class="gem-ability-icon" id="gi2b" src="/abilities/web.png" alt="Web" />
+                <div class="gem-cd-wipe" id="gw2b"></div>
+              </div>
+              <span class="gem-cd-num" id="gcd2b"></span>
+              <span class="gem-key-badge" id="gkb2b"></span>
             </div>
           </div>
 
@@ -172,30 +196,6 @@ export class GamePage {
         </div>
 
         <div class="sr" id="live" aria-live="polite"></div>
-
-        <!-- TOUCH PAD -->
-        <div class="touch" id="touch" aria-label="Touch controls">
-          <button type="button" class="tb" data-t="left">&#9664;</button>
-          <button type="button" class="tb" data-t="right">&#9654;</button>
-          <button type="button" class="tb" data-t="strike">Strike</button>
-          <button type="button" class="tb" data-t="block">Block</button>
-          <button type="button" class="tb wide" data-t="reel">Climb</button>
-        </div>
-
-        <!-- CONTROLS STRIP -->
-        <section class="ctl" id="ctl" aria-label="Controls">
-          <div class="ctl-head">
-            <h3>Controls</h3>
-            <div class="ctl-btns">
-              <button type="button" class="btn ghost" id="bPause">Pause</button>
-              <button type="button" class="btn ghost" id="bToggleCtl" aria-expanded="true">Hide controls</button>
-            </div>
-          </div>
-          <div class="ctl-body" id="ctlBody">
-            <div class="krow kp1" id="kp1"><span class="kn"><i class="swatch"></i><span id="kn1">Amber</span></span></div>
-            <div class="krow kp2" id="kp2" hidden><span class="kn"><i class="swatch"></i><span id="kn2">Jade</span></span></div>
-          </div>
-        </section>
       </div>
 
       <!-- CARD PICK MODAL -->
@@ -259,12 +259,14 @@ export class GamePage {
     this.gi1b = container.querySelector('#gi1b') as HTMLElement;
     this.gi2a = container.querySelector('#gi2a') as HTMLElement;
     this.gi2b = container.querySelector('#gi2b') as HTMLElement;
-
-    // Controls
-    this.kp1 = container.querySelector('#kp1') as HTMLElement;
-    this.kp2 = container.querySelector('#kp2') as HTMLElement;
-    this.ctlBody = container.querySelector('#ctlBody') as HTMLElement;
-    this.bToggleCtl = container.querySelector('#bToggleCtl') as HTMLButtonElement;
+    this.gcd1a = container.querySelector('#gcd1a') as HTMLElement;
+    this.gcd1b = container.querySelector('#gcd1b') as HTMLElement;
+    this.gcd2a = container.querySelector('#gcd2a') as HTMLElement;
+    this.gcd2b = container.querySelector('#gcd2b') as HTMLElement;
+    this.gkb1a = container.querySelector('#gkb1a') as HTMLElement;
+    this.gkb1b = container.querySelector('#gkb1b') as HTMLElement;
+    this.gkb2a = container.querySelector('#gkb2a') as HTMLElement;
+    this.gkb2b = container.querySelector('#gkb2b') as HTMLElement;
 
     this.buildControlsGuide();
   }
@@ -283,8 +285,13 @@ export class GamePage {
     // Sound toggle
     const btnSoundToggle = this.rootElement.querySelector('#btnSoundToggle') as HTMLButtonElement;
     btnSoundToggle.addEventListener('click', () => {
-      sound.enabled = !sound.enabled;
-      btnSoundToggle.textContent = sound.enabled ? '🔊 Sound On' : '🔇 Sound Off';
+      const isNowOn = sound.toggle();
+      btnSoundToggle.textContent = isNowOn ? '🔊 Sound On' : '🔇 Sound Off';
+      btnSoundToggle.classList.toggle('sound-on', isNowOn);
+      btnSoundToggle.classList.toggle('sound-off', !isNowOn);
+      if (isNowOn) {
+        sound.playTone(580, 0.08, 'triangle', 0.04, 150);
+      }
     });
 
     // Back to Menu
@@ -304,24 +311,7 @@ export class GamePage {
       this.togglePause();
     });
 
-    // Hide/show controls toggle
-    let ctlShown = true;
-    try {
-      ctlShown = localStorage.getItem('gb-controls') !== '0';
-    } catch {
-      // ignore
-    }
-    this.setControlsVisible(ctlShown);
 
-    this.bToggleCtl.addEventListener('click', () => {
-      this.setControlsVisible(!ctlShown);
-      ctlShown = !ctlShown;
-      try {
-        localStorage.setItem('gb-controls', ctlShown ? '1' : '0');
-      } catch {
-        // ignore
-      }
-    });
 
     // Touch controls
     this.rootElement.querySelectorAll('.tb[data-t]').forEach((b) => {
@@ -365,73 +355,15 @@ export class GamePage {
     });
   }
 
-  private setControlsVisible(show: boolean) {
-    this.ctlBody.hidden = !show;
-    this.bToggleCtl.textContent = show ? 'Hide controls' : 'Show controls';
-    this.bToggleCtl.setAttribute('aria-expanded', show ? 'true' : 'false');
-  }
-
-  public buildControlsGuide(s1Skills?: [string, string], s2Skills?: [string, string]) {
-    const kb = getKeys();
+  public buildControlsGuide(_s1Skills?: [string, string], _s2Skills?: [string, string]) {
     const looks = getLooks();
-    const sk1 = s1Skills || ['dash', 'web'];
-    const sk2 = s2Skills || ['dash', 'web'];
-
-    const kbd = (t: string) => {
-      const el = document.createElement('kbd');
-      el.textContent = t;
-      return el;
-    };
-
-    const addKeyItem = (row: HTMLElement, parts: HTMLElement[], label?: string) => {
-      const sp = document.createElement('span');
-      sp.className = 'k';
-      parts.forEach(p => sp.appendChild(p));
-      if (label) sp.appendChild(document.createTextNode(' ' + label));
-      row.appendChild(sp);
-    };
-
-    // P1
-    while (this.kp1.children.length > 1) this.kp1.removeChild(this.kp1.lastChild!);
-    addKeyItem(this.kp1, [kbd(keyLabel(kb.p1.left)), kbd(keyLabel(kb.p1.right))], 'Move');
-    addKeyItem(this.kp1, [kbd(keyLabel(kb.p1.strike))], 'Strike');
-    addKeyItem(this.kp1, [kbd(keyLabel(kb.p1.block))], 'Block');
-    addKeyItem(this.kp1, [kbd(keyLabel(kb.p1.climb))], 'Climb');
-    for (let j = 0; j < 2; j++) {
-      const id = sk1[j] as AbilityId;
-      const sd = ABILITIES[id] || ABILITIES.dash;
-      const bind = j === 0 ? kb.p1.s1 : kb.p1.s2;
-      const ic = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-      ic.setAttribute('class', 'ico');
-      ic.innerHTML = `<use href="#${sd.icon}"/>`;
-      addKeyItem(this.kp1, [kbd(keyLabel(bind)), ic as any], sd.name);
-    }
-
-    // P2
-    this.kp2.hidden = this.gameMode !== '2p';
-    while (this.kp2.children.length > 1) this.kp2.removeChild(this.kp2.lastChild!);
-    addKeyItem(this.kp2, [kbd(keyLabel(kb.p2.left)), kbd(keyLabel(kb.p2.right))], 'Move');
-    addKeyItem(this.kp2, [kbd(keyLabel(kb.p2.strike))], 'Strike');
-    addKeyItem(this.kp2, [kbd(keyLabel(kb.p2.block))], 'Block');
-    addKeyItem(this.kp2, [kbd(keyLabel(kb.p2.climb))], 'Climb');
-    for (let j = 0; j < 2; j++) {
-      const id = sk2[j] as AbilityId;
-      const sd = ABILITIES[id] || ABILITIES.dash;
-      const bind = j === 0 ? kb.p2.s1 : kb.p2.s2;
-      const ic = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-      ic.setAttribute('class', 'ico');
-      ic.innerHTML = `<use href="#${sd.icon}"/>`;
-      addKeyItem(this.kp2, [kbd(keyLabel(bind)), ic as any], sd.name);
-    }
-
-    // Apply looks styling
     const c1 = getColor(looks.p1.color);
     const c2 = getColor(looks.p2.color);
-    this.rootElement.querySelectorAll<HTMLElement>('.p1,.kp1').forEach(e => e.style.setProperty('--c', c1.main));
-    this.rootElement.querySelectorAll<HTMLElement>('.p2,.kp2').forEach(e => e.style.setProperty('--c', c2.main));
+    this.rootElement.querySelectorAll<HTMLElement>('.p1').forEach(e => e.style.setProperty('--c', c1.main));
+    this.rootElement.querySelectorAll<HTMLElement>('.p2').forEach(e => e.style.setProperty('--c', c2.main));
   }
 
-  /* ---------- CARD PICK MODAL (Fanned cards, 3 draw keep 2) ---------- */
+  /* ---------- CARD PICK MODAL (Fanned cards, 3 draw keep 2, or 1 keep 1) ---------- */
   public showDraftModal(
     choices: string[],
     round: number,
@@ -440,28 +372,38 @@ export class GamePage {
   ) {
     this.isDraftLeaving = false;
     this.isDraftOpen = true;
-    this.selectedDraftSlots = [];
-    this.currentDraftOffer = choices as AbilityId[];
+    this.currentDraftOffer = (choices && choices.length > 0 ? choices : ['dash']) as AbilityId[];
     this.draftConfirmCallback = onConfirm;
+
+    const targetCount = this.targetDraftCount;
 
     this.pkWho.textContent = `${playerName} · Round ${round}`;
     this.pkWho.style.setProperty('--c', 'var(--amber)');
-    this.pkTitle.textContent = 'Pick 2 skills';
-    this.pkSub.textContent = 'Choose 2 of these 3 cards. You keep them for the whole match. Press 1, 2 or 3 to choose.';
+
+    if (targetCount === 1) {
+      this.pkTitle.textContent = 'Pick your skill';
+      this.pkSub.textContent = 'You have 1 ability unlocked. Equip your card for the match. Press 1 or click to choose.';
+      this.selectedDraftSlots = [0]; // Auto-selected so player can confirm immediately
+    } else {
+      this.pkTitle.textContent = 'Pick 2 skills';
+      this.pkSub.textContent = `Choose 2 of these ${choices.length} cards. You keep them for the whole match. Press 1, 2 or 3 to choose.`;
+      this.selectedDraftSlots = [];
+    }
+
     this.pkCards.innerHTML = '';
 
-    choices.forEach((id, k) => {
+    this.currentDraftOffer.forEach((id, k) => {
       const s = ABILITIES[id as AbilityId] || ABILITIES.dash;
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'skill card-pick';
-      btn.setAttribute('aria-pressed', 'false');
+      btn.setAttribute('aria-pressed', this.selectedDraftSlots.includes(k) ? 'true' : 'false');
       btn.style.setProperty('--i', String(k));
 
       btn.innerHTML = `
         <span class="num">${k + 1}</span>
         <span class="pgem">
-          <img src="/abilities/${s.id}.png" alt="${s.name}" class="card-icon-img" style="width:100%;height:100%;object-fit:contain;border-radius:10px;box-shadow:0 4px 12px rgba(0,0,0,0.5);" />
+          <img src="/abilities/${s.id}.png" alt="${s.name}" class="card-icon-img" style="width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 6px 14px rgba(0,0,0,0.65));" />
         </span>
         <div>
           <h3>${s.name}</h3>
@@ -501,14 +443,19 @@ export class GamePage {
     if (firstCard) firstCard.focus({ preventScroll: true });
   }
 
+  private get targetDraftCount(): number {
+    return Math.min(2, Math.max(1, this.currentDraftOffer.length));
+  }
+
   private toggleCard(k: number) {
     if (this.isDraftLeaving) return;
+    const target = this.targetDraftCount;
     const ix = this.selectedDraftSlots.indexOf(k);
     if (ix >= 0) {
       this.selectedDraftSlots.splice(ix, 1);
       sound.play('card_deselect');
     } else {
-      if (this.selectedDraftSlots.length >= 2) {
+      if (this.selectedDraftSlots.length >= target) {
         this.selectedDraftSlots.shift();
       }
       this.selectedDraftSlots.push(k);
@@ -526,15 +473,17 @@ export class GamePage {
   }
 
   private syncPickUI() {
+    const target = this.targetDraftCount;
     Array.from(this.pkCards.children).forEach((c, k) => {
       c.setAttribute('aria-pressed', this.selectedDraftSlots.includes(k) ? 'true' : 'false');
     });
-    this.pkCount.textContent = `${this.selectedDraftSlots.length} of 2 picked`;
-    this.pkGo.disabled = this.selectedDraftSlots.length !== 2;
+    this.pkCount.textContent = `${this.selectedDraftSlots.length} of ${target} picked`;
+    this.pkGo.disabled = this.selectedDraftSlots.length !== target;
   }
 
   private confirmPick() {
-    if (this.selectedDraftSlots.length !== 2 || this.isDraftLeaving) return;
+    const target = this.targetDraftCount;
+    if (this.selectedDraftSlots.length !== target || this.isDraftLeaving) return;
     this.isDraftLeaving = true;
     sound.play('card_confirm');
 
@@ -561,18 +510,17 @@ export class GamePage {
   /* ---------- LABELS AND ROOM BADGE ---------- */
   public setLabels(mode: string, diff: string, myId: number = 0) {
     this.gameMode = mode;
+    this.gemSeen = {};
+    this.lastControlsKey = '';
     if (mode === 'online') {
       this.w1.textContent = myId === 0 ? 'You' : 'Opponent';
       this.w2.textContent = myId === 1 ? 'You' : 'Opponent';
-      this.kp2.hidden = true;
     } else if (mode === 'cpu') {
       this.w1.textContent = 'You';
       this.w2.textContent = `CPU · ${diff}`;
-      this.kp2.hidden = true;
     } else {
       this.w1.textContent = 'Player 1';
       this.w2.textContent = 'Player 2';
-      this.kp2.hidden = false;
     }
   }
 
@@ -610,59 +558,103 @@ export class GamePage {
     this.gb2.classList.toggle('low', s2.grip < 30);
 
     // Player 1 ability gems (Slot 1 & Slot 2)
-    const p1Skills = [s1.skill1 || 'dash', s1.skill2 || 'web'];
+    const p1Skills = [s1.skill1 || 'dash', s1.skill2 || ''];
     const p1Cds = [s1.cd1 || 0, s1.cd2 || 0];
     const p1CdMax = [s1.cd1max || 3, s1.cd2max || 5];
 
+    // Player 2 ability gems (Slot 1 & Slot 2)
+    const p2Skills = [s2.skill1 || 'dash', s2.skill2 || ''];
+    const p2Cds = [s2.cd1 || 0, s2.cd2 || 0];
+    const p2CdMax = [s2.cd1max || 3, s2.cd2max || 5];
+
+    // Keep bottom controls guide synced with current equipped skills
+    const currentSkillsKey = `${p1Skills.join(',')}_${p2Skills.join(',')}`;
+    if (this.lastControlsKey !== currentSkillsKey) {
+      this.lastControlsKey = currentSkillsKey;
+      this.buildControlsGuide(p1Skills as [string, string], p2Skills as [string, string]);
+    }
+
     [0, 1].forEach(j => {
-      const id = p1Skills[j] as AbilityId;
-      const sd = ABILITIES[id] || ABILITIES.dash;
-      const tag = '1' + (j ? 'b' : 'a');
       const g = j === 0 ? this.g1a : this.g1b;
+      const id = p1Skills[j] as AbilityId;
+      if (!id || !ABILITIES[id]) {
+        g.style.display = 'none';
+        return;
+      }
+      g.style.display = '';
+
+      const sd = ABILITIES[id];
+      const tag = '1' + (j ? 'b' : 'a');
       const gi = j === 0 ? this.gi1a : this.gi1b;
+      const cdEl = j === 0 ? this.gcd1a : this.gcd1b;
+      const kbEl = j === 0 ? this.gkb1a : this.gkb1b;
+      const bindCode = j === 0 ? kb.p1.s1 : kb.p1.s2;
 
       if (this.gemSeen[tag] !== sd.id) {
         this.gemSeen[tag] = sd.id;
-        gi.firstElementChild?.setAttribute('href', `#${sd.icon}`);
-        const bindCode = j === 0 ? kb.p1.s1 : kb.p1.s2;
+        (gi as HTMLImageElement).src = `/abilities/${sd.id}.png`;
+        (gi as HTMLImageElement).alt = sd.name;
         g.title = `${sd.name} (${keyLabel(bindCode)})${sd.use === 'hang' ? ' - only while dangling' : ''}`;
         g.setAttribute('aria-label', sd.name);
+      }
+
+      if (kbEl) {
+        kbEl.textContent = keyLabel(bindCode);
       }
 
       const usable = (sd.use === 'hang') === !!s1.hang;
       const cd = p1Cds[j];
       const max = p1CdMax[j] || sd.cd || 1;
-      g.style.setProperty('--cd', `${Math.max(0, Math.min(100, 100 * cd / max)).toFixed(1)}%`);
+      const pct = Math.max(0, Math.min(100, 100 * cd / max));
+      g.style.setProperty('--cd', `${pct.toFixed(1)}%`);
       g.classList.toggle('ready', cd <= 0 && usable);
       g.classList.toggle('off', !usable);
+
+      if (cdEl) {
+        cdEl.textContent = cd > 0.1 ? (cd >= 10 ? Math.ceil(cd).toString() : cd.toFixed(1)) : '';
+      }
     });
 
-    // Player 2 ability gems (Slot 1 & Slot 2)
-    const p2Skills = [s2.skill1 || 'dash', s2.skill2 || 'web'];
-    const p2Cds = [s2.cd1 || 0, s2.cd2 || 0];
-    const p2CdMax = [s2.cd1max || 3, s2.cd2max || 5];
-
     [0, 1].forEach(j => {
-      const id = p2Skills[j] as AbilityId;
-      const sd = ABILITIES[id] || ABILITIES.dash;
-      const tag = '2' + (j ? 'b' : 'a');
       const g = j === 0 ? this.g2a : this.g2b;
+      const id = p2Skills[j] as AbilityId;
+      if (!id || !ABILITIES[id]) {
+        g.style.display = 'none';
+        return;
+      }
+      g.style.display = '';
+
+      const sd = ABILITIES[id];
+      const tag = '2' + (j ? 'b' : 'a');
       const gi = j === 0 ? this.gi2a : this.gi2b;
+      const cdEl = j === 0 ? this.gcd2a : this.gcd2b;
+      const kbEl = j === 0 ? this.gkb2a : this.gkb2b;
+      const bindCode = j === 0 ? kb.p2.s1 : kb.p2.s2;
+      const human = this.gameMode === '2p';
 
       if (this.gemSeen[tag] !== sd.id) {
         this.gemSeen[tag] = sd.id;
-        gi.firstElementChild?.setAttribute('href', `#${sd.icon}`);
-        const bindCode = j === 0 ? kb.p2.s1 : kb.p2.s2;
-        const human = this.gameMode === '2p';
+        (gi as HTMLImageElement).src = `/abilities/${sd.id}.png`;
+        (gi as HTMLImageElement).alt = sd.name;
         g.title = `${sd.name}${human ? ` (${keyLabel(bindCode)})` : ''}${sd.use === 'hang' ? ' - only while dangling' : ''}`;
+      }
+
+      if (kbEl) {
+        kbEl.textContent = human ? keyLabel(bindCode) : '';
+        kbEl.style.display = human ? 'block' : 'none';
       }
 
       const usable = (sd.use === 'hang') === !!s2.hang;
       const cd = p2Cds[j];
       const max = p2CdMax[j] || sd.cd || 1;
-      g.style.setProperty('--cd', `${Math.max(0, Math.min(100, 100 * cd / max)).toFixed(1)}%`);
+      const pct = Math.max(0, Math.min(100, 100 * cd / max));
+      g.style.setProperty('--cd', `${pct.toFixed(1)}%`);
       g.classList.toggle('ready', cd <= 0 && usable);
       g.classList.toggle('off', !usable);
+
+      if (cdEl) {
+        cdEl.textContent = cd > 0.1 ? (cd >= 10 ? Math.ceil(cd).toString() : cd.toFixed(1)) : '';
+      }
     });
 
     // Round wins pips

@@ -1356,29 +1356,48 @@
 
 /* Web Nodes */
 .web-node {
-  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   outline: none;
+  cursor: pointer;
 }
 
-.web-node:hover {
-  transform: scale(1.12);
+.node-hit-area {
+  pointer-events: all;
+  cursor: pointer;
 }
 
-.web-node.selected {
-  filter: drop-shadow(0 0 14px rgba(242, 163, 58, 0.8));
+.web-node .node-visual {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), filter 0.18s ease;
+  pointer-events: none;
+}
+
+.web-node:hover .node-visual {
+  transform: scale(1.15);
+  filter: drop-shadow(0 0 12px rgba(242, 163, 58, 0.75));
+}
+
+.web-node.selected .node-visual {
+  filter: drop-shadow(0 0 16px rgba(242, 163, 58, 0.95));
 }
 
 .node-avail-pulse {
-  animation: beaconPulse 2s infinite ease-out;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: beaconPulse 2.2s infinite ease-out;
+  pointer-events: none;
 }
 
 @keyframes beaconPulse {
-  0% { r: 24; opacity: 0.8; stroke-width: 2; }
-  100% { r: 38; opacity: 0; stroke-width: 0.5; }
+  0% { transform: scale(0.92); opacity: 0.85; }
+  100% { transform: scale(1.35); opacity: 0; }
 }
 
 .node-select-halo {
-  animation: haloRotate 6s linear infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: haloRotate 12s linear infinite;
+  pointer-events: none;
 }
 
 @keyframes haloRotate {
@@ -1388,6 +1407,10 @@
 
 .node-gem-shape {
   transition: fill 0.25s, stroke 0.25s, stroke-width 0.25s;
+}
+
+.web-node:hover .node-gem-shape {
+  stroke-width: 3.2px;
 }
 
 .node-label {
@@ -1427,12 +1450,6 @@
   z-index: 20;
   box-sizing: border-box;
   overflow-y: auto;
-  animation: slideInPanel 0.25s ease-out;
-}
-
-@keyframes slideInPanel {
-  0% { opacity: 0; transform: translateX(20px); }
-  100% { opacity: 1; transform: translateX(0); }
 }
 
 @media (max-width: 900px) {
@@ -1466,11 +1483,23 @@
 }
 
 .ac-gem-preview {
-  width: 54px;
+  width: 64px;
   height: 54px;
   flex: none;
   position: relative;
-  display: inline-block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+}
+
+.ac-gem-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
 }
 
 .ac-name {

@@ -461,10 +461,7 @@ export class GamePage {
       btn.innerHTML = `
         <span class="num">${k + 1}</span>
         <span class="pgem">
-          <svg class="shape" viewBox="0 0 100 100" aria-hidden="true">
-            <polygon points="50,3 91,26.5 91,73.5 50,97 9,73.5 9,26.5"/>
-          </svg>
-          <svg class="glyph" aria-hidden="true"><use href="#${s.icon}"/></svg>
+          <img src="/abilities/${s.id}.png" alt="${s.name}" class="card-icon-img" style="width:100%;height:100%;object-fit:contain;border-radius:10px;box-shadow:0 4px 12px rgba(0,0,0,0.5);" />
         </span>
         <div>
           <h3>${s.name}</h3>

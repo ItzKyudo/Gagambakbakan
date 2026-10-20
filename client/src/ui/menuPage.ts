@@ -362,6 +362,76 @@ export function renderMenuPage(container: HTMLElement, onStart: (opts: MenuStart
   /* ====================================================
      3. ABILITIES SPIDER WEB VIEW
      ==================================================== */
+  function renderDetailCardHtml(nodeId: AbilityId): string {
+    const prog = getProgress();
+    const pts = getAbilityPoints(prog);
+    const unlockedIds = getUnlockedIds(prog);
+    const sel = ABILITIES[nodeId] || ABILITIES.dash;
+    const selUnlocked = unlockedIds.includes(sel.id);
+    const selAvailable = isNodeAvailableToUnlock(sel.id, unlockedIds);
+
+    let actionHtml = '';
+    if (selUnlocked) {
+      actionHtml = `
+        <div class="ac-acquired-banner">
+          <svg class="ico mini" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" fill="none"/></svg>
+          <span>SKILL ACQUIRED &amp; EQUIPPED</span>
+        </div>
+      `;
+    } else if (selAvailable) {
+      if (pts.available > 0) {
+        actionHtml = `
+          <button type="button" class="btn-acquire-action" id="btnAcquireSkill" data-id="${sel.id}">
+            <span>⚡ ACQUIRE FOR 1 POINT</span>
+          </button>
+        `;
+      } else {
+        actionHtml = `
+          <div class="ac-locked-banner warning">
+            <span>PATH REACHED • 0 POINTS AVAILABLE</span>
+            <small>Level up in Online Matches to earn +1 Ability Point.</small>
+          </div>
+        `;
+      }
+    } else {
+      actionHtml = `
+        <div class="ac-locked-banner">
+          <svg class="ico mini" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 11V8a4 4 0 018 0v3" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+          <span>LOCKED — PATH NOT REACHED</span>
+          <small>Unlock adjacent connecting skills in the spider web first.</small>
+        </div>
+      `;
+    }
+
+    return `
+      <span class="ac-sector-tag" style="color:${sel.sectorColor}; border-color:${sel.sectorColor}66; background:${sel.sectorColor}1a;">${sel.sectorName}</span>
+
+      <div class="ac-card-head">
+        <div class="ac-gem-preview">
+          <img src="/abilities/${sel.id}.png" alt="${sel.name}" class="ac-gem-img" />
+        </div>
+        <div>
+          <h2 class="ac-name">${sel.name}</h2>
+          <div class="ac-chips">
+            <span class="ac-chip cd">⏱ ${sel.cd}s Cooldown</span>
+            <span class="ac-chip stance ${sel.use}">${sel.use === 'hang' ? '⚓ Dangling only' : '🌿 Clinging'}</span>
+          </div>
+        </div>
+      </div>
+
+      <p class="ac-desc">${sel.desc}</p>
+
+      <div class="ac-tip-box">
+        <span class="ac-tip-label">💡 COMBAT TACTIC</span>
+        ${sel.tip}
+      </div>
+
+      <div class="ac-action-area">
+        ${actionHtml}
+      </div>
+    `;
+  }
+
   function renderAbilitiesView(): string {
     const prog = getProgress();
     const expInfo = getExpProgress(prog.onlineExp);
@@ -399,107 +469,69 @@ export function renderMenuPage(container: HTMLElement, onStart: (opts: MenuStart
 
       let fillCol = '#0d1817';
       let strokeCol = 'rgba(52, 80, 75, 0.6)';
-      let iconCol = 'rgba(149, 170, 161, 0.35)';
 
       if (isUnlockedNode) {
         fillCol = '#112322';
         strokeCol = s.sectorColor;
-        iconCol = s.sectorColor;
       } else if (isAvail) {
         fillCol = '#231d14';
         strokeCol = '#f2a33a';
-        iconCol = '#ffd694';
       }
 
       return `
         <g class="web-node ${isSelected ? 'selected' : ''}" data-id="${s.id}" transform="translate(${s.x}, ${s.y})" cursor="pointer" tabindex="0" role="button" aria-label="${s.name}">
-          <!-- Enlarged hit target -->
-          <circle cx="0" cy="0" r="32" fill="transparent" />
+          <!-- Completely stable, non-moving hit area -->
+          <circle class="node-hit-area" cx="0" cy="0" r="34" fill="transparent" />
 
-          <!-- Selection Halo -->
-          ${isSelected ? `
-            <circle class="node-select-halo" cx="0" cy="0" r="32" fill="none" stroke="#f2a33a" stroke-width="2.2" stroke-dasharray="6 4" />
-          ` : ''}
+          <!-- Inner visual group with pointer-events: none that scales smoothly in place -->
+          <g class="node-visual">
+            <!-- Selection Halo -->
+            ${isSelected ? `
+              <circle class="node-select-halo" cx="0" cy="0" r="32" fill="none" stroke="#f2a33a" stroke-width="2.2" stroke-dasharray="6 4" />
+            ` : ''}
 
-          <!-- Available Beacon Pulse -->
-          ${!isUnlockedNode && isAvail ? `
-            <circle class="node-avail-pulse" cx="0" cy="0" r="26" fill="none" stroke="#f2a33a" stroke-width="2" />
-          ` : ''}
+            <!-- Available Beacon Pulse -->
+            ${!isUnlockedNode && isAvail ? `
+              <circle class="node-avail-pulse" cx="0" cy="0" r="26" fill="none" stroke="#f2a33a" stroke-width="2" />
+            ` : ''}
 
-          <!-- Base Shape -->
-          ${isCenter ? `
-            <circle cx="0" cy="0" r="25" fill="#142624" stroke="#ffd694" stroke-width="3" />
-            <circle cx="0" cy="0" r="20" fill="none" stroke="rgba(255, 214, 148, 0.45)" stroke-width="1.5" stroke-dasharray="3 3" />
-          ` : `
-            <polygon class="node-gem-shape" points="0,-24 17,-17 24,0 17,17 0,24 -17,17 -24,0 -17,-17" fill="${fillCol}" stroke="${strokeCol}" stroke-width="${isUnlockedNode ? '2.8' : (isAvail ? '2.4' : '1.5')}" />
-          `}
+            <!-- Base Shape -->
+            ${isCenter ? `
+              <circle cx="0" cy="0" r="25" fill="#142624" stroke="#ffd694" stroke-width="3" />
+              <circle cx="0" cy="0" r="20" fill="none" stroke="rgba(255, 214, 148, 0.45)" stroke-width="1.5" stroke-dasharray="3 3" />
+            ` : `
+              <polygon class="node-gem-shape" points="0,-24 17,-17 24,0 17,17 0,24 -17,17 -24,0 -17,-17" fill="${fillCol}" stroke="${strokeCol}" stroke-width="${isUnlockedNode ? '2.8' : (isAvail ? '2.4' : '1.5')}" />
+            `}
 
-          <!-- Icon Glyph -->
-          <use href="#${s.icon}" x="-13" y="-13" width="26" height="26" fill="${iconCol}" />
+            <!-- Extracted Ability Card Art -->
+            <image href="/abilities/${s.id}.png" x="-16" y="-14" width="32" height="28" preserveAspectRatio="xMidYMid meet" style="opacity:${isUnlockedNode ? 1 : (isAvail ? 0.92 : 0.38)}; filter:${isUnlockedNode ? 'none' : (isAvail ? 'contrast(1.08) brightness(0.95)' : 'grayscale(1) brightness(0.4)')}; border-radius: 4px;" />
 
-          <!-- Corner Badges -->
-          ${!isUnlockedNode && !isAvail ? `
-            <g transform="translate(10, 10)">
-              <circle cx="0" cy="0" r="7.5" fill="#160e0d" stroke="#e8593f" stroke-width="1.2" />
-              <use href="#ic-lock" x="-4.5" y="-4.5" width="9" height="9" fill="#ff9d8a" />
-            </g>
-          ` : ''}
-          ${!isUnlockedNode && isAvail ? `
-            <g transform="translate(11, -11)">
-              <circle cx="0" cy="0" r="7.5" fill="#2a1e0b" stroke="#f2a33a" stroke-width="1.2" />
-              <text x="0" y="3.5" text-anchor="middle" font-size="9.5" font-weight="900" fill="#ffd694">1</text>
-            </g>
-          ` : ''}
-          ${isUnlockedNode && !isCenter ? `
-            <g transform="translate(11, -11)">
-              <circle cx="0" cy="0" r="7" fill="#0d2420" stroke="#4cc7b2" stroke-width="1.2" />
-              <text x="0" y="3" text-anchor="middle" font-size="8.5" font-weight="900" fill="#4cc7b2">✓</text>
-            </g>
-          ` : ''}
+            <!-- Corner Badges -->
+            ${!isUnlockedNode && !isAvail ? `
+              <g transform="translate(10, 10)">
+                <circle cx="0" cy="0" r="7.5" fill="#160e0d" stroke="#e8593f" stroke-width="1.2" />
+                <use href="#ic-lock" x="-4.5" y="-4.5" width="9" height="9" fill="#ff9d8a" />
+              </g>
+            ` : ''}
+            ${!isUnlockedNode && isAvail ? `
+              <g transform="translate(11, -11)">
+                <circle cx="0" cy="0" r="7.5" fill="#2a1e0b" stroke="#f2a33a" stroke-width="1.2" />
+                <text x="0" y="3.5" text-anchor="middle" font-size="9.5" font-weight="900" fill="#ffd694">1</text>
+              </g>
+            ` : ''}
+            ${isUnlockedNode && !isCenter ? `
+              <g transform="translate(11, -11)">
+                <circle cx="0" cy="0" r="7" fill="#0d2420" stroke="#4cc7b2" stroke-width="1.2" />
+                <text x="0" y="3" text-anchor="middle" font-size="8.5" font-weight="900" fill="#4cc7b2">✓</text>
+              </g>
+            ` : ''}
+          </g>
 
           <!-- Name Tag -->
           <text class="node-label ${isUnlockedNode ? 'unlocked' : (isAvail ? 'available' : 'locked')}" x="0" y="38" text-anchor="middle" font-family="'Cinzel', serif" font-weight="700" font-size="11" letter-spacing="0.8">${s.name.toUpperCase()}</text>
         </g>
       `;
     }).join('');
-
-    // Detail Panel for Selected Node
-    const sel = ABILITIES[selectedNodeId] || ABILITIES.dash;
-    const selUnlocked = unlockedIds.includes(sel.id);
-    const selAvailable = isNodeAvailableToUnlock(sel.id, unlockedIds);
-
-    let actionHtml = '';
-    if (selUnlocked) {
-      actionHtml = `
-        <div class="ac-acquired-banner">
-          <svg class="ico mini" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" fill="none"/></svg>
-          <span>SKILL ACQUIRED &amp; EQUIPPED</span>
-        </div>
-      `;
-    } else if (selAvailable) {
-      if (pts.available > 0) {
-        actionHtml = `
-          <button type="button" class="btn-acquire-action" id="btnAcquireSkill" data-id="${sel.id}">
-            <span>⚡ ACQUIRE FOR 1 POINT</span>
-          </button>
-        `;
-      } else {
-        actionHtml = `
-          <div class="ac-locked-banner warning">
-            <span>PATH REACHED • 0 POINTS AVAILABLE</span>
-            <small>Level up in Online Matches to earn +1 Ability Point.</small>
-          </div>
-        `;
-      }
-    } else {
-      actionHtml = `
-        <div class="ac-locked-banner">
-          <svg class="ico mini" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 11V8a4 4 0 018 0v3" fill="none" stroke="currentColor" stroke-width="2"/></svg>
-          <span>LOCKED — PATH NOT REACHED</span>
-          <small>Unlock adjacent connecting skills in the spider web first.</small>
-        </div>
-      `;
-    }
 
     return `
       <div class="spider-web-view">
@@ -584,35 +616,8 @@ export function renderMenuPage(container: HTMLElement, onStart: (opts: MenuStart
           </svg>
 
           <!-- Floating Detail Card (Assassin's Creed Origins Style) -->
-          <aside class="swv-detail-panel" aria-label="Selected Ability Details">
-            <span class="ac-sector-tag" style="color:${sel.sectorColor}; border-color:${sel.sectorColor}66; background:${sel.sectorColor}1a;">${sel.sectorName}</span>
-
-            <div class="ac-card-head">
-              <div class="ac-gem-preview" style="color:${selUnlocked ? sel.sectorColor : (selAvailable ? '#f2a33a' : 'rgba(149, 170, 161, 0.5)')}">
-                <svg viewBox="0 0 100 100" style="width:100%;height:100%;">
-                  <polygon points="50,3 91,26.5 91,73.5 50,97 9,73.5 9,26.5" fill="rgba(14,26,25,0.9)" stroke="currentColor" stroke-width="4"/>
-                  <use href="#${sel.icon}" x="25" y="25" width="50" height="50" fill="currentColor"/>
-                </svg>
-              </div>
-              <div>
-                <h2 class="ac-name">${sel.name}</h2>
-                <div class="ac-chips">
-                  <span class="ac-chip cd">⏱ ${sel.cd}s Cooldown</span>
-                  <span class="ac-chip stance ${sel.use}">${sel.use === 'hang' ? '⚓ Dangling only' : '🌿 Clinging'}</span>
-                </div>
-              </div>
-            </div>
-
-            <p class="ac-desc">${sel.desc}</p>
-
-            <div class="ac-tip-box">
-              <span class="ac-tip-label">💡 COMBAT TACTIC</span>
-              ${sel.tip}
-            </div>
-
-            <div class="ac-action-area">
-              ${actionHtml}
-            </div>
+          <aside class="swv-detail-panel" id="swvDetailPanel" aria-label="Selected Ability Details">
+            ${renderDetailCardHtml(selectedNodeId)}
           </aside>
         </div>
 
@@ -1025,15 +1030,45 @@ export function renderMenuPage(container: HTMLElement, onStart: (opts: MenuStart
     }
 
     if (activeTab === 'abilities') {
-      // Node Selection on Spider Web
-      container.querySelectorAll<SVGElement>('.web-node[data-id]').forEach(node => {
-        const onSelect = () => {
-          const id = node.dataset.id as AbilityId;
-          if (id && ABILITIES[id]) {
-            selectedNodeId = id;
-            sound.playTone(580, 0.06, 'triangle', 0.04, 150);
+      const detailPanel = container.querySelector<HTMLElement>('#swvDetailPanel');
+
+      const bindAcquireAction = () => {
+        const btn = container.querySelector('#btnAcquireSkill') as HTMLButtonElement | null;
+        if (!btn) return;
+        btn.onclick = () => {
+          const targetId = (btn.dataset.id as AbilityId) || selectedNodeId;
+          const res = acquireSkill(targetId);
+          if (res.success) {
+            selectedNodeId = targetId;
+            sound.playTone(520, 0.1, 'triangle', 0.05, 200);
+            setTimeout(() => sound.playTone(780, 0.18, 'triangle', 0.05, 100), 100);
             render();
+          } else {
+            sound.playTone(280, 0.15, 'sawtooth', 0.05, -80);
           }
+        };
+      };
+
+      bindAcquireAction();
+
+      // Node Selection & Smooth Hover Preview on Spider Web
+      container.querySelectorAll<SVGElement>('.web-node[data-id]').forEach(node => {
+        const id = node.dataset.id as AbilityId;
+        if (!id || !ABILITIES[id]) return;
+
+        // Hover: update detail panel to preview this skill smoothly without re-rendering SVG
+        node.addEventListener('mouseenter', () => {
+          if (detailPanel) {
+            detailPanel.innerHTML = renderDetailCardHtml(id);
+            bindAcquireAction();
+          }
+        });
+
+        // Click / Enter: select this node as the persistent active node
+        const onSelect = () => {
+          selectedNodeId = id;
+          sound.playTone(580, 0.06, 'triangle', 0.04, 150);
+          render();
         };
 
         node.addEventListener('click', onSelect);
@@ -1043,19 +1078,6 @@ export function renderMenuPage(container: HTMLElement, onStart: (opts: MenuStart
             onSelect();
           }
         });
-      });
-
-      // Acquire Skill Button
-      container.querySelector('#btnAcquireSkill')?.addEventListener('click', () => {
-        const res = acquireSkill(selectedNodeId);
-        if (res.success) {
-          // Play triumphant acquisition audio chime
-          sound.playTone(520, 0.1, 'triangle', 0.05, 200);
-          setTimeout(() => sound.playTone(780, 0.18, 'triangle', 0.05, 100), 100);
-          render();
-        } else {
-          sound.playTone(280, 0.15, 'sawtooth', 0.05, -80);
-        }
       });
 
       // Respec Web Button

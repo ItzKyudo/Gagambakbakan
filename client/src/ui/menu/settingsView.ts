@@ -67,7 +67,7 @@ export function renderSettingsView(listeningKey: ListeningKey | null): string {
 
       <!-- CPU SKILL -->
       <section class="sec" aria-label="CPU skill">
-        <h2>CPU skill</h2>
+        <h2>AI Difficulty</h2>
         <div class="seg" role="radiogroup" aria-label="CPU skill">
           <label><input type="radio" name="diff" value="easy" ${st.diff === 'easy' ? 'checked' : ''}><span>Easy</span></label>
           <label><input type="radio" name="diff" value="normal" ${st.diff === 'normal' ? 'checked' : ''}><span>Normal</span></label>

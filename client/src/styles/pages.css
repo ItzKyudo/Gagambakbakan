@@ -783,3 +783,35 @@
   display: inline-block;
   vertical-align: middle;
 }
+
+/* Developers section */
+.about-dev-card {
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.about-dev-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(76, 199, 178, 0.45) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.dev-github-link:hover {
+  background: rgba(255, 255, 255, 0.14) !important;
+  border-color: var(--jade) !important;
+  color: #fff !important;
+  transform: translateY(-1px);
+}
+
+.dev-pfp {
+  width: 50px;
+  height: 50px;
+  border-radius: 10px;
+  object-fit: cover;
+  flex-shrink: 0;
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.about-dev-card:hover .dev-pfp {
+  transform: scale(1.06);
+}
+

@@ -43,6 +43,8 @@ export class GamePage {
   private pkSub!: HTMLElement;
   private pkCards!: HTMLElement;
   private pkCount!: HTMLElement;
+  private pkTimer!: HTMLElement;
+  private pkTimeVal!: HTMLElement;
   private pkGo!: HTMLButtonElement;
   private pkMenuBtn!: HTMLButtonElement;
   private selectedDraftSlots: number[] = [];
@@ -51,6 +53,8 @@ export class GamePage {
   public isDraftOpen: boolean = false;
   private isDraftLeaving: boolean = false;
   private draftKeyHandler?: (e: KeyboardEvent) => void;
+  private draftTimerInterval: number | null = null;
+  private draftTimeLeft: number = 15;
 
   private g1a!: HTMLElement;
   private g1b!: HTMLElement;
@@ -208,6 +212,7 @@ export class GamePage {
           </div>
           <div class="pk-foot">
             <span id="pkCount" aria-live="polite">0 of 2 picked</span>
+            <div class="pk-timer" id="pkTimer" aria-label="Time remaining"><span class="pk-timer-num" id="pkTimeVal">15</span>s</div>
             <button type="button" class="btn primary" id="pkGo" disabled>Confirm</button>
             <button type="button" class="btn ghost" id="pkMenu">Menu</button>
           </div>
@@ -247,6 +252,8 @@ export class GamePage {
     this.pkSub = container.querySelector('#pkSub') as HTMLElement;
     this.pkCards = container.querySelector('#pkCards') as HTMLElement;
     this.pkCount = container.querySelector('#pkCount') as HTMLElement;
+    this.pkTimer = container.querySelector('#pkTimer') as HTMLElement;
+    this.pkTimeVal = container.querySelector('#pkTimeVal') as HTMLElement;
     this.pkGo = container.querySelector('#pkGo') as HTMLButtonElement;
     this.pkMenuBtn = container.querySelector('#pkMenu') as HTMLButtonElement;
 
@@ -335,10 +342,18 @@ export class GamePage {
       this.confirmPick();
     });
 
-    // Keyboard numbers 1, 2, 3 in draft
+    // Mouse wheel horizontal scrolling for cards
+    this.pkCards.addEventListener('wheel', (e: WheelEvent) => {
+      if (this.pkCards.classList.contains('has-scroll') && Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        e.preventDefault();
+        this.pkCards.scrollLeft += e.deltaY;
+      }
+    }, { passive: false });
+
+    // Keyboard numbers 1-9 in draft
     this.draftKeyHandler = (e) => {
       if (!this.isDraftOpen || this.isDraftLeaving) return;
-      const m = /^(?:Digit|Numpad)([1-3])$/.exec(e.code);
+      const m = /^(?:Digit|Numpad)([1-9])$/.exec(e.code);
       if (m) {
         const idx = parseInt(m[1], 10) - 1;
         if (idx < this.currentDraftOffer.length) {
@@ -357,6 +372,7 @@ export class GamePage {
   }
 
   public destroy() {
+    this.clearDraftTimer();
     if (this.draftKeyHandler) window.removeEventListener('keydown', this.draftKeyHandler);
   }
 
@@ -375,6 +391,7 @@ export class GamePage {
     playerName: string,
     onConfirm: (skills: string[]) => void
   ) {
+    this.clearDraftTimer();
     this.isDraftLeaving = false;
     this.isDraftOpen = true;
     this.currentDraftOffer = (choices && choices.length > 0 ? choices : ['dash']) as AbilityId[];
@@ -391,9 +408,18 @@ export class GamePage {
       this.selectedDraftSlots = [0]; // Auto-selected so player can confirm immediately
     } else {
       this.pkTitle.textContent = 'Pick 2 skills';
-      this.pkSub.textContent = `Choose 2 of these ${choices.length} cards. You keep them for the whole match. Press 1, 2 or 3 to choose.`;
+      const keyHint = choices.length <= 3 ? 'Press 1, 2 or 3 to choose.' : `Press 1-${Math.min(9, choices.length)} or click to choose.`;
+      this.pkSub.textContent = `Choose 2 of these ${choices.length} cards. You keep them for the whole match. ${keyHint}`;
       this.selectedDraftSlots = [];
     }
+
+    if (this.currentDraftOffer.length > 3) {
+      this.pkCards.classList.add('has-scroll');
+    } else {
+      this.pkCards.classList.remove('has-scroll');
+    }
+
+    if (this.pkTimer) this.pkTimer.style.display = '';
 
     this.pkCards.innerHTML = '';
 
@@ -430,6 +456,7 @@ export class GamePage {
     });
 
     this.syncPickUI();
+    this.startDraftTimer(15);
     this.pickModal.classList.remove('leave');
     this.pickModal.hidden = false;
 
@@ -437,11 +464,11 @@ export class GamePage {
     requestAnimationFrame(() => {
       void this.pkCards.offsetWidth;
       Array.from(this.pkCards.children).forEach(c => c.classList.add('deal'));
-      [0, 1, 2].forEach(k => {
+      for (let k = 0; k < Math.min(5, this.currentDraftOffer.length); k++) {
         setTimeout(() => {
           sound.playTone(220 + k * 70, 0.3, 'sawtooth', 0.025, 520);
-        }, 80 + k * 120);
-      });
+        }, 80 + k * 100);
+      }
     });
 
     const firstCard = this.pkCards.firstElementChild as HTMLElement;
@@ -472,9 +499,67 @@ export class GamePage {
       card.classList.remove('pop');
       void card.offsetWidth;
       card.classList.add('pop');
+      card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
     }
 
     this.syncPickUI();
+  }
+
+  private startDraftTimer(durationSeconds: number = 15) {
+    this.clearDraftTimer();
+    this.draftTimeLeft = durationSeconds;
+    this.updateDraftTimerUI();
+
+    this.draftTimerInterval = window.setInterval(() => {
+      this.draftTimeLeft--;
+      this.updateDraftTimerUI();
+      if (this.draftTimeLeft <= 0) {
+        this.clearDraftTimer();
+        this.autoPickAndConfirm();
+      }
+    }, 1000);
+  }
+
+  private clearDraftTimer() {
+    if (this.draftTimerInterval !== null) {
+      clearInterval(this.draftTimerInterval);
+      this.draftTimerInterval = null;
+    }
+    if (this.pkTimer) {
+      this.pkTimer.classList.remove('urgent');
+    }
+  }
+
+  private updateDraftTimerUI() {
+    if (!this.pkTimeVal) return;
+    this.pkTimeVal.textContent = String(Math.max(0, this.draftTimeLeft));
+    if (this.draftTimeLeft <= 5) {
+      this.pkTimer?.classList.add('urgent');
+    } else {
+      this.pkTimer?.classList.remove('urgent');
+    }
+  }
+
+  private autoPickAndConfirm() {
+    if (!this.isDraftOpen || this.isDraftLeaving) return;
+    const target = this.targetDraftCount;
+
+    // Retain any valid pre-selected cards
+    const current = this.selectedDraftSlots.filter(
+      idx => typeof idx === 'number' && idx >= 0 && idx < this.currentDraftOffer.length
+    );
+
+    // Auto-fill any remaining slots from available choices
+    for (let i = 0; i < this.currentDraftOffer.length; i++) {
+      if (current.length >= target) break;
+      if (!current.includes(i)) {
+        current.push(i);
+      }
+    }
+
+    this.selectedDraftSlots = current.slice(0, target);
+    this.syncPickUI();
+    this.confirmPick();
   }
 
   private syncPickUI() {
@@ -489,6 +574,7 @@ export class GamePage {
   private confirmPick() {
     const target = this.targetDraftCount;
     if (this.selectedDraftSlots.length !== target || this.isDraftLeaving) return;
+    this.clearDraftTimer();
     this.isDraftLeaving = true;
     sound.play('card_confirm');
 
@@ -499,17 +585,48 @@ export class GamePage {
     setTimeout(() => {
       this.isDraftLeaving = false;
       this.pickModal.classList.remove('leave');
-      this.hideDraftModal();
+      if (this.gameMode === 'online') {
+        this.showDraftWaiting(chosen);
+      } else {
+        this.hideDraftModal();
+      }
       if (cb) cb(chosen);
     }, 400);
   }
 
+  public showDraftWaiting(chosen: string[]) {
+    this.clearDraftTimer();
+    this.isDraftOpen = true;
+    this.isDraftLeaving = false;
+    this.pickModal.hidden = false;
+    this.pkTitle.textContent = 'Waiting for Opponent...';
+    const names = chosen.map(id => ABILITIES[id as AbilityId]?.name || id).join(' & ');
+    this.pkSub.textContent = `You picked ${names}. Waiting for your opponent to choose their abilities...`;
+    this.pkCount.textContent = 'Ready ✓';
+    this.pkGo.disabled = true;
+    this.pkGo.textContent = 'Locked In';
+    if (this.pkTimer) this.pkTimer.style.display = 'none';
+    Array.from(this.pkCards.children).forEach(c => {
+      (c as HTMLElement).style.pointerEvents = 'none';
+      (c as HTMLElement).style.opacity = '0.5';
+    });
+  }
+
   public hideDraftModal() {
+    this.clearDraftTimer();
     this.isDraftOpen = false;
     this.isDraftLeaving = false;
     this.pickModal.hidden = true;
     this.selectedDraftSlots = [];
     this.draftConfirmCallback = null;
+    this.pkGo.disabled = false;
+    this.pkGo.textContent = 'Confirm';
+    if (this.pkTimer) this.pkTimer.style.display = '';
+    this.pkCards.classList.remove('has-scroll');
+    Array.from(this.pkCards.children).forEach(c => {
+      (c as HTMLElement).style.pointerEvents = '';
+      (c as HTMLElement).style.opacity = '';
+    });
   }
 
   /* ---------- LABELS AND ROOM BADGE ---------- */

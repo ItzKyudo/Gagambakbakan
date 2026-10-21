@@ -198,9 +198,15 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
     this.battleState.p1.falls = 0;
     this.battleState.p2.falls = 0;
 
-    // Draw 3 skills for each player based on their validated unlocked web skills
-    this.battleState.draftChoicesP1 = getRandomAbilities(3, [], this.battleState.p1.unlockedSkills || this.battleState.p1.level || 1);
-    this.battleState.draftChoicesP2 = getRandomAbilities(3, [], this.battleState.p2.unlockedSkills || this.battleState.p2.level || 1);
+    // Offer all unlocked skills for each player based on their validated unlocked web skills
+    const p1Skills = this.battleState.p1.unlockedSkills && this.battleState.p1.unlockedSkills.length > 0
+      ? this.battleState.p1.unlockedSkills
+      : getRandomAbilities(16, [], this.battleState.p1.level || 1);
+    const p2Skills = this.battleState.p2.unlockedSkills && this.battleState.p2.unlockedSkills.length > 0
+      ? this.battleState.p2.unlockedSkills
+      : getRandomAbilities(16, [], this.battleState.p2.level || 1);
+    this.battleState.draftChoicesP1 = p1Skills;
+    this.battleState.draftChoicesP2 = p2Skills;
     this.battleState.p1Drafted = false;
     this.battleState.p2Drafted = false;
     this.battleState.status = 'draft';
@@ -289,7 +295,8 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
   private update(dt: number) {
     this.battleState.stateT += dt;
 
-    if (this.battleState.status === 'draft' && this.battleState.stateT >= 15) {
+    // 17s server timeout provides 2s grace over 15s client countdown to absorb network latency
+    if (this.battleState.status === 'draft' && this.battleState.stateT >= 17) {
       if (!this.battleState.p1Drafted) this.autoDraft(this.battleState.p1, this.battleState.draftChoicesP1);
       if (!this.battleState.p2Drafted) this.autoDraft(this.battleState.p2, this.battleState.draftChoicesP2);
       this.startFightReady();

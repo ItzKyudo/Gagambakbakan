@@ -161,10 +161,11 @@ export class LocalGameEngine {
     this.state.p1.falls = 0;
     this.state.p2.falls = 0;
 
-    // Draw from unlocked skills
+    // Offer all unlocked skills for drafting
     const unlocked = getUnlockedIds();
-    this.state.draftChoicesP1 = drawSkills(unlocked, 3);
-    this.state.draftChoicesP2 = drawSkills(unlocked, 3);
+    const choices = unlocked && unlocked.length > 0 ? unlocked : (['dash', 'web', 'surge'] as AbilityId[]);
+    this.state.draftChoicesP1 = choices;
+    this.state.draftChoicesP2 = choices;
     this.state.p1Drafted = false;
     this.state.p2Drafted = false;
     this.state.status = 'draft';

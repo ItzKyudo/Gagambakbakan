@@ -29,6 +29,7 @@ const touchState = { left: false, right: false, strike: false, block: false, ree
 let abQueueP1 = [0, 0]; // [s1, s2]
 let abQueueP2 = [0, 0]; // [s1, s2]
 let reelP2 = 0;
+let onlineDraftSubmitted = false;
 
 function setupKeyboardListeners() {
   window.addEventListener('keydown', (e) => {
@@ -131,6 +132,7 @@ function showMainMenu() {
   network.leave();
   gamePage?.destroy();
   gamePage = null;
+  onlineDraftSubmitted = false;
   keysDown.clear();
   touchState.left = touchState.right = touchState.strike = touchState.block = false;
   clearInputs();
@@ -192,6 +194,7 @@ async function startOnlineGame(opts: MenuStartOptions) {
   const scene = currentScene;
 
   currentScene.isOnline = true;
+  onlineDraftSubmitted = false;
   sound.music.play('ambient');
 
   // If match was already found via menu queue, start directly without modal delay
@@ -207,13 +210,14 @@ async function startOnlineGame(opts: MenuStartOptions) {
       gamePage.updateHud(network.room.state);
 
       if (network.room.state.status === 'draft') {
-        const myId = network.myPlayerId;
+        const myId = network.myPlayerId >= 0 ? network.myPlayerId : (currentScene ? currentScene.myPlayerId : 0);
         const myDrafted = myId === 0 ? network.room.state.p1Drafted : network.room.state.p2Drafted;
         const myChoices = myId === 0 ? network.room.state.draftChoicesP1 : network.room.state.draftChoicesP2;
         const myName = myId === 0 ? network.room.state.p1?.name : network.room.state.p2?.name;
 
-        if (!myDrafted && myChoices && myChoices.length >= 1 && !gamePage.isDraftOpen) {
+        if (!myDrafted && !onlineDraftSubmitted && myChoices && myChoices.length >= 1 && !gamePage.isDraftOpen) {
           gamePage.showDraftModal(myChoices, network.room.state.round || 1, myName || 'Player', (skills) => {
+            onlineDraftSubmitted = true;
             network.sendSelectSkills(skills);
           });
         }
@@ -296,6 +300,15 @@ function getNetworkCallbacks() {
       if (currentScene) currentScene.myPlayerId = data.id;
       if (gamePage) gamePage.setLabels('online', 'normal', data.id);
     },
+    onDraftStart: () => {
+      onlineDraftSubmitted = false;
+    },
+    onPlayerDrafted: (data: { id: number; skill1: string; skill2: string }) => {
+      const myId = network.myPlayerId >= 0 ? network.myPlayerId : (currentScene ? currentScene.myPlayerId : 0);
+      if (data.id === myId) {
+        onlineDraftSubmitted = true;
+      }
+    },
     onStateChange: (state: any) => {
       if (currentScene) currentScene.gameState = state;
       if (gamePage) {
@@ -304,17 +317,19 @@ function getNetworkCallbacks() {
         // Handle drafting phase in online mode
         if (state.status === 'draft') {
           sound.music.play('ambient');
-          const myId = currentScene ? currentScene.myPlayerId : 0;
+          const myId = network.myPlayerId >= 0 ? network.myPlayerId : (currentScene ? currentScene.myPlayerId : 0);
           const myDrafted = myId === 0 ? state.p1Drafted : state.p2Drafted;
           const myChoices = myId === 0 ? state.draftChoicesP1 : state.draftChoicesP2;
           const myName = myId === 0 ? state.p1.name : state.p2.name;
 
-          if (!myDrafted && myChoices && myChoices.length >= 1 && !gamePage.isDraftOpen) {
+          if (!myDrafted && !onlineDraftSubmitted && myChoices && myChoices.length >= 1 && !gamePage.isDraftOpen) {
             gamePage.showDraftModal(myChoices, state.round || 1, myName || 'Player', (skills) => {
+              onlineDraftSubmitted = true;
               network.sendSelectSkills(skills);
             });
           }
         } else if (state.status === 'ready' || state.status === 'fight') {
+          onlineDraftSubmitted = false;
           if (gamePage.isDraftOpen) {
             gamePage.hideDraftModal();
           }
@@ -333,6 +348,7 @@ function getNetworkCallbacks() {
       if (currentScene) currentScene.addShake(shake.amount);
     },
     onRoundStart: () => {
+      onlineDraftSubmitted = false;
       if (gamePage) {
         if (gamePage.isDraftOpen) gamePage.hideDraftModal();
         gamePage.hideModal();
@@ -345,9 +361,10 @@ function getNetworkCallbacks() {
     },
     onMatchEnd: (data: { winner: number; winnerName: string; p1Wins: number; p2Wins: number; forfeit?: boolean }) => {
       sound.music.play('ambient');
+      onlineDraftSubmitted = false;
       if (gamePage) {
         if (gamePage.isDraftOpen) gamePage.hideDraftModal();
-        const myId = currentScene ? currentScene.myPlayerId : 0;
+        const myId = network.myPlayerId >= 0 ? network.myPlayerId : (currentScene ? currentScene.myPlayerId : 0);
         const isMe = myId === data.winner;
         const myWins = myId === 0 ? data.p1Wins : data.p2Wins;
 

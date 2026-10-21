@@ -7,6 +7,8 @@ export interface NetworkCallbacks {
   onSnd?: (snd: { name: string }) => void;
   onShake?: (shake: { amount: number }) => void;
   onRoundStart?: (data: { round: number }) => void;
+  onDraftStart?: (data: { choicesP1: string[]; choicesP2: string[] }) => void;
+  onPlayerDrafted?: (data: { id: number; skill1: string; skill2: string }) => void;
   onRoundWon?: (data: { winner: number; round: number; p1Wins: number; p2Wins: number }) => void;
   onMatchEnd?: (data: { winner: number; winnerName: string; p1Wins: number; p2Wins: number; forfeit?: boolean }) => void;
   onRematchVote?: (data: { count: number; ready: boolean }) => void;
@@ -159,6 +161,8 @@ export class NetworkManager {
     room.onMessage('snd', (data) => this.callbacks.onSnd?.(data));
     room.onMessage('shake', (data) => this.callbacks.onShake?.(data));
     room.onMessage('roundStart', (data) => this.callbacks.onRoundStart?.(data));
+    room.onMessage('draftStart', (data) => this.callbacks.onDraftStart?.(data));
+    room.onMessage('playerDrafted', (data) => this.callbacks.onPlayerDrafted?.(data));
     room.onMessage('roundWon', (data) => this.callbacks.onRoundWon?.(data));
     room.onMessage('matchEnd', (data) => this.callbacks.onMatchEnd?.(data));
     room.onMessage('rematchVote', (data) => this.callbacks.onRematchVote?.(data));

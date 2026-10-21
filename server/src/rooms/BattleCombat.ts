@@ -28,6 +28,8 @@ export class BattleCombat {
   private tapTimes: [number[], number[]] = [[], []];
   private tapBuf: [boolean, boolean] = [false, false];
   private reelCd: [number, number] = [0, 0];
+  private lastReelTimes: [number[], number[]] = [[], []];
+  private windJitter: [number, number] = [0.16, 0.16];
   private kb: [number, number] = [0, 0];
   private cool: [number, number] = [0, 0];
   private timeElapsed = 0;
@@ -45,6 +47,8 @@ export class BattleCombat {
     this.tapTimes = [[], []];
     this.tapBuf = [false, false];
     this.reelCd = [0, 0];
+    this.lastReelTimes = [[], []];
+    this.windJitter = [0.16, 0.16];
     this.kb = [0, 0];
     this.cool = [0, 0];
   }
@@ -100,7 +104,7 @@ private fall(s: PlayerStateData) {
   s.tapLift = TAP;
   const sinkV = SINK * (1 + 0.5 * f);
   s.depth = Math.min(FALL_DEPTH + 12 * f, MAXDROP - 30);
-  s.hold = sinkV / s.tapLift;
+  s.hold = sinkV / Math.max(1, s.tapLift);
   this.tapTimes[s.id] = [];
   s.rate = 0;
 
@@ -556,6 +560,19 @@ private stepSpider(s: PlayerStateData, o: PlayerStateData, inp: PlayerInput, dt:
         this.tapBuf[id] = false;
         s.drop -= s.tapLift;
         this.reelCd[id] = REEL_CD;
+
+        const lr = this.lastReelTimes[id];
+        lr.push(this.timeElapsed);
+        if (lr.length > 4) lr.shift();
+        if (lr.length === 4) {
+          const d0 = lr[1] - lr[0];
+          const d1 = lr[2] - lr[1];
+          const d2 = lr[3] - lr[2];
+          if (Math.max(Math.abs(d1 - d0), Math.abs(d2 - d1)) < 0.003) {
+            this.reelCd[id] = REEL_CD * 1.75;
+          }
+        }
+
         times.push(this.timeElapsed);
         this.emitSound('reel');
       }
@@ -645,6 +662,7 @@ private stepSpider(s: PlayerStateData, o: PlayerStateData, inp: PlayerInput, dt:
     if (!s.blocking) {
       s.blocking = true;
       s.blockT = 0;
+      s.guard = Math.max(0, s.guard - 2);
     }
     s.blockT += dt;
     s.guard -= 9 * dt;
@@ -681,7 +699,8 @@ private stepSpider(s: PlayerStateData, o: PlayerStateData, inp: PlayerInput, dt:
   if (s.atkT > 0) {
     const prevAtk = s.atkT;
     s.atkT += dt;
-    if (prevAtk < ATK.wind && s.atkT >= ATK.wind) {
+    const windup = this.windJitter[id];
+    if (prevAtk < windup && s.atkT >= windup) {
       this.doStrike(s, o);
     }
     if (s.atkT > 0.1 && s.atkT < ATK.act) {
@@ -695,7 +714,9 @@ private stepSpider(s: PlayerStateData, o: PlayerStateData, inp: PlayerInput, dt:
       this.cool[id] = 0.1;
     }
   } else if (free && inp.strike && this.cool[id] <= 0 && !s.blocking) {
+    inp.strike = false;
     s.atkT = 0.0001;
+    this.windJitter[id] = 0.14 + Math.random() * 0.04;
     s.atkId++;
     const prev = s.atkType ?? 0;
     let next = Math.floor(Math.random() * 3);

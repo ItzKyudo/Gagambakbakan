@@ -104,7 +104,7 @@ private fall(s: LocalPlayerState) {
   s.tapLift = TAP;
   const sinkV = SINK * (1 + 0.5 * f);
   s.depth = Math.min(FALL_DEPTH + 12 * f, MAXDROP - 30);
-  s.hold = sinkV / s.tapLift;
+  s.hold = sinkV / Math.max(1, s.tapLift);
   this.tapTimes[s.id] = [];
   s.rate = 0;
 
@@ -811,6 +811,7 @@ private stepSpider(s: LocalPlayerState, o: LocalPlayerState, inp: InputState, dt
       this.cool[id] = 0.1;
     }
   } else if (free && inp.strike && this.cool[id] <= 0 && !s.blocking) {
+    inp.strike = false;
     s.atkT = 0.0001;
     s.atkId++;
     const prev = s.atkType ?? 0;

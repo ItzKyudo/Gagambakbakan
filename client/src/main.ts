@@ -343,7 +343,7 @@ function getNetworkCallbacks() {
     onRoundWon: () => {
       sound.music.play('ambient');
     },
-    onMatchEnd: (data: { winner: number; winnerName: string; p1Wins: number; p2Wins: number }) => {
+    onMatchEnd: (data: { winner: number; winnerName: string; p1Wins: number; p2Wins: number; forfeit?: boolean }) => {
       sound.music.play('ambient');
       if (gamePage) {
         if (gamePage.isDraftOpen) gamePage.hideDraftModal();
@@ -357,8 +357,10 @@ function getNetworkCallbacks() {
           sound.play('power_up');
         }
 
-        const title = isMe ? 'VICTORY!' : 'DEFEAT!';
-        const sub = `${data.winnerName} won the match (${data.p1Wins} - ${data.p2Wins})!`;
+        const title = isMe ? (data.forfeit ? 'VICTORY BY FORFEIT!' : 'VICTORY!') : 'DEFEAT!';
+        const sub = data.forfeit
+          ? (isMe ? 'Your opponent abandoned the match. Full victory awarded!' : 'Match abandoned.')
+          : `${data.winnerName} won the match (${data.p1Wins} - ${data.p2Wins})!`;
 
         const rewardHtml = `
           <div class="online-exp-reward-box">
@@ -390,8 +392,17 @@ function getNetworkCallbacks() {
         ], rewardHtml);
       }
     },
+    onRematchVote: (data: { count: number; ready: boolean }) => {
+      if (gamePage && !data.ready) {
+        const rematchBtn = gamePage.rootElement.querySelector('.overlay-modal .btn.primary') as HTMLButtonElement | null;
+        if (rematchBtn) {
+          rematchBtn.textContent = `Rematch (${data.count}/2 voted)`;
+          rematchBtn.disabled = true;
+        }
+      }
+    },
     onPlayerLeft: () => {
-      if (gamePage) {
+      if (gamePage && currentScene?.gameState?.status !== 'matchEnd') {
         if (gamePage.isDraftOpen) gamePage.hideDraftModal();
         gamePage.showModal('Opponent Left', 'Your opponent disconnected from the match.', [
           { label: 'Menu', primary: true, onClick: () => showMainMenu() }

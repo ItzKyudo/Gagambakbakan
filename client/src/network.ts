@@ -8,8 +8,9 @@ export interface NetworkCallbacks {
   onShake?: (shake: { amount: number }) => void;
   onRoundStart?: (data: { round: number }) => void;
   onRoundWon?: (data: { winner: number; round: number; p1Wins: number; p2Wins: number }) => void;
-  onMatchEnd?: (data: { winner: number; winnerName: string; p1Wins: number; p2Wins: number }) => void;
-  onPlayerLeft?: (data: { winner: number }) => void;
+  onMatchEnd?: (data: { winner: number; winnerName: string; p1Wins: number; p2Wins: number; forfeit?: boolean }) => void;
+  onRematchVote?: (data: { count: number; ready: boolean }) => void;
+  onPlayerLeft?: (data: { winner?: number; sessionId?: string }) => void;
   onError?: (err: any) => void;
   onDisconnect?: () => void;
 }
@@ -104,7 +105,7 @@ export class NetworkManager {
     const client = new Client(this.serverUrl);
     this.client = client;
 
-    // Colyseus 0.18 response shim for colyseus.js 0.16
+    // shortcut: Colyseus 0.18 server response needs seat reservation restructured on colyseus.js 0.16 client, upgrade when colyseus.js 0.18 is available.
     const origConsume = (client as any).consumeSeatReservation.bind(client);
     (client as any).consumeSeatReservation = function (response: any, rootSchema?: any, reuseRoomInstance?: any) {
       if (response && !response.room && response.roomId) {
@@ -160,6 +161,7 @@ export class NetworkManager {
     room.onMessage('roundStart', (data) => this.callbacks.onRoundStart?.(data));
     room.onMessage('roundWon', (data) => this.callbacks.onRoundWon?.(data));
     room.onMessage('matchEnd', (data) => this.callbacks.onMatchEnd?.(data));
+    room.onMessage('rematchVote', (data) => this.callbacks.onRematchVote?.(data));
     room.onMessage('playerLeft', (data) => this.callbacks.onPlayerLeft?.(data));
 
     room.onError((code, message) => {

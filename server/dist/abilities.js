@@ -4,6 +4,7 @@ exports.WEB_EDGES = exports.ALL_ABILITY_IDS = exports.SKILLS_LIST = exports.ABIL
 exports.isAbilityId = isAbilityId;
 exports.selectDraftAbilities = selectDraftAbilities;
 exports.isNodeAvailableToUnlock = isNodeAvailableToUnlock;
+exports.validateUnlockedSkills = validateUnlockedSkills;
 exports.getAbility = getAbility;
 exports.shuffle = shuffle;
 exports.getRandomAbilities = getRandomAbilities;
@@ -329,6 +330,28 @@ function isNodeAvailableToUnlock(id, unlocked) {
             return unlocked.includes(a);
         return false;
     });
+}
+function validateUnlockedSkills(skills, level = 1) {
+    const safeLvl = Math.max(1, Math.min(100, Math.floor(level) || 1));
+    const maxAllowed = safeLvl + 2;
+    const list = Array.isArray(skills) ? skills.filter(isAbilityId) : [];
+    const unlocked = ['dash'];
+    for (const id of list) {
+        if (unlocked.length >= maxAllowed)
+            break;
+        if (id !== 'dash' && !unlocked.includes(id) && isNodeAvailableToUnlock(id, unlocked)) {
+            unlocked.push(id);
+        }
+    }
+    const defaults = ['web', 'surge'];
+    for (const d of defaults) {
+        if (unlocked.length >= 3 || unlocked.length >= maxAllowed)
+            break;
+        if (!unlocked.includes(d) && isNodeAvailableToUnlock(d, unlocked)) {
+            unlocked.push(d);
+        }
+    }
+    return unlocked;
 }
 function getAbility(id) {
     return exports.ABILITIES[id] || exports.ABILITIES.dash;

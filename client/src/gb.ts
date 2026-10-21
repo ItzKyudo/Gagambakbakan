@@ -493,17 +493,34 @@ export function getExpProgress(totalExp: number): ExpProgressInfo {
 /* ---------- progress ---------- */
 export function getProgress(): ProgressData {
   const p = lsGet<any>('progress', {}) || {};
-  let unlockedSkills: string[] = p.unlockedSkills;
-  if (!Array.isArray(unlockedSkills) || unlockedSkills.length === 0) {
-    unlockedSkills = ['dash', 'web', 'surge'];
+  const onlineExp = Math.max(0, p.onlineExp | 0);
+  const lvl = getLevel(onlineExp);
+  const maxSkills = lvl + 2;
+
+  const unlockedSkills: string[] = ['dash'];
+  if (Array.isArray(p.unlockedSkills)) {
+    for (const id of p.unlockedSkills) {
+      if (unlockedSkills.length >= maxSkills) break;
+      if (id !== 'dash' && ALL_ABILITY_IDS.includes(id) && !unlockedSkills.includes(id) && isNodeAvailableToUnlock(id as AbilityId, unlockedSkills as AbilityId[])) {
+        unlockedSkills.push(id);
+      }
+    }
   }
+  if (unlockedSkills.length === 1) {
+    (['web', 'surge'] as AbilityId[]).forEach(d => {
+      if (unlockedSkills.length < maxSkills && isNodeAvailableToUnlock(d, unlockedSkills as AbilityId[])) {
+        unlockedSkills.push(d);
+      }
+    });
+  }
+
   return {
-    played: p.played | 0,
-    wins: p.wins | 0,
+    played: Math.max(0, p.played | 0),
+    wins: Math.max(0, p.wins | 0),
     unlockAll: !!p.unlockAll,
-    onlineExp: Math.max(0, p.onlineExp | 0),
+    onlineExp,
     onlinePlayed: Math.max(0, p.onlinePlayed | 0),
-    onlineWins: Math.max(0, p.onlineWins | 0),
+    onlineWins: Math.min(Math.max(0, p.onlinePlayed | 0), Math.max(0, p.onlineWins | 0)),
     unlockedSkills
   };
 }

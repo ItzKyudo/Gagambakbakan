@@ -372,6 +372,29 @@ export function isNodeAvailableToUnlock(id: AbilityId, unlocked: AbilityId[]): b
   });
 }
 
+export function validateUnlockedSkills(skills: unknown, level: number = 1): AbilityId[] {
+  const safeLvl = Math.max(1, Math.min(100, Math.floor(level) || 1));
+  const maxAllowed = safeLvl + 2;
+  const list = Array.isArray(skills) ? skills.filter(isAbilityId) : [];
+  const unlocked: AbilityId[] = ['dash'];
+
+  for (const id of list) {
+    if (unlocked.length >= maxAllowed) break;
+    if (id !== 'dash' && !unlocked.includes(id) && isNodeAvailableToUnlock(id, unlocked)) {
+      unlocked.push(id);
+    }
+  }
+
+  const defaults: AbilityId[] = ['web', 'surge'];
+  for (const d of defaults) {
+    if (unlocked.length >= 3 || unlocked.length >= maxAllowed) break;
+    if (!unlocked.includes(d) && isNodeAvailableToUnlock(d, unlocked)) {
+      unlocked.push(d);
+    }
+  }
+  return unlocked;
+}
+
 export function getAbility(id: string): AbilityDef {
   return ABILITIES[id as AbilityId] || ABILITIES.dash;
 }

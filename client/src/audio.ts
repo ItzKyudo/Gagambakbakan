@@ -39,6 +39,7 @@ class SoundEngine {
       case 'strike':
         playSound(190, 0.14, 'sawtooth', 0.08, -110);
         break;
+      case 'power':
       case 'power_strike':
         playSound(130, 0.14, 'sawtooth', 0.08, -110);
         break;

@@ -17,7 +17,7 @@ export function renderMainMenuView(): string {
     <!-- TOP CENTER TITLE WITH NO CONTAINER -->
     <header class="menu-title-header">
       <button type="button" class="menu-corner-sound-btn sound-toggle-btn ${sound.enabled ? 'sound-on' : 'sound-off'}" id="btnCornerSoundToggle" title="Toggle Sound (Mute/Unmute)">
-        ${sound.enabled ? 'ðŸ”Š Sound: ON' : 'ðŸ”‡ Sound: OFF'}
+        ${sound.enabled ? '&#128266; Sound: ON' : '&#128263; Sound: OFF'}
       </button>
       <svg class="title-twig" viewBox="0 0 300 78" aria-hidden="true">
         <rect x="6" y="8" width="288" height="14" rx="7" fill="#7b5b3e"/>
@@ -49,7 +49,7 @@ export function renderMainMenuView(): string {
           <button type="button" class="mb" id="btnGoAbilities">
             <span class="mi"><svg class="ico"><use href="#ic-gem"/></svg></span>
             <span class="ml">Abilities</span>
-            <small id="abCount">Level ${expInfo.level} Â· ${unlockedCount} of ${SKILLS_LIST.length} unlocked</small>
+            <small id="abCount">Level ${expInfo.level} &middot; ${unlockedCount} of ${SKILLS_LIST.length} unlocked</small>
           </button>
           <button type="button" class="mb" id="btnGoSettings">
             <span class="mi"><svg class="ico"><use href="#ic-gear"/></svg></span>
@@ -95,7 +95,7 @@ export function renderMainMenuView(): string {
         </div>
 
         <div class="menu-sound-pod">
-          <span class="engine-badge">PHASER 4 Â· COLYSEUS 0.18</span>
+          <span class="engine-badge">PHASER 4 &middot; COLYSEUS 0.18</span>
         </div>
       </div>
 
@@ -139,7 +139,7 @@ export function renderMainMenuView(): string {
             </div>
             <div class="mlc-sub">
               <span class="mlc-prog-label">Skill Mastery</span>
-              <span class="mlc-skills-count">${unlockedCount} / ${SKILLS_LIST.length} Unlocked â€º</span>
+              <span class="mlc-skills-count">${unlockedCount} / ${SKILLS_LIST.length} Unlocked &rsaquo;</span>
             </div>
           </div>
         </div>

@@ -22,7 +22,7 @@ export function renderSettingsView(listeningKey: ListeningKey | null): string {
       <header class="page-top">
         <h1>Settings</h1>
         <div style="display:flex; gap:8px; align-items:center;">
-          <button type="button" class="btn ghost sound-toggle-btn ${sound.enabled ? 'sound-on' : 'sound-off'}" id="btnSettingsSoundToggle" title="Toggle Sound (Music & SFX)">${sound.enabled ? 'ðŸ”Š Sound On' : 'ðŸ”‡ Sound Off'}</button>
+          <button type="button" class="btn ghost sound-toggle-btn ${sound.enabled ? 'sound-on' : 'sound-off'}" id="btnSettingsSoundToggle" title="Toggle Sound (Music & SFX)">${sound.enabled ? '&#128266; Sound On' : '&#128263; Sound Off'}</button>
           <button type="button" class="btn ghost" id="btnBackToMain">Menu</button>
         </div>
       </header>
@@ -37,7 +37,7 @@ export function renderSettingsView(listeningKey: ListeningKey | null): string {
             <span>Master Sound (${sound.enabled ? 'ON' : 'OFF'})</span>
           </label>
           <div style="display:flex; align-items:center; gap:12px;">
-            <span class="pct" style="color:${sound.enabled ? 'var(--jade-light)' : 'var(--muted)'}; font-weight:700;">${sound.enabled ? 'ðŸ”Š Active' : 'ðŸ”‡ Muted'}</span>
+            <span class="pct" style="color:${sound.enabled ? 'var(--jade-light)' : 'var(--muted)'}; font-weight:700;">${sound.enabled ? '&#128266; Active' : '&#128263; Muted'}</span>
             <button type="button" class="btn ghost sound-toggle-btn ${sound.enabled ? 'sound-on' : 'sound-off'}" id="btnQuickSoundToggle">
               ${sound.enabled ? 'Mute All' : 'Unmute All'}
             </button>
@@ -106,7 +106,7 @@ export function renderSettingsView(listeningKey: ListeningKey | null): string {
           <div>
             <div style="font-family:var(--label); font-size:12px; color:var(--muted); text-transform:uppercase;">Online Matches</div>
             <div style="font-family:var(--display); font-size:22px; color:var(--jade-light);">${prog.onlineWins}W / ${prog.onlinePlayed}P</div>
-            <div style="font-size:12px; color:var(--muted);">${unlockedCount} of ${SKILLS_LIST.length} Skills Â· Offline: ${prog.wins}W / ${prog.played}P</div>
+            <div style="font-size:12px; color:var(--muted);">${unlockedCount} of ${SKILLS_LIST.length} Skills &middot; Offline: ${prog.wins}W / ${prog.played}P</div>
           </div>
         </div>
         <p class="note" style="margin-bottom:12px;">EXP is earned only from Online matches. Each level unlocks new battle abilities.</p>

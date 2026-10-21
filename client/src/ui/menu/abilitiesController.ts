@@ -9,6 +9,7 @@ export interface AbilitiesViewState {
   panY: number;
   zoomScale: number;
   isPanelCollapsed: boolean;
+  isRespecConfirmOpen: boolean;
   keyHandler: ((event: KeyboardEvent) => void) | null;
 }
 
@@ -19,17 +20,22 @@ export function createAbilitiesViewState(): AbilitiesViewState {
     panY: 0,
     zoomScale: 1,
     isPanelCollapsed: false,
+    isRespecConfirmOpen: false,
     keyHandler: null
   };
 }
 
 export function clearAbilitiesKeyHandler(state: AbilitiesViewState) {
+  document.body.classList.remove('abilities-active');
+  document.documentElement.classList.remove('abilities-active');
   if (!state.keyHandler) return;
   window.removeEventListener('keydown', state.keyHandler);
   state.keyHandler = null;
 }
 
 export function bindAbilitiesEvents(container: HTMLElement, state: AbilitiesViewState, render: () => void) {
+  document.body.classList.add('abilities-active');
+  document.documentElement.classList.add('abilities-active');
   const stage = container.querySelector<HTMLElement>('#swvStage');
   const detailPanel = container.querySelector<HTMLElement>('#swvDetailPanel');
   const openCardTab = container.querySelector<HTMLElement>('#btnOpenCardTab');
@@ -107,9 +113,13 @@ export function bindAbilitiesEvents(container: HTMLElement, state: AbilitiesView
     setPanelCollapsed(false);
   });
 
-  const selectNode = (id: AbilityId, panTo = false) => {
+  const selectNode = (id: AbilityId, panTo = true) => {
     if (!id || !ABILITIES[id]) return;
     state.selectedNodeId = id;
+
+    if (state.isPanelCollapsed) {
+      setPanelCollapsed(false);
+    }
 
     container.querySelectorAll<SVGElement>('.web-node').forEach(node => {
       node.classList.toggle('selected', node.dataset.id === id);
@@ -120,7 +130,8 @@ export function bindAbilitiesEvents(container: HTMLElement, state: AbilitiesView
       bindDetailCardActions();
     }
 
-    sound.playTone(580, 0.05, 'triangle', 0.04, 120);
+    sound.play(id);
+    sound.playTone(600, 0.06, 'triangle', 0.04, 140);
 
     if (panTo) {
       centerOnNode(id);
@@ -128,54 +139,88 @@ export function bindAbilitiesEvents(container: HTMLElement, state: AbilitiesView
   };
 
   // Drag to pan variables
+  let isPointerDown = false;
   let isDragging = false;
   let startX = 0;
   let startY = 0;
   let initialPanX = 0;
   let initialPanY = 0;
   let dragDist = 0;
+  let activePointerId: number | null = null;
 
   if (stage) {
     stage.addEventListener('pointerdown', (e: PointerEvent) => {
       if (e.button !== 0) return;
       const target = e.target as HTMLElement | SVGElement;
-      if (target.closest('.swv-nav-hud, .swv-detail-panel, .swv-header, .swv-bottom-bar, .swv-open-card-tab')) {
+      if (target.closest('.swv-top-hud, .swv-nav-hud, .swv-detail-panel, .swv-header, .swv-bottom-bar, .swv-open-card-tab, .swv-modal-overlay')) {
         return;
       }
 
-      isDragging = true;
+      isPointerDown = true;
+      isDragging = false;
       dragDist = 0;
       startX = e.clientX;
       startY = e.clientY;
       initialPanX = state.panX;
       initialPanY = state.panY;
-      stage.classList.add('dragging');
-      stage.setPointerCapture(e.pointerId);
+      activePointerId = e.pointerId;
     });
 
     stage.addEventListener('pointermove', (e: PointerEvent) => {
-      if (!isDragging) return;
+      if (!isPointerDown) return;
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
       dragDist = Math.hypot(dx, dy);
 
-      const rect = stage.getBoundingClientRect();
-      const ratio = 1100 / (rect.width || 1100);
+      if (dragDist > 5) {
+        if (!isDragging) {
+          isDragging = true;
+          stage.classList.add('dragging');
+          if (activePointerId !== null) {
+            try {
+              stage.setPointerCapture(activePointerId);
+            } catch {}
+          }
+        }
 
-      state.panX = initialPanX + dx * ratio;
-      state.panY = initialPanY + dy * ratio;
-      state.panX = Math.max(-650, Math.min(550, state.panX));
-      state.panY = Math.max(-550, Math.min(550, state.panY));
-      applyViewport(false);
+        const rect = stage.getBoundingClientRect();
+        const ratio = 1100 / (rect.width || 1100);
+
+        state.panX = initialPanX + dx * ratio;
+        state.panY = initialPanY + dy * ratio;
+        state.panX = Math.max(-650, Math.min(550, state.panX));
+        state.panY = Math.max(-550, Math.min(550, state.panY));
+        applyViewport(false);
+      }
     });
 
     const onPointerUp = (e: PointerEvent) => {
-      if (!isDragging) return;
+      const wasDragging = isDragging;
+      const movedDist = dragDist;
+
+      isPointerDown = false;
       isDragging = false;
+      dragDist = 0;
       stage.classList.remove('dragging');
-      try {
-        stage.releasePointerCapture(e.pointerId);
-      } catch {}
+
+      if (activePointerId !== null) {
+        try {
+          stage.releasePointerCapture(activePointerId);
+        } catch {}
+        activePointerId = null;
+      }
+
+      // If user tapped/clicked without dragging, select and focus on the clicked node
+      if (!wasDragging && movedDist <= 5) {
+        const hitNode = (e.target as Element)?.closest?.('.web-node') ||
+                        document.elementFromPoint(e.clientX, e.clientY)?.closest('.web-node');
+        if (hitNode) {
+          const id = (hitNode as SVGElement).dataset.id as AbilityId;
+          if (id && ABILITIES[id]) {
+            selectNode(id, true);
+          }
+        }
+      }
     };
 
     stage.addEventListener('pointerup', onPointerUp);
@@ -241,10 +286,10 @@ export function bindAbilitiesEvents(container: HTMLElement, state: AbilitiesView
       }
     });
 
-    // Click: select node if not dragged
-    node.addEventListener('click', () => {
-      if (dragDist > 6) return;
-      selectNode(id, false);
+    // Click: select node, play sound, and focus on it!
+    node.addEventListener('click', (e) => {
+      e.stopPropagation();
+      selectNode(id, true);
     });
   });
 
@@ -286,7 +331,7 @@ export function bindAbilitiesEvents(container: HTMLElement, state: AbilitiesView
           score += Math.abs(dy) * 0.5;
         }
       } else if (dir === 'right') {
-        if (dx > 15 && Math.abs(dy) <= Math.abs(dx) * 1.8) {
+        if (dx > 15 && Math.abs(dx) <= Math.abs(dy) * 1.8) {
           isValidDirection = true;
           score += Math.abs(dy) * 0.5;
         }
@@ -322,28 +367,73 @@ export function bindAbilitiesEvents(container: HTMLElement, state: AbilitiesView
     return bestId;
   };
 
+  // Modal Cancel / Close actions
+  const closeRespecModal = () => {
+    if (!state.isRespecConfirmOpen) return;
+    state.isRespecConfirmOpen = false;
+    sound.playTone(340, 0.06, 'sine', 0.03, -80);
+    render();
+  };
+
+  container.querySelector('#btnCancelRespec')?.addEventListener('click', closeRespecModal);
+  container.querySelector('#btnCancelRespecX')?.addEventListener('click', closeRespecModal);
+  container.querySelector('#swvRespecModalOverlay')?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) {
+      closeRespecModal();
+    }
+  });
+
+  // Modal Confirm Reset action
+  container.querySelector('#btnConfirmRespec')?.addEventListener('click', () => {
+    respecWeb();
+    state.selectedNodeId = 'dash';
+    state.isRespecConfirmOpen = false;
+    sound.playTone(380, 0.12, 'triangle', 0.05, 180);
+    setTimeout(() => sound.playTone(640, 0.22, 'triangle', 0.06, 260), 100);
+    centerOnNode('dash');
+    render();
+  });
+
   // Keyboard navigation
   state.keyHandler = (e: KeyboardEvent) => {
     const targetTag = (e.target as HTMLElement)?.tagName?.toLowerCase();
     if (targetTag === 'input' || targetTag === 'textarea') return;
 
     const k = e.key;
+    if (k === 'Escape') {
+      e.preventDefault();
+      if (state.isRespecConfirmOpen) {
+        closeRespecModal();
+      } else {
+        setPanelCollapsed(!state.isPanelCollapsed);
+      }
+      return;
+    }
+
+    if (state.isRespecConfirmOpen) {
+      if (k === 'Enter') {
+        e.preventDefault();
+        container.querySelector<HTMLButtonElement>('#btnConfirmRespec')?.click();
+      }
+      return;
+    }
+
     if (k === 'ArrowUp' || k === 'w' || k === 'W') {
       e.preventDefault();
       const next = getNextNodeInDirection(state.selectedNodeId, 'up');
-      if (next) selectNode(next, false);
+      if (next) selectNode(next, true);
     } else if (k === 'ArrowDown' || k === 's' || k === 'S') {
       e.preventDefault();
       const next = getNextNodeInDirection(state.selectedNodeId, 'down');
-      if (next) selectNode(next, false);
+      if (next) selectNode(next, true);
     } else if (k === 'ArrowLeft' || k === 'a' || k === 'A') {
       e.preventDefault();
       const next = getNextNodeInDirection(state.selectedNodeId, 'left');
-      if (next) selectNode(next, false);
+      if (next) selectNode(next, true);
     } else if (k === 'ArrowRight' || k === 'd' || k === 'D') {
       e.preventDefault();
       const next = getNextNodeInDirection(state.selectedNodeId, 'right');
-      if (next) selectNode(next, false);
+      if (next) selectNode(next, true);
     } else if (k === ' ' || k === 'Enter') {
       e.preventDefault();
       const res = acquireSkill(state.selectedNodeId);
@@ -368,22 +458,17 @@ export function bindAbilitiesEvents(container: HTMLElement, state: AbilitiesView
       e.preventDefault();
       state.zoomScale = Math.max(0.55, state.zoomScale * 0.8);
       applyViewport(true);
-    } else if (k === 'Escape') {
-      e.preventDefault();
-      setPanelCollapsed(!state.isPanelCollapsed);
     }
   };
 
   window.addEventListener('keydown', state.keyHandler);
 
-  // Respec Web Button
-  container.querySelector('#btnRespecWeb')?.addEventListener('click', () => {
-    if (confirm('Refund all spent ability points and reset web back to starter Dash?')) {
-      respecWeb();
-      state.selectedNodeId = 'dash';
-      sound.playTone(400, 0.14, 'triangle', 0.04, -120);
-      render();
-    }
+  // Respec Web Button (Opens Confirmation Modal)
+  container.querySelector('#btnRespecWeb')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    sound.playTone(480, 0.08, 'triangle', 0.04, 120);
+    state.isRespecConfirmOpen = true;
+    render();
   });
 }
 

@@ -148,7 +148,8 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
           abilitiesState.isPanelCollapsed,
           abilitiesState.panX,
           abilitiesState.panY,
-          abilitiesState.zoomScale
+          abilitiesState.zoomScale,
+          abilitiesState.isRespecConfirmOpen
         );
       case 'settings':
         return renderSettingsView(settingsState.listeningKey);

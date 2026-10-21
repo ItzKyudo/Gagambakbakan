@@ -592,6 +592,7 @@ export function acquireSkill(id: AbilityId): { success: boolean; reason?: string
 export function respecWeb(): void {
   const p = getProgress();
   p.unlockedSkills = ['dash'];
+  p.unlockAll = false;
   saveProgress(p);
 }
 

@@ -1,5 +1,4 @@
-import { createElement, Volume2, VolumeX, BookOpen, GraduationCap, Settings, type IconNode } from 'lucide';
-import { sound } from '../../audio';
+import { createElement, BookOpen, GraduationCap, Settings, type IconNode } from 'lucide';
 import { getColor, getExpProgress, getLooks, getProgress, getSettings, getUnlockedIds, spiderSVG } from '../../gb';
 import { SKILLS_LIST } from '../../game/abilities';
 import { getPlayerRankTitle } from './rankTitle';
@@ -29,20 +28,10 @@ export function renderMainMenuView(): string {
   const totalPlayed = onlinePlayed + offlinePlayed;
   const totalLosses = onlineLosses + offlineLosses;
   const winRate = totalPlayed > 0 ? Math.round((totalWins / totalPlayed) * 100) : 0;
-  const soundIconSvg = icon(sound.enabled ? Volume2 : VolumeX, {
-    class: 'ico snd-ico',
-    width: 15,
-    height: 15,
-    'stroke-width': 2.2
-  });
 
   return `
     <!-- TOP CENTER TITLE WITH NO CONTAINER -->
     <header class="menu-title-header">
-      <button type="button" class="menu-corner-sound-btn sound-toggle-btn ${sound.enabled ? 'sound-on' : 'sound-off'}" id="btnCornerSoundToggle" title="Toggle Sound (Mute/Unmute)">
-        ${soundIconSvg}
-        <span>Sound: ${sound.enabled ? 'ON' : 'OFF'}</span>
-      </button>
       <svg class="title-twig" viewBox="0 0 300 78" aria-hidden="true">
         <rect x="6" y="8" width="288" height="14" rx="7" fill="#7b5b3e"/>
         <rect x="6" y="8" width="288" height="4" rx="2" fill="#a58059"/>

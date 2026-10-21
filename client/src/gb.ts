@@ -6,6 +6,8 @@ import {
   shuffle
 } from './game/abilities';
 import { decodePatternArt } from './patternArt';
+import bgMusicMenuUrl from './assets/musics/bg-music-menu.mp3';
+import bgMusicGameplayUrl from './assets/musics/bg-music-gameplay.mp3';
 
 export interface SpiderColor {
   id: string;
@@ -666,257 +668,121 @@ export function getAudioContext(): AudioContext | null {
   return AC;
 }
 
-const mus = {
-  gain: null as GainNode | null,
-  timer: null as any,
-  step: 0,
-  next: 0,
-  on: false,
-  track: 'ambient' as 'ambient' | 'duel',
-  noise: null as AudioBuffer | null
-};
+/* ---------- Background Music Engine ---------- */
+let menuAudio: HTMLAudioElement | null = null;
+let duelAudio: HTMLAudioElement | null = null;
+let currentTrack: 'ambient' | 'duel' = 'ambient';
+let armed = false;
 
-const LEAD = [220, 261.63, 293.66, 329.63, 392, 440, 523.25, 587.33];
-const BASS = [110, 87.31, 98, 82.41];
-
-function note(c: AudioContext, t: number, f: number, dur: number, type: OscillatorType, vol: number, dest?: AudioNode): void {
-  const o = c.createOscillator();
-  const g = c.createGain();
-  o.type = type;
-  o.frequency.value = f;
-  g.gain.setValueAtTime(0.0001, t);
-  g.gain.exponentialRampToValueAtTime(vol, t + 0.03);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  o.connect(g);
-  g.connect(dest || mus.gain!);
-  o.start(t);
-  o.stop(t + dur + 0.05);
+function getMenuAudio(): HTMLAudioElement | null {
+  if (typeof window === 'undefined' || typeof Audio === 'undefined') return null;
+  if (!menuAudio) {
+    menuAudio = new Audio(bgMusicMenuUrl);
+    menuAudio.loop = true;
+    menuAudio.preload = 'auto';
+  }
+  return menuAudio;
 }
 
-let leadIndex = 3;
-function ambientStep(c: AudioContext, t: number, n: number): void {
-  if (n % 8 === 0) {
-    note(c, t, BASS[(n / 8) % 4 | 0], 2.2, 'sine', 0.6);
+function getDuelAudio(): HTMLAudioElement | null {
+  if (typeof window === 'undefined' || typeof Audio === 'undefined') return null;
+  if (!duelAudio) {
+    duelAudio = new Audio(bgMusicGameplayUrl);
+    duelAudio.loop = true;
+    duelAudio.preload = 'auto';
   }
-  if (n % 2 === 0 || Math.random() < 0.3) {
-    leadIndex = Math.max(0, Math.min(LEAD.length - 1, leadIndex + (Math.random() < 0.5 ? -1 : 1) * (Math.random() < 0.3 ? 2 : 1)));
-    if (Math.random() < 0.8) note(c, t, LEAD[leadIndex], 0.9, 'triangle', 0.22);
-  }
-}
-
-const DUEL_ROOTS = [110, 87.31, 130.81, 98];
-const DUEL_CHORD = [
-  [220, 261.63, 329.63],
-  [174.61, 220, 261.63],
-  [261.63, 329.63, 392],
-  [196, 246.94, 293.66]
-];
-const DUEL_MEL = [
-  [440, 0, 523.25, 440, 0, 392, 440, 0, 659.25, 0, 587.33, 523.25, 0, 440, 392, 0],
-  [349.23, 0, 440, 349.23, 0, 329.63, 349.23, 0, 523.25, 0, 440, 392, 0, 349.23, 329.63, 0],
-  [523.25, 0, 659.25, 523.25, 0, 440, 523.25, 0, 783.99, 0, 659.25, 587.33, 0, 523.25, 440, 0],
-  [392, 0, 493.88, 392, 0, 349.23, 392, 0, 587.33, 0, 523.25, 493.88, 0, 392, 349.23, 659.25]
-];
-
-function noiseBuf(c: AudioContext): AudioBuffer {
-  if (mus.noise) return mus.noise;
-  const b = c.createBuffer(1, c.sampleRate * 0.5, c.sampleRate);
-  const d = b.getChannelData(0);
-  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-  return (mus.noise = b);
-}
-
-function kick(c: AudioContext, t: number, vol: number): void {
-  const o = c.createOscillator();
-  const g = c.createGain();
-  o.type = 'sine';
-  o.frequency.setValueAtTime(150, t);
-  o.frequency.exponentialRampToValueAtTime(42, t + 0.14);
-  g.gain.setValueAtTime(vol, t);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
-  o.connect(g);
-  g.connect(mus.gain!);
-  o.start(t);
-  o.stop(t + 0.3);
-}
-
-function snare(c: AudioContext, t: number, vol: number): void {
-  const s = c.createBufferSource();
-  const f = c.createBiquadFilter();
-  const g = c.createGain();
-  s.buffer = noiseBuf(c);
-  f.type = 'highpass';
-  f.frequency.value = 1400;
-  g.gain.setValueAtTime(vol, t);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
-  s.connect(f);
-  f.connect(g);
-  g.connect(mus.gain!);
-  s.start(t);
-  s.stop(t + 0.2);
-  note(c, t, 190, 0.1, 'triangle', vol * 0.8);
-}
-
-function hat(c: AudioContext, t: number, vol: number): void {
-  const s = c.createBufferSource();
-  const f = c.createBiquadFilter();
-  const g = c.createGain();
-  s.buffer = noiseBuf(c);
-  f.type = 'highpass';
-  f.frequency.value = 7000;
-  g.gain.setValueAtTime(vol, t);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.04);
-  s.connect(f);
-  f.connect(g);
-  g.connect(mus.gain!);
-  s.start(t);
-  s.stop(t + 0.05);
-}
-
-function duelStep(c: AudioContext, t: number, n: number): void {
-  const st = n % 16;
-  const bar = Math.floor(n / 16) % 4;
-  const root = DUEL_ROOTS[bar];
-  if (st % 4 === 0) kick(c, t, 0.9);
-  if (st === 10 && bar % 2 === 1) kick(c, t, 0.7);
-  if (st === 4 || st === 12) snare(c, t, 0.45);
-  if (st % 2 === 0) hat(c, t, st % 4 === 2 ? 0.14 : 0.08);
-
-  // Galloping bass
-  if (st % 4 === 0 || st % 4 === 1 || st % 4 === 3) {
-    note(c, t, st % 4 === 3 ? root * 2 : root, 0.17, 'sawtooth', 0.24);
-  }
-  // Brass chords
-  if (st === 0 || st === 8) {
-    DUEL_CHORD[bar].forEach(f => {
-      note(c, t, f, st === 0 ? 0.9 : 0.35, 'sawtooth', 0.075);
-      note(c, t, f * 1.004, st === 0 ? 0.9 : 0.35, 'square', 0.03);
-    });
-  }
-  const m = DUEL_MEL[bar][st];
-  if (n >= 32 && m) {
-    note(c, t, m, 0.2, 'sawtooth', 0.11);
-    note(c, t, m * 2, 0.16, 'triangle', 0.05);
-  }
-  if (st === 8 && bar === 3) {
-    const o = c.createOscillator();
-    const g = c.createGain();
-    o.type = 'sawtooth';
-    o.frequency.setValueAtTime(220, t);
-    o.frequency.exponentialRampToValueAtTime(880, t + 0.8);
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(0.06, t + 0.7);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.85);
-    o.connect(g);
-    g.connect(mus.gain!);
-    o.start(t);
-    o.stop(t + 0.9);
-  }
-}
-
-function musicSchedule(): void {
-  const c = getAudioContext();
-  if (!c || !mus.on) return;
-  const step = mus.track === 'duel' ? 0.1 : 0.32;
-  if (mus.next < c.currentTime) {
-    mus.next = c.currentTime + 0.05;
-  }
-  while (mus.next < c.currentTime + 0.5) {
-    (mus.track === 'duel' ? duelStep : ambientStep)(c, mus.next, mus.step++);
-    mus.next += step;
-  }
+  return duelAudio;
 }
 
 export function startTrack(track: 'ambient' | 'duel'): void {
   const s = getSettings();
-  mus.track = track;
+  const prevTrack = currentTrack;
+  currentTrack = track;
+
   if (!s.sound || !s.music || s.musicVol <= 0) {
     stopTrack();
     return;
   }
-  const c = getAudioContext();
-  if (!c) return;
-  if (mus.on && mus.track === track) return;
-  if (mus.on) stopTrack();
 
-  try {
-    if (c.state === 'suspended') c.resume().catch(() => {});
-  } catch {
-    // ignore
+  const menu = getMenuAudio();
+  const duel = getDuelAudio();
+  if (!menu || !duel) return;
+
+  const vol = Math.max(0, Math.min(1, s.musicVol));
+  menu.volume = vol;
+  duel.volume = vol;
+
+  if (track === 'ambient') {
+    if (!duel.paused) {
+      duel.pause();
+      duel.currentTime = 0;
+    }
+    if (menu.paused) {
+      menu.play().catch(() => {});
+    }
+  } else {
+    if (!menu.paused) {
+      menu.pause();
+    }
+    if (duel.paused || prevTrack !== 'duel') {
+      if (prevTrack !== 'duel') {
+        duel.currentTime = 0;
+      }
+      duel.play().catch(() => {});
+    }
   }
-
-  mus.gain = c.createGain();
-  mus.gain.gain.value = s.musicVol * (track === 'duel' ? 0.4 : 0.3);
-  mus.gain.connect(c.destination);
-  mus.on = true;
-  mus.step = 0;
-  mus.next = c.currentTime + 0.1;
-  if (mus.timer) clearInterval(mus.timer);
-  mus.timer = setInterval(musicSchedule, 100);
 }
 
 export function stopTrack(): void {
-  if (!mus.on && !mus.timer && !mus.gain) return;
-  mus.on = false;
-  if (mus.timer) {
-    clearInterval(mus.timer);
-    mus.timer = null;
+  const menu = getMenuAudio();
+  const duel = getDuelAudio();
+  if (menu && !menu.paused) {
+    try { menu.pause(); } catch {}
   }
-  const g = mus.gain;
-  mus.gain = null;
-  const c = getAudioContext();
-  if (g && c) {
-    try {
-      g.gain.cancelScheduledValues(c.currentTime);
-      g.gain.setValueAtTime(g.gain.value, c.currentTime);
-      g.gain.linearRampToValueAtTime(0.0001, c.currentTime + 0.04);
-      setTimeout(() => {
-        try { g.disconnect(); } catch {}
-      }, 70);
-    } catch {}
+  if (duel && !duel.paused) {
+    try { duel.pause(); } catch {}
   }
 }
 
 export const music = {
-  start: (t?: 'ambient' | 'duel') => startTrack(t || mus.track || 'ambient'),
-  play: (t?: 'ambient' | 'duel') => { if (t) mus.track = t; startTrack(mus.track || 'ambient'); },
+  get track(): 'ambient' | 'duel' {
+    return currentTrack;
+  },
+  start: (t?: 'ambient' | 'duel') => startTrack(t || currentTrack || 'ambient'),
+  play: (t?: 'ambient' | 'duel') => startTrack(t || currentTrack || 'ambient'),
   stop: stopTrack,
   setVolume: (v: number) => {
-    if (mus.gain) {
-      try { mus.gain.gain.value = v * (mus.track === 'duel' ? 0.4 : 0.3); } catch {}
-    }
+    const vol = Math.max(0, Math.min(1, v));
+    const menu = getMenuAudio();
+    const duel = getDuelAudio();
+    if (menu) menu.volume = vol;
+    if (duel) duel.volume = vol;
   },
   arm: (track: 'ambient' | 'duel' = 'ambient') => {
-    mus.track = track;
-    const evs = ['pointerdown', 'mousedown', 'touchstart', 'click', 'keydown'];
-    const done = () => {
-      const c = getAudioContext();
-      if (c && c.state === 'running') {
-        evs.forEach(e => window.removeEventListener(e, kickMusic, true));
-        return true;
-      }
-      return false;
-    };
-    const kickMusic = () => {
-      const s = getSettings();
-      const c = getAudioContext();
-      if (s.sound && s.music && s.musicVol > 0) {
-        startTrack(mus.track || track);
-      }
-      if (c && c.state !== 'running') {
-        c.resume().then(done).catch(() => {});
-      }
-      done();
-    };
-    const s0 = getSettings();
-    if (s0.sound && s0.music && s0.musicVol > 0) {
+    currentTrack = track;
+    const s = getSettings();
+    if (s.sound && s.music && s.musicVol > 0) {
       startTrack(track);
     }
-    const c0 = getAudioContext();
-    if (c0) c0.onstatechange = () => { done(); };
-    if (!done()) {
-      evs.forEach(e => window.addEventListener(e, kickMusic, true));
-    }
+
+    if (armed) return;
+    armed = true;
+
+    const evs = ['pointerdown', 'mousedown', 'touchstart', 'click', 'keydown'];
+    const unlock = () => {
+      evs.forEach(e => window.removeEventListener(e, unlock, true));
+      armed = false;
+      const c = getAudioContext();
+      if (c && c.state === 'suspended') {
+        c.resume().catch(() => {});
+      }
+      const curSet = getSettings();
+      if (curSet.sound && curSet.music && curSet.musicVol > 0) {
+        startTrack(currentTrack);
+      }
+    };
+
+    evs.forEach(e => window.addEventListener(e, unlock, true));
   }
 };
 

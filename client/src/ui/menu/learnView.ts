@@ -2,15 +2,12 @@ import {
   createElement,
   type IconNode,
   ArrowLeft,
-  Volume2,
-  VolumeX,
   ArrowLeftRight,
   Swords,
   Shield,
   ArrowUp,
   Zap
 } from 'lucide';
-import { sound } from '../../audio';
 import { getKeys, getLooks, keyLabel } from '../../gb';
 import { createPhaserGame } from '../../game/phaserConfig';
 import { LocalGameEngine } from '../../game/localGame';
@@ -26,9 +23,6 @@ function keycap(key: string, label: string, phase = ''): string {
 }
 
 export function renderLearnView(): string {
-  const soundIconSvg = icon(sound.enabled ? Volume2 : VolumeX, {
-    class: 'ico snd-ico', width: 15, height: 15, 'stroke-width': 2.2
-  });
   const kb = getKeys();
 
   return `
@@ -37,9 +31,6 @@ export function renderLearnView(): string {
         <div class="page-actions">
           <button type="button" class="btn ghost" id="btnBackToMain" title="Back to Menu">
             ${icon(ArrowLeft, { class: 'ico', width: 15, height: 15, 'stroke-width': 2.2 })}<span>Menu</span>
-          </button>
-          <button type="button" class="btn ghost sound-toggle-btn ${sound.enabled ? 'sound-on' : 'sound-off'}" id="btnLearnSoundToggle" title="Toggle Sound">
-            ${soundIconSvg}<span>Sound: ${sound.enabled ? 'ON' : 'OFF'}</span>
           </button>
         </div>
         <div class="about-title-group">

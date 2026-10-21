@@ -357,7 +357,7 @@ function getNetworkCallbacks() {
       sound.music.play('duel');
     },
     onRoundWon: () => {
-      sound.music.play('ambient');
+      // Gameplay music continues until match end
     },
     onMatchEnd: (data: { winner: number; winnerName: string; p1Wins: number; p2Wins: number; forfeit?: boolean }) => {
       sound.music.play('ambient');

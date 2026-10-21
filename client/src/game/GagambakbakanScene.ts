@@ -5,6 +5,7 @@ import {
 } from './constants';
 import { keyLabel, getKeys } from '../gb';
 import { decodePatternArt } from '../patternArt';
+import { attackMotion, gaitMotion, smoothMotion } from './spiderMotion';
 
 interface Particle {
   x: number;
@@ -593,21 +594,32 @@ export class GagambakbakanScene extends Phaser.Scene {
     ctx.stroke();
   }
 
+  private projectileCast(s: any): number {
+    const starts: Record<string, number> = { web: 1.6, spit: 1.2, hook: 1 };
+    const shot = Array.from((this.gameState?.webs || []) as any[]).find((w: any) => w.owner === s.id && starts[w.k] - w.life < .3) as any;
+    if (!shot) return 0;
+    const progress = Math.max(0, Math.min(1, (starts[shot.k] - shot.life) / .3));
+    return Math.sin(progress * Math.PI);
+  }
+
   private drawLegs(ctx: CanvasRenderingContext2D, s: any, bx: number, by: number, far: boolean, colMain: string, colDark: string) {
     const f = s.face;
     const hb = s.hb || 0;
     const t = (this.time.now / 1000);
     const u = s.atkT > 0 ? this.atkProgress(s.atkT) : 0;
     const shaky = (s.stun > 0 && !s.hang) ? 1 : 0;
+    const cast = this.projectileCast(s);
 
     for (let i = 0; i < 4; i++) {
       const ax = bx + f * (15 - i * 8) + (far ? f * 2 : 0);
       const ay = by + 5;
-      const ph = (s.walkPhase || 0) * Math.PI * 2 + i * Math.PI / 2 + (far ? Math.PI : 0);
-      let fx = bx + f * (42 - i * 27) + (far ? f * 10 : 0) + Math.sin(ph) * 9 * (s.move || 0);
-      let fy = STICK.y - 1 - Math.max(0, Math.cos(ph)) * 6 * (s.move || 0);
+      const gait = gaitMotion((s.walkPhase || 0) + (i === 1 || i === 2 ? .5 : 0) + (far ? .5 : 0));
+      const moving = Math.min(1, Math.abs(s.move || 0));
+      const pace = s.hasteT > 0 ? 1.18 : 1;
+      let fx = bx + f * (42 - i * 27) + (far ? f * 10 : 0) + f * gait.reach * 9 * moving * pace;
+      let fy = STICK.y - 1 - gait.lift * 8 * moving;
       let kx = (ax + fx) / 2 + f * (i < 2 ? 6 : -6);
-      let ky = Math.min(ay, fy) - 24;
+      let ky = Math.min(ay, fy) - 24 - gait.lift * 2 * moving;
 
       if (i < 2 && !s.hang) {
         if (s.atkT > 0) {
@@ -658,11 +670,32 @@ export class GagambakbakanScene extends Phaser.Scene {
               ky = by - (i === 0 ? 60 : 48);
             }
           }
-        } else if (s.blocking) {
-          fx = bx + f * (30 + i * 10);
-          fy = by - 30 - i * 6;
-          kx = bx + f * (16 + i * 6);
-          ky = by - 50;
+        } else if (s.dashT > 0) {
+          const burst = smoothMotion(Math.min(1, s.dashT / .16));
+          fx = bx + f * (46 + i * 17) * (s.pounce ? 1.16 : 1);
+          fy = by - 10 - i * 8 - burst * (s.pounce ? 15 : 5);
+          kx = bx + f * (20 + i * 7);
+          ky = by - 28 - burst * 10;
+        } else if (s.quake > 0) {
+          fx = bx + f * (38 + i * 18);
+          fy = STICK.y - 1;
+          kx = bx + f * (17 + i * 7);
+          ky = by - 8 - i * 3;
+        } else if (cast > 0) {
+          fx = bx + f * (43 + i * 18 + cast * 12);
+          fy = by - 18 - i * 12;
+          kx = bx + f * (19 + i * 8);
+          ky = by - 38 - cast * 5;
+        } else if (s.blocking || s.shield > 0) {
+          fx = bx + f * (31 + i * 11);
+          fy = by - 25 - i * 8;
+          kx = bx + f * (13 + i * 6);
+          ky = by - 43;
+        } else if (s.riposte > 0) {
+          fx = bx + f * (i === 0 ? 57 : 38);
+          fy = by + (i === 0 ? 4 : -31);
+          kx = bx + f * (24 + i * 5);
+          ky = by - 34;
         } else if (s.cheer) {
           fx = bx + f * (26 + i * 12) + Math.sin(t * 11 + i) * 5;
           fy = by - 44 + Math.cos(t * 9 + i) * 6;
@@ -692,9 +725,7 @@ export class GagambakbakanScene extends Phaser.Scene {
   }
 
   private atkProgress(t: number): number {
-    if (t < 0.16) return -Math.min(1, t / 0.16);
-    if (t < 0.26) return -1 + 2 * (t - 0.16) / (0.26 - 0.16);
-    return 1 - (t - 0.26) / (0.46 - 0.26);
+    return attackMotion(t);
   }
 
   private drawSpider(ctx: CanvasRenderingContext2D, s: any, t: number) {
@@ -709,6 +740,9 @@ export class GagambakbakanScene extends Phaser.Scene {
     const hb = s.hb || 0;
     const u = s.atkT > 0 ? this.atkProgress(s.atkT) : 0;
     const atkType = (s.atkType !== undefined ? s.atkType : (s.atkId || 0)) % 3;
+    const moving = Math.min(1, Math.abs(s.move || 0));
+    const gait = gaitMotion(s.walkPhase || 0);
+    const cast = this.projectileCast(s);
 
     let atkXOffset = 0;
     let atkYOffset = 0;
@@ -728,10 +762,11 @@ export class GagambakbakanScene extends Phaser.Scene {
       }
     }
 
-    const bx = s.x + f * atkXOffset - (s.blocking ? f * 3 : 0);
+    const bx = s.x + f * atkXOffset - (s.blocking ? f * 4 : 0) - f * cast * 4;
     let by = STICK.y - BODY_H + (s.blocking ? 6 : 0) + atkYOffset;
-    by += Math.sin(t * 3 + s.id * 2) * 1.1 * (1 - hb);
-    by -= Math.abs(Math.sin((s.walkPhase || 0) * Math.PI * 2)) * 2.2 * (s.move || 0);
+    by += Math.sin(t * 2.1 + s.id * 1.7) * .55 * (1 - moving) * (1 - hb);
+    by -= gait.lift * 1.4 * moving;
+    by -= cast * 2;
     if (s.stun > 0 && !s.hang) by += 3;
 
     const byW = BODY_Y + (s.drop || 0) + 26 * hb;
@@ -778,7 +813,9 @@ export class GagambakbakanScene extends Phaser.Scene {
     ctx.fillRect(cx - 30, cy - 24, 60, 48);
 
     // Pattern
-    ctx.fillStyle = 'rgba(20,12,6,.36)';
+    ctx.fillStyle = colDark;
+    ctx.strokeStyle = colDark;
+    if (pattern !== 'custom') ctx.globalAlpha *= .55;
     if (pattern === 'custom') {
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
@@ -788,12 +825,12 @@ export class GagambakbakanScene extends Phaser.Scene {
         ctx.fillStyle = stroke.color;
         ctx.beginPath();
         stroke.points.forEach(([x, y], index) => {
-          const px = cx + (x - .5) * 44;
+          const px = cx + f * (x - .5) * 44;
           const py = cy + (y - .5) * 34;
           if (index) ctx.lineTo(px, py); else ctx.moveTo(px, py);
         });
         if (stroke.points.length === 1) {
-          ctx.arc(cx + (stroke.points[0][0] - .5) * 44, cy + (stroke.points[0][1] - .5) * 34, 2, 0, Math.PI * 2);
+          ctx.arc(cx + f * (stroke.points[0][0] - .5) * 44, cy + (stroke.points[0][1] - .5) * 34, 2, 0, Math.PI * 2);
           ctx.fill();
         } else ctx.stroke();
       });
@@ -804,7 +841,7 @@ export class GagambakbakanScene extends Phaser.Scene {
         ctx.fill();
       });
     } else if (pattern === 'chevron') {
-      ctx.strokeStyle = 'rgba(20,12,6,.36)';
+      ctx.strokeStyle = colDark;
       ctx.lineWidth = 4.5;
       ctx.lineJoin = 'round';
       [-12, -3, 6].forEach((k) => {
@@ -815,35 +852,35 @@ export class GagambakbakanScene extends Phaser.Scene {
         ctx.stroke();
       });
     } else if (pattern === 'rings') {
-      ctx.strokeStyle = 'rgba(20,12,6,.36)';
+      ctx.strokeStyle = colDark;
       ctx.lineWidth = 3.2;
       [6, 12, 17].forEach((r) => {
         ctx.beginPath();
         ctx.ellipse(cx, cy, r, r * 0.75, 0, 0, Math.PI * 2);
         ctx.stroke();
       });
-      ctx.fillStyle = 'rgba(20,12,6,.36)';
+      ctx.fillStyle = colDark;
       ctx.beginPath();
       ctx.arc(cx, cy, 2.5, 0, Math.PI * 2);
       ctx.fill();
     } else if (pattern === 'cross') {
-      ctx.fillStyle = 'rgba(20,12,6,.36)';
+      ctx.fillStyle = colDark;
       ctx.fillRect(cx - 3.5, cy - 18, 7, 36);
       ctx.fillRect(cx - 15, cy - 3.5, 30, 7);
       ctx.beginPath();
       ctx.arc(cx, cy, 6, 0, Math.PI * 2);
       ctx.fill();
     } else if (pattern === 'split') {
-      ctx.fillStyle = 'rgba(20,12,6,.36)';
+      ctx.fillStyle = colDark;
       ctx.fillRect(cx - 30, cy - 24, 60, 24);
-      ctx.strokeStyle = 'rgba(20,12,6,.5)';
+      ctx.strokeStyle = colDark;
       ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.moveTo(cx - 24, cy);
       ctx.lineTo(cx + 24, cy);
       ctx.stroke();
     } else if (pattern === 'webmark') {
-      ctx.strokeStyle = 'rgba(20,12,6,.36)';
+      ctx.strokeStyle = colDark;
       ctx.lineWidth = 2;
       for (let a = 0; a < 8; a++) {
         const rad = a * Math.PI / 4;
@@ -864,7 +901,7 @@ export class GagambakbakanScene extends Phaser.Scene {
         ctx.stroke();
       });
     } else if (pattern === 'diamonds') {
-      ctx.fillStyle = 'rgba(20,12,6,.36)';
+      ctx.fillStyle = colDark;
       [-12, 0, 12].forEach((dx) => {
         ctx.beginPath();
         ctx.moveTo(cx + dx, cy - 11);
@@ -875,9 +912,12 @@ export class GagambakbakanScene extends Phaser.Scene {
         ctx.fill();
       });
     } else if (pattern !== 'plain') {
-      // Stripes
       [-12, -3, 6].forEach((k) => {
-        ctx.fillRect(cx + k - 2, cy - 24, 4.5, 48);
+        ctx.beginPath();
+        ctx.moveTo(cx + k, cy - 20);
+        ctx.bezierCurveTo(cx + k - 4, cy - 8, cx + k + 4, cy + 8, cx + k, cy + 20);
+        ctx.lineWidth = 4.5;
+        ctx.stroke();
       });
     }
     ctx.restore();
@@ -888,6 +928,14 @@ export class GagambakbakanScene extends Phaser.Scene {
     ctx.lineWidth = 2;
     ctx.stroke();
 
+    ctx.strokeStyle = colLight;
+    ctx.globalAlpha *= .28;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.ellipse(cx - f * 3, cy - 3, 16, 10, -.2 * f, Math.PI * 1.08, Math.PI * 1.72);
+    ctx.stroke();
+    ctx.globalAlpha /= .28;
+
     // Cephalothorax (head/chest)
     const hx2 = bx + f * 11;
     const hy2 = by;
@@ -896,7 +944,7 @@ export class GagambakbakanScene extends Phaser.Scene {
     g2.addColorStop(1, colDark);
     ctx.fillStyle = g2;
     ctx.beginPath();
-    ctx.ellipse(hx2, hy2, 16, 13, 0, 0, Math.PI * 2);
+    ctx.ellipse(hx2, hy2, 15, 14, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
 
@@ -906,7 +954,7 @@ export class GagambakbakanScene extends Phaser.Scene {
       ctx.ellipse(cx, cy, 22, 17, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.beginPath();
-      ctx.ellipse(hx2, hy2, 16, 13, 0, 0, Math.PI * 2);
+      ctx.ellipse(hx2, hy2, 15, 14, 0, 0, Math.PI * 2);
       ctx.fill();
     }
 
@@ -915,10 +963,13 @@ export class GagambakbakanScene extends Phaser.Scene {
 
     // Eyes
     const dazed = (s.stun > 0 && !s.hang) || s.ko;
-    const eyes: Array<[number, number, number]> = [[18, -6, 3.2], [13, -8.5, 2.6], [23, -3, 2.3]];
+    const eyes: Array<[number, number, number]> = [
+      [0, -3, 2.5], [9, -2.5, 2.3], [-7, -2, 1.35], [14, 1, 1.3],
+      [-6, -10, 1.05], [0, -12, 1.1], [7, -11, 1.05], [13, -7, 1]
+    ];
     eyes.forEach(([ex0, ey0, er]) => {
-      const ex = bx + f * ex0;
-      const ey = by + ey0;
+      const ex = hx2 + f * ex0;
+      const ey = hy2 + ey0;
       if (dazed) {
         ctx.strokeStyle = '#10201f';
         ctx.lineWidth = 1.6;
@@ -929,13 +980,16 @@ export class GagambakbakanScene extends Phaser.Scene {
         ctx.lineTo(ex - 2, ey + 2);
         ctx.stroke();
       } else {
-        ctx.fillStyle = '#f4f7ee';
+        ctx.fillStyle = '#07100f';
+        ctx.strokeStyle = colLight;
+        ctx.lineWidth = .7;
         ctx.beginPath();
         ctx.arc(ex, ey, er, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = '#10201f';
+        ctx.stroke();
+        ctx.fillStyle = '#f4f7ee';
         ctx.beginPath();
-        ctx.arc(ex + f * 0.9, ey + 0.4, er * 0.5, 0, Math.PI * 2);
+        ctx.arc(ex - f * er * .28, ey - er * .28, Math.max(.28, er * .24), 0, Math.PI * 2);
         ctx.fill();
       }
     });
@@ -1238,11 +1292,27 @@ export class GagambakbakanScene extends Phaser.Scene {
       ctx.restore();
     }
 
+    if (s.dashT > 0) {
+      const burst = Math.min(1, s.dashT / .16);
+      ctx.save();
+      ctx.globalAlpha = .18 + burst * .3;
+      ctx.strokeStyle = colLight;
+      ctx.lineCap = 'round';
+      for (let line = 0; line < 3; line++) {
+        ctx.lineWidth = 1.5 + line * .5;
+        ctx.beginPath();
+        ctx.moveTo(bx - f * (30 + line * 8), by - 12 + line * 11);
+        ctx.lineTo(bx - f * (65 + line * 12), by - 12 + line * 11);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
     // Block energy shield
     if (s.blocking) {
       const sx = bx + f * 16;
       const sy = by - 4;
-      ctx.globalAlpha = 0.5 + 0.15 * Math.sin(t * 20);
+      ctx.globalAlpha = 0.28 + 0.08 * Math.sin(t * 12);
       ctx.strokeStyle = colLight;
       ctx.lineWidth = 4;
       ctx.beginPath();

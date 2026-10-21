@@ -114,9 +114,9 @@ export function renderSettingsView(listeningKey: ListeningKey | null): string {
             <div style="font-size:12px; color:var(--fg);">${expInfo.totalExp} Total EXP</div>
           </div>
           <div>
-            <div style="font-family:var(--label); font-size:12px; color:var(--muted); text-transform:uppercase;">Online Matches</div>
-            <div style="font-family:var(--display); font-size:22px; color:var(--jade-light);">${prog.onlineWins}W / ${prog.onlinePlayed}P</div>
-            <div style="font-size:12px; color:var(--muted);">${unlockedCount} of ${SKILLS_LIST.length} Skills &middot; Offline: ${prog.wins}W / ${prog.played}P</div>
+            <div style="font-family:var(--label); font-size:12px; color:var(--muted); text-transform:uppercase;">Abilities Unlocked</div>
+            <div style="font-family:var(--display); font-size:22px; color:var(--jade-light);">${unlockedCount} / ${SKILLS_LIST.length}</div>
+            <div style="font-size:12px; color:var(--muted);">Skills Active in Spider Web</div>
           </div>
         </div>
         <p class="note" style="margin-bottom:12px;">EXP is earned only from Online matches. Each level unlocks new battle abilities.</p>

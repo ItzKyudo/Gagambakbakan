@@ -17,6 +17,18 @@ export function renderMainMenuView(): string {
   const prog = getProgress();
   const expInfo = getExpProgress(prog.onlineExp);
   const unlockedCount = getUnlockedIds(prog).length;
+
+  const onlineWins = prog.onlineWins || 0;
+  const onlinePlayed = prog.onlinePlayed || 0;
+  const onlineLosses = Math.max(0, onlinePlayed - onlineWins);
+  const offlineWins = prog.wins || 0;
+  const offlinePlayed = prog.played || 0;
+  const offlineLosses = Math.max(0, offlinePlayed - offlineWins);
+
+  const totalWins = onlineWins + offlineWins;
+  const totalPlayed = onlinePlayed + offlinePlayed;
+  const totalLosses = onlineLosses + offlineLosses;
+  const winRate = totalPlayed > 0 ? Math.round((totalWins / totalPlayed) * 100) : 0;
   const soundIconSvg = icon(sound.enabled ? Volume2 : VolumeX, {
     class: 'ico snd-ico',
     width: 15,
@@ -115,20 +127,7 @@ export function renderMainMenuView(): string {
       <!-- FAR RIGHT: CHARACTER DISPLAY -->
       <aside class="showcase menu-right-col" aria-label="Your spider">
         <div class="showcase-card">
-          <!-- PODIUM & SPIDER -->
-          <div class="showcase-podium">
-            <div class="showcase-glow" style="--spider-glow:${getColor(looks.p1.color).main};"></div>
-            <div class="stage" id="showcaseStage" role="button" tabindex="0" title="Click to customize your spider">
-              ${spiderSVG(looks.p1, '-showcase')}
-            </div>
-            <div class="showcase-reflection"></div>
-            <button type="button" class="showcase-customize-hint" id="btnQuickCustomize" title="Customize Spider">
-              <svg class="ico" width="13" height="13" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              <span>Customize</span>
-            </button>
-          </div>
-
-          <!-- CHARACTER IDENTITY BADGE -->
+          <!-- 1. SPIDER NAME & IDENTITY (MOVED ABOVE SPIDER DISPLAY) -->
           <div class="showcase-id-badge" id="badgeQuickCustomize" role="button" tabindex="0" title="Click to customize your spider" style="--badge-c:${getColor(looks.p1.color).main};">
             <div class="sib-header">
               <i class="sib-dot" style="background:${getColor(looks.p1.color).main}; box-shadow: 0 0 10px ${getColor(looks.p1.color).main};"></i>
@@ -141,7 +140,40 @@ export function renderMainMenuView(): string {
             </div>
           </div>
 
-          <!-- LEVEL & ONLINE EXP PROGRESS CARD -->
+          <!-- 2. PODIUM & SPIDER DISPLAY -->
+          <div class="showcase-podium">
+            <div class="showcase-glow" style="--spider-glow:${getColor(looks.p1.color).main};"></div>
+            <div class="stage" id="showcaseStage" role="button" tabindex="0" title="Click to customize your spider">
+              ${spiderSVG(looks.p1, '-showcase')}
+            </div>
+            <div class="showcase-reflection"></div>
+            <button type="button" class="showcase-customize-hint" id="btnQuickCustomize" title="Customize Spider">
+              <svg class="ico" width="13" height="13" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span>Customize</span>
+            </button>
+          </div>
+
+          <!-- 3. WINS & LOST STATS (BELOW SPIDER CHARACTER DISPLAY) -->
+          <div class="showcase-stats-card" title="Total Matches: ${totalPlayed} (${onlinePlayed} Online, ${offlinePlayed} Offline)">
+            <div class="ssc-main">
+              <div class="ssc-stat ssc-wins">
+                <span class="ssc-label">Wins</span>
+                <span class="ssc-val wins-val">${totalWins}</span>
+              </div>
+              <div class="ssc-divider"></div>
+              <div class="ssc-stat ssc-lost">
+                <span class="ssc-label">Lost</span>
+                <span class="ssc-val lost-val">${totalLosses}</span>
+              </div>
+              <div class="ssc-divider"></div>
+              <div class="ssc-stat ssc-winrate">
+                <span class="ssc-label">Win Rate</span>
+                <span class="ssc-val rate-val">${winRate}%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. LEVEL & ONLINE EXP PROGRESS CARD -->
           <div class="menu-level-card" role="button" tabindex="0" title="View Abilities Tree">
             <div class="mlc-top">
               <span class="mlc-badge">LEVEL ${expInfo.level}</span>

@@ -27,6 +27,8 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
   const abilitiesState = createAbilitiesViewState();
 
   const onStart = (opts: MenuStartOptions) => {
+    document.body.classList.remove('main-menu-active', 'abilities-active');
+    document.documentElement.classList.remove('main-menu-active', 'abilities-active');
     clearAbilitiesKeyHandler(abilitiesState);
     rawOnStart(opts);
   };
@@ -144,6 +146,19 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
   }
 
   function renderActiveTab(): string {
+    if (activeTab === 'main') {
+      document.body.classList.add('main-menu-active');
+      document.documentElement.classList.add('main-menu-active');
+    } else {
+      document.body.classList.remove('main-menu-active');
+      document.documentElement.classList.remove('main-menu-active');
+    }
+
+    if (activeTab !== 'abilities') {
+      document.body.classList.remove('abilities-active');
+      document.documentElement.classList.remove('abilities-active');
+    }
+
     switch (activeTab) {
       case 'customize':
         return renderCustomizeView(customizeState.player, customizeState.drawColor);

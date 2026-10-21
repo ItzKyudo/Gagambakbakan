@@ -1,6 +1,11 @@
+import { createElement, ArrowLeft, Volume2, VolumeX, type IconNode } from 'lucide';
 import { sound } from '../../audio';
 import { ACTIONS, getExpProgress, getKeys, getProgress, getSettings, getUnlockedIds, keyLabel } from '../../gb';
 import { SKILLS_LIST } from '../../game/abilities';
+
+function icon(node: IconNode, attrs: Record<string, string | number> = {}): string {
+  return createElement(node, attrs).outerHTML;
+}
 
 export interface ListeningKey {
   player: 'p1' | 'p2';
@@ -18,15 +23,17 @@ export function renderSettingsView(listeningKey: ListeningKey | null): string {
   const unlockedCount = getUnlockedIds(prog).length;
 
   return `
-    <div class="page" style="max-width:760px; margin-inline:auto;">
-      <header class="page-top">
-        <h1>Settings</h1>
-        <div style="display:flex; gap:8px; align-items:center;">
-          <button type="button" class="btn ghost sound-toggle-btn ${sound.enabled ? 'sound-on' : 'sound-off'}" id="btnSettingsSoundToggle" title="Toggle Sound (Music & SFX)">${sound.enabled ? '&#128266; Sound On' : '&#128263; Sound Off'}</button>
-          <button type="button" class="btn ghost" id="btnBackToMain">Menu</button>
+    <div class="page settings-page" style="max-width:760px; margin-inline:auto;">
+      <header class="page-top" style="display:flex; align-items:center; justify-content:space-between; gap:18px;">
+        <button type="button" class="btn ghost back-btn" id="btnBackToMain" title="Back to Menu" style="display:inline-flex; align-items:center; gap:8px; padding:8px 16px; font-weight:700; text-transform:uppercase; font-family:var(--label); font-size:15px; letter-spacing:0.06em; flex-shrink:0;">
+          ${icon(ArrowLeft, { class: 'ico', width: 16, height: 16, 'stroke-width': 2.2 })}
+          <span>Menu</span>
+        </button>
+        <div style="text-align:right;">
+          <h1 style="margin:0; line-height:1.1;">Settings</h1>
+          <p class="note" style="margin:4px 0 0 0;">Changes save automatically.</p>
         </div>
       </header>
-      <p class="note">Changes save automatically.</p>
 
       <!-- SOUND & MUSIC -->
       <section class="sec" aria-label="Sound and music">
@@ -37,7 +44,10 @@ export function renderSettingsView(listeningKey: ListeningKey | null): string {
             <span>Master Sound (${sound.enabled ? 'ON' : 'OFF'})</span>
           </label>
           <div style="display:flex; align-items:center; gap:12px;">
-            <span class="pct" style="color:${sound.enabled ? 'var(--jade-light)' : 'var(--muted)'}; font-weight:700;">${sound.enabled ? '&#128266; Active' : '&#128263; Muted'}</span>
+            <span class="pct" style="color:${sound.enabled ? 'var(--jade-light)' : 'var(--muted)'}; font-weight:700; display:inline-flex; align-items:center; gap:6px;">
+              ${icon(sound.enabled ? Volume2 : VolumeX, { class: 'ico', width: 15, height: 15, 'stroke-width': 2.2 })}
+              <span>${sound.enabled ? 'Active' : 'Muted'}</span>
+            </span>
             <button type="button" class="btn ghost sound-toggle-btn ${sound.enabled ? 'sound-on' : 'sound-off'}" id="btnQuickSoundToggle">
               ${sound.enabled ? 'Mute All' : 'Unmute All'}
             </button>
@@ -57,7 +67,7 @@ export function renderSettingsView(listeningKey: ListeningKey | null): string {
 
       <!-- CPU SKILL -->
       <section class="sec" aria-label="CPU skill">
-        <h2>CPU skill</h2>
+        <h2>AI Difficulty</h2>
         <div class="seg" role="radiogroup" aria-label="CPU skill">
           <label><input type="radio" name="diff" value="easy" ${st.diff === 'easy' ? 'checked' : ''}><span>Easy</span></label>
           <label><input type="radio" name="diff" value="normal" ${st.diff === 'normal' ? 'checked' : ''}><span>Normal</span></label>

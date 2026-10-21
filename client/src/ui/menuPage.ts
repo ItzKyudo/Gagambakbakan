@@ -13,7 +13,7 @@ import { bindAbilitiesEvents, clearAbilitiesKeyHandler, createAbilitiesViewState
 import { renderSettingsView } from './menu/settingsView';
 import { bindSettingsEvents, type SettingsState } from './menu/settingsController';
 import { renderAboutView } from './menu/aboutView';
-import { renderLearnView } from './menu/learnView';
+import { bindLearnDemo, renderLearnView } from './menu/learnView';
 
 export type { MenuStartOptions } from './menu/menuTypes';
 
@@ -23,6 +23,7 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
   const customizeState: CustomizeState = { player: 'p1', drawColor: '#e8593f' };
   const settingsState: SettingsState = { listeningKey: null };
   let spiderLookFrame = 0;
+  let cleanupLearnDemo: (() => void) | null = null;
   const abilitiesState = createAbilitiesViewState();
 
   const onStart = (opts: MenuStartOptions) => {
@@ -34,6 +35,8 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
   sound.music.arm('ambient');
 
   function render() {
+    cleanupLearnDemo?.();
+    cleanupLearnDemo = null;
     container.innerHTML = `
       <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
         <defs>
@@ -244,6 +247,8 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
     if (activeTab === 'settings') bindSettingsEvents(container, settingsState, render);
 
     if (activeTab === 'abilities') bindAbilitiesEvents(container, abilitiesState, render);
+
+    if (activeTab === 'learn') cleanupLearnDemo = bindLearnDemo(container);
   }
 
   // Window key listener for interactive key remap

@@ -16,3 +16,22 @@ export function gaitMotion(phase: number): { reach: number; lift: number } {
   const swing = (cycle - .58) / .42;
   return { reach: -1 + 2 * smoothMotion(swing), lift: Math.sin(swing * Math.PI) };
 }
+
+export const LEARN_DEMO_PHASES = [
+  { id: 'move', duration: 2.4 },
+  { id: 'strike', duration: 1.5 },
+  { id: 'block', duration: 1.5 },
+  { id: 'climb', duration: 4 }
+] as const;
+
+export function learnDemoFrame(elapsed: number) {
+  const total = LEARN_DEMO_PHASES.reduce((sum, phase) => sum + phase.duration, 0);
+  const cycle = Math.floor(Math.max(0, elapsed) / total);
+  let time = ((elapsed % total) + total) % total;
+  for (let index = 0; index < LEARN_DEMO_PHASES.length; index++) {
+    const phase = LEARN_DEMO_PHASES[index];
+    if (time < phase.duration) return { phase: phase.id, index, time, cycle };
+    time -= phase.duration;
+  }
+  return { phase: LEARN_DEMO_PHASES[0].id, index: 0, time: 0, cycle };
+}

@@ -4,232 +4,216 @@ import {
   ArrowLeft,
   Volume2,
   VolumeX,
-  Gamepad2,
+  ArrowLeftRight,
   Swords,
-  Sparkles,
   Shield,
-  Zap,
-  Compass,
   ArrowUp,
-  RotateCcw
+  Zap
 } from 'lucide';
 import { sound } from '../../audio';
-import { ACTIONS, getKeys, keyLabel } from '../../gb';
+import { getKeys, getLooks, keyLabel } from '../../gb';
+import { createPhaserGame } from '../../game/phaserConfig';
+import { LocalGameEngine } from '../../game/localGame';
+import { ATK, BODY_Y, DIFF_SETTINGS, FALL_DEPTH, FALL_SPEED, REEL_CD, SINK, SPEED, TAP } from '../../game/constants';
+import { learnDemoFrame } from '../../game/spiderMotion';
 
 function icon(node: IconNode, attrs: Record<string, string | number> = {}): string {
   return createElement(node, attrs).outerHTML;
 }
 
-/* ====================================================
-   LEARN VIEW
-   Spider Controls & Battle Mechanics
-   ==================================================== */
+function keycap(key: string, label: string, phase = ''): string {
+  return `<span class="learn-key"${phase ? ` data-learn-key="${phase}"` : ''}><kbd>${keyLabel(key)}</kbd><small>${label}</small></span>`;
+}
+
 export function renderLearnView(): string {
   const soundIconSvg = icon(sound.enabled ? Volume2 : VolumeX, {
-    class: 'ico snd-ico',
-    width: 15,
-    height: 15,
-    'stroke-width': 2.2
+    class: 'ico snd-ico', width: 15, height: 15, 'stroke-width': 2.2
   });
-
   const kb = getKeys();
 
   return `
-    <div class="page about-page" style="max-width:820px; margin-inline:auto;">
+    <div class="page learn-page">
       <header class="page-top">
         <div class="about-title-group">
-          <h1><span class="a">How to</span> <span class="j">Play</span></h1>
-          <p class="note">Master the twig: spider controls, combat rules, and survival tactics.</p>
+          <h1><span class="a">Watch.</span> <span class="j">Fight.</span></h1>
+          <p class="note">The real battle engine demonstrates every move.</p>
         </div>
-        <div style="display:flex; gap:10px; align-items:center;">
+        <div class="page-actions">
           <button type="button" class="btn ghost sound-toggle-btn ${sound.enabled ? 'sound-on' : 'sound-off'}" id="btnLearnSoundToggle" title="Toggle Sound">
-            ${soundIconSvg}
-            <span>Sound: ${sound.enabled ? 'ON' : 'OFF'}</span>
+            ${soundIconSvg}<span>Sound: ${sound.enabled ? 'ON' : 'OFF'}</span>
           </button>
           <button type="button" class="btn ghost" id="btnBackToMain" title="Back to Menu">
-            ${icon(ArrowLeft, { class: 'ico', width: 15, height: 15, 'stroke-width': 2.2 })}
-            <span>Menu</span>
+            ${icon(ArrowLeft, { class: 'ico', width: 15, height: 15, 'stroke-width': 2.2 })}<span>Menu</span>
           </button>
         </div>
       </header>
 
-      <!-- SECTION 1: SPIDER CONTROLS -->
-      <section class="sec" aria-label="Spider Controls">
-        <div class="about-sec-head">
-          <div class="about-sec-icon-badge amber">
-            ${icon(Gamepad2, { width: 20, height: 20, 'stroke-width': 2.2 })}
-          </div>
-          <div>
-            <h2>Spider Controls</h2>
-            <small class="about-tagline">Keyboard bindings for Player 1 &amp; Player 2</small>
-          </div>
+      <section class="learn-live" aria-label="Live battle tutorial">
+        <div class="learn-live-head" aria-live="polite">
+          <span class="learn-live-icon">
+            <span data-learn-icon="move">${icon(ArrowLeftRight, { width: 22, height: 22 })}</span>
+            <span data-learn-icon="strike" hidden>${icon(Swords, { width: 22, height: 22 })}</span>
+            <span data-learn-icon="block" hidden>${icon(Shield, { width: 22, height: 22 })}</span>
+            <span data-learn-icon="climb" hidden>${icon(ArrowUp, { width: 22, height: 22 })}</span>
+          </span>
+          <div><h2 id="learnLiveTitle">Move</h2><p id="learnLiveHint">Close the gap and control the center.</p></div>
+          <span class="learn-engine-badge">Live engine</span>
         </div>
-        <p class="about-text" style="margin-bottom:12px;">
-          Positioning and timing are everything. Crawl along the twig, strike with front limbs, block attacks, and tap to climb when knocked off.
-        </p>
-
-        <div class="keys" style="margin-bottom:14px;">
-          <div class="kcol p1" style="background:var(--surface-2); padding:12px 14px; border-radius:8px; border:1px solid var(--line);">
-            <h3><i class="swatch" style="background:var(--amber);"></i> Player 1</h3>
-            ${ACTIONS.map(([k, label]) => `
-              <div class="kr">
-                <span style="font-size:14px;">${label}</span>
-                <span class="kb" style="cursor:default; text-align:center;">${keyLabel(kb.p1[k])}</span>
-              </div>
-            `).join('')}
-          </div>
-
-          <div class="kcol p2" style="background:var(--surface-2); padding:12px 14px; border-radius:8px; border:1px solid var(--line);">
-            <h3><i class="swatch" style="background:var(--jade);"></i> Player 2 (Local PvP)</h3>
-            ${ACTIONS.map(([k, label]) => `
-              <div class="kr">
-                <span style="font-size:14px;">${label}</span>
-                <span class="kb" style="cursor:default; text-align:center;">${keyLabel(kb.p2[k])}</span>
-              </div>
-            `).join('')}
-          </div>
+        <div class="arena learn-arena"><div id="learnBattlePreview"></div></div>
+        <div class="learn-action-track" aria-label="Tutorial sequence">
+          <span data-learn-step="move" class="active">${icon(ArrowLeftRight, { width: 17, height: 17 })}<b>Move</b></span>
+          <span data-learn-step="strike">${icon(Swords, { width: 17, height: 17 })}<b>Strike</b></span>
+          <span data-learn-step="block">${icon(Shield, { width: 17, height: 17 })}<b>Block</b></span>
+          <span data-learn-step="climb">${icon(ArrowUp, { width: 17, height: 17 })}<b>Climb</b></span>
         </div>
-
-        <div class="about-cards-grid" style="margin-top:8px;">
-          <div class="about-card">
-            <div class="about-card-top">
-              <span class="card-ico amber">${icon(Compass, { width: 18, height: 18, 'stroke-width': 2.2 })}</span>
-              <h3>Move Left &amp; Right</h3>
-            </div>
-            <p>Crawl along the twig. Spiders cannot walk through each other — push your opponent toward the edges to restrict their movement.</p>
-          </div>
-
-          <div class="about-card">
-            <div class="about-card-top">
-              <span class="card-ico teal">${icon(Swords, { width: 18, height: 18, 'stroke-width': 2.2 })}</span>
-              <h3>Strike</h3>
-            </div>
-            <p>Lunge with your front legs to deliver knockback. Hits land up to <strong>84px</strong> reach. Stagger an unguarding spider to knock them off the twig.</p>
-          </div>
-
-          <div class="about-card">
-            <div class="about-card-top">
-              <span class="card-ico blue">${icon(Shield, { width: 18, height: 18, 'stroke-width': 2.2 })}</span>
-              <h3>Block &amp; Guard</h3>
-            </div>
-            <p>Raise your limbs to defend. Absorbs strike knockback, but depletes guard stamina. Don't let your guard break!</p>
-          </div>
-
-          <div class="about-card">
-            <div class="about-card-top">
-              <span class="card-ico green">${icon(ArrowUp, { width: 18, height: 18, 'stroke-width': 2.2 })}</span>
-              <h3>Climb (Tap)</h3>
-            </div>
-            <p>When knocked off the twig, <strong>mash the Climb key</strong> rapidly! Each tap pulls your spider upward along your silk lifeline back onto the stick.</p>
-          </div>
-
-          <div class="about-card">
-            <div class="about-card-top">
-              <span class="card-ico amber">${icon(Zap, { width: 18, height: 18, 'stroke-width': 2.2 })}</span>
-              <h3>Skills 1 &amp; 2</h3>
-            </div>
-            <p>Cast your equipped abilities (Dash, Surge, Web Spit, Riposte, etc.). Unlock and equip up to 2 skills in the <strong>Abilities</strong> menu.</p>
-          </div>
-        </div>
-
-        <p class="note" style="margin-top:10px;">
-          Want to change your layout? Remap keys anytime in the <strong>Settings</strong> page.
-        </p>
-      </section>
-
-      <!-- SECTION 2: BATTLE MECHANICS -->
-      <section class="sec" aria-label="Battle Mechanics">
-        <div class="about-sec-head">
-          <div class="about-sec-icon-badge jade">
-            ${icon(Swords, { width: 20, height: 20, 'stroke-width': 2.2 })}
-          </div>
-          <div>
-            <h2>How Mechanics Work</h2>
-            <small class="about-tagline">Physics, Lifelines, Fatigue &amp; Round Rules</small>
-          </div>
-        </div>
-
-        <div class="about-cards-grid" style="margin-top:6px;">
-          <div class="about-card">
-            <div class="about-card-top">
-              <span class="card-ico teal">${icon(Compass, { width: 18, height: 18, 'stroke-width': 2.2 })}</span>
-              <h3>The Twig &amp; The Pond</h3>
-            </div>
-            <p>Duels are fought on a single suspended stick above dark pond water. There are no ring ropes or walls: the goal is to knock your rival completely into the water below.</p>
-          </div>
-
-          <div class="about-card">
-            <div class="about-card-top">
-              <span class="card-ico amber">${icon(ArrowUp, { width: 18, height: 18, 'stroke-width': 2.2 })}</span>
-              <h3>Lifeline &amp; Falling</h3>
-            </div>
-            <p>When struck cleanly off the twig, a spider anchors a silk safety line and dangles above the water. A fall is not an immediate defeat — you have a chance to recover!</p>
-          </div>
-
-          <div class="about-card">
-            <div class="about-card-top">
-              <span class="card-ico blue">${icon(RotateCcw, { width: 18, height: 18, 'stroke-width': 2.2 })}</span>
-              <h3>Reeling &amp; Fall Fatigue</h3>
-            </div>
-            <p>Mash your Climb key to reel up. But beware: <strong>each fall in a round increases Fatigue</strong> (up to 4x). With higher fatigue, you fall deeper and sink faster toward the water line!</p>
-          </div>
-
-          <div class="about-card">
-            <div class="about-card-top">
-              <span class="card-ico amber">${icon(Shield, { width: 18, height: 18, 'stroke-width': 2.2 })}</span>
-              <h3>Guard &amp; Guard Break</h3>
-            </div>
-            <p>Holding Block negates knockback, but sustained attacks drain your guard gauge. If guard runs out, you suffer a <strong>Guard Break</strong>: stunned for 0.9s with zero defense.</p>
-          </div>
-
-          <div class="about-card">
-            <div class="about-card-top">
-              <span class="card-ico green">${icon(Sparkles, { width: 18, height: 18, 'stroke-width': 2.2 })}</span>
-              <h3>Recovery &amp; Invulnerability</h3>
-            </div>
-            <p>When you successfully reel back onto the stick, you receive a brief <strong>1.1s invulnerability window</strong>, giving you space to reposition without being instantly hit off again.</p>
-          </div>
-
-          <div class="about-card">
-            <div class="about-card-top">
-              <span class="card-ico teal">${icon(Zap, { width: 18, height: 18, 'stroke-width': 2.2 })}</span>
-              <h3>Abilities Synergy</h3>
-            </div>
-            <p>Combine skills to adapt your playstyle: use <em>Dash</em> to close distance, <em>Web Spit</em> to slow down aggressive opponents, or <em>Surge</em> to recover lift when dangling!</p>
-          </div>
+        <div class="learn-p1-keys" aria-label="Player 1 controls">
+          ${keycap(kb.p1.left, 'Left', 'move')}${keycap(kb.p1.right, 'Right', 'move')}
+          ${keycap(kb.p1.strike, 'Strike', 'strike')}${keycap(kb.p1.block, 'Hold', 'block')}
+          ${keycap(kb.p1.climb, 'Tap', 'climb')}
         </div>
       </section>
 
-      <!-- SECTION 3: DERBY TACTICS -->
-      <section class="sec" aria-label="Tactics & Tips">
-        <div class="about-sec-head">
-          <div class="about-sec-icon-badge amber">
-            ${icon(Sparkles, { width: 20, height: 20, 'stroke-width': 2.2 })}
-          </div>
-          <div>
-            <h2>Derby Pro Tips</h2>
-            <small class="about-tagline">Tactics to dominate the stick</small>
-          </div>
-        </div>
-
-        <div class="about-cards-grid three-cols" style="margin-top:6px;">
-          <div class="about-card sector-card aerial">
-            <h3>Hold the Center</h3>
-            <p>Standing in the center of the twig gives you room to absorb hits. Being cornered near the stick tips makes recovery nearly impossible.</p>
-          </div>
-
-          <div class="about-card sector-card control">
-            <h3>Mash Early on Falls</h3>
-            <p>Do not wait until your spider sinks near the water surface. Start mashing Climb the split second you get knocked off to stop downward momentum.</p>
-          </div>
-
-          <div class="about-card">
-            <h3>Punish Whiffed Strikes</h3>
-            <p>Every strike has a windup and recovery animation. If an enemy strikes from out of range, step forward and counter before they can block.</p>
-          </div>
-        </div>
+      <section class="learn-finale" aria-label="Skills">
+        <span class="learn-finale-icon">${icon(Zap, { width: 24, height: 24 })}</span>
+        <div><h2>Skills turn the fight</h2><p>Dash, control, defend, or recover with your equipped skills.</p></div>
+        <div class="learn-skill-keys">${keycap(kb.p1.s1, 'Skill 1')}${keycap(kb.p1.s2, 'Skill 2')}</div>
       </section>
+
+      <details class="learn-controls">
+        <summary>Player 2 keys</summary>
+        <div class="learn-key-row">
+          ${keycap(kb.p2.left, 'Left')}${keycap(kb.p2.right, 'Right')}${keycap(kb.p2.strike, 'Strike')}
+          ${keycap(kb.p2.block, 'Block')}${keycap(kb.p2.climb, 'Climb')}${keycap(kb.p2.s1, 'Skill 1')}${keycap(kb.p2.s2, 'Skill 2')}
+        </div>
+      </details>
     </div>
   `;
 }
 
+export function bindLearnDemo(container: HTMLElement): () => void {
+  const parent = container.querySelector<HTMLElement>('#learnBattlePreview');
+  if (!parent) return () => {};
+
+  const looks = getLooks();
+  const engine = new LocalGameEngine('2p', 'normal', looks.p1, looks.p2);
+  const state = engine.state;
+  state.status = 'fight';
+  const { game, scene } = createPhaserGame(parent);
+  scene.gameState = state;
+
+  const title = container.querySelector<HTMLElement>('#learnLiveTitle');
+  const hint = container.querySelector<HTMLElement>('#learnLiveHint');
+  const steps = container.querySelectorAll<HTMLElement>('[data-learn-step]');
+  const keys = container.querySelectorAll<HTMLElement>('[data-learn-key]');
+  const icons = container.querySelectorAll<HTMLElement>('[data-learn-icon]');
+  const copy = {
+    move: ['Move', 'Close the gap and control the center.'],
+    strike: ['Strike', 'Wind up, lunge, and knock your rival back.'],
+    block: ['Block', 'Raise your front legs before the hit lands.'],
+    climb: ['Climb', 'Tap quickly before your silk reaches the pond.']
+  } as const;
+  let lastPhase = '';
+  let phaseFxPlayed = false;
+  let animationFrame = 0;
+  const started = performance.now();
+
+  function reset() {
+    Object.assign(state.p1, { x: 440, face: 1, move: 0, walkPhase: 0, grip: 100, guard: 100, hang: false, falling: false, drop: 0, hb: 0, stun: 0, blocking: false, blockT: 0, inv: 0, hitFlash: 0, ko: false, atkT: 0, atkType: 1 });
+    Object.assign(state.p2, { x: 760, face: -1, move: 0, walkPhase: 0, grip: 100, guard: 100, hang: false, falling: false, drop: 0, hb: 0, stun: 0, blocking: false, blockT: 0, inv: 0, hitFlash: 0, ko: false, atkT: 0, atkType: 1 });
+  }
+
+  function renderFrame(now: number) {
+    const frame = learnDemoFrame((now - started) / 1000);
+    if (frame.phase !== lastPhase) {
+      reset();
+      lastPhase = frame.phase;
+      phaseFxPlayed = false;
+      state.p1.atkType = frame.cycle % 3;
+      title!.textContent = copy[frame.phase][0];
+      hint!.textContent = copy[frame.phase][1];
+      steps.forEach(step => step.classList.toggle('active', step.dataset.learnStep === frame.phase));
+      keys.forEach(key => key.classList.toggle('active', key.dataset.learnKey === frame.phase));
+      icons.forEach(icon => { icon.hidden = icon.dataset.learnIcon !== frame.phase; });
+    }
+
+    const t = frame.time;
+    if (frame.phase === 'move') {
+      const travel = Math.min(t, 1.42) * SPEED;
+      state.p1.x = 440 + travel;
+      state.p1.move = t < 1.42 ? 1 : 0;
+      state.p1.walkPhase = travel * .055;
+    } else if (frame.phase === 'strike') {
+      const attackT = Math.max(0, Math.min(ATK.end, t - .28));
+      const hitT = Math.max(0, attackT - ATK.wind);
+      state.p1.x = 520 + 110 * Math.min(.16, Math.max(0, attackT - .1));
+      state.p1.atkT = attackT;
+      state.p2.x = 592 + 430 / 7 * (1 - Math.exp(-7 * hitT));
+      state.p2.hitFlash = hitT > 0 && hitT < .2 ? .2 - hitT : 0;
+      state.p2.stun = Math.max(0, .28 - hitT);
+      if (hitT > 0 && !phaseFxPlayed) {
+        phaseFxPlayed = true;
+        const x = (state.p1.x + state.p2.x) / 2;
+        scene.addFx({ type: 'spark', x, y: BODY_Y - 6, col: '#ffffff', count: 10, sp: 260 });
+        scene.addFx({ type: 'spark', x, y: BODY_Y - 6, col: state.p1.color, count: 8, sp: 220 });
+        scene.addShake(7);
+      }
+    } else if (frame.phase === 'block') {
+      const attackT = Math.max(0, Math.min(ATK.end, t - .28));
+      const hitT = Math.max(0, attackT - ATK.wind);
+      state.p1.x = 520 + 110 * Math.min(.16, Math.max(0, attackT - .1));
+      state.p1.atkT = attackT;
+      state.p2.x = 592 + 150 / 7 * (1 - Math.exp(-7 * hitT));
+      state.p2.blocking = t >= .4 && t < .9;
+      state.p2.blockT = Math.max(0, t - .4);
+      state.p2.guard = Math.max(0, 100 - Math.max(0, t - .4) * 9 - (hitT > 0 ? 22 : 0));
+      if (hitT > 0 && !phaseFxPlayed) {
+        phaseFxPlayed = true;
+        scene.addFx({ type: 'spark', x: (state.p1.x + state.p2.x) / 2, y: BODY_Y - 6, col: state.p2.colorLight, count: 8, sp: 180 });
+        scene.addShake(3);
+      }
+    } else {
+      const fallTime = (FALL_DEPTH - 12) / FALL_SPEED;
+      state.p1.x = 340;
+      state.p2.x = 760;
+      state.p1.hang = true;
+      state.p1.hb = 1 - Math.exp(-9 * t);
+      if (t < fallTime) {
+        state.p1.falling = true;
+        state.p1.drop = 12 + FALL_SPEED * t;
+      } else {
+        state.p1.falling = false;
+        const climbTime = Math.max(0, t - fallTime - .25);
+        const tapInterval = Math.max(REEL_CD, 1 / DIFF_SETTINGS.normal.reel);
+        state.p1.drop = FALL_DEPTH + SINK * (t - fallTime) - TAP * Math.floor(climbTime / tapInterval);
+        if (state.p1.drop <= 0) {
+          const recoveredFor = -state.p1.drop / (TAP / tapInterval - SINK);
+          state.p1.hang = false;
+          state.p1.drop = 0;
+          state.p1.hb = Math.exp(-9 * recoveredFor);
+          state.p1.inv = Math.max(0, 1.1 - recoveredFor);
+        }
+      }
+    }
+
+    animationFrame = requestAnimationFrame(renderFrame);
+  }
+
+  reset();
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    state.p1.x = 520;
+    state.p2.x = 592;
+    state.p2.blocking = true;
+    title!.textContent = copy.block[0];
+    hint!.textContent = copy.block[1];
+    steps.forEach(step => step.classList.toggle('active', step.dataset.learnStep === 'block'));
+    keys.forEach(key => key.classList.toggle('active', key.dataset.learnKey === 'block'));
+    icons.forEach(icon => { icon.hidden = icon.dataset.learnIcon !== 'block'; });
+  } else {
+    animationFrame = requestAnimationFrame(renderFrame);
+  }
+
+  return () => {
+    cancelAnimationFrame(animationFrame);
+    game.destroy(true);
+  };
+}

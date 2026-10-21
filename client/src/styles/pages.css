@@ -783,3 +783,43 @@
   display: inline-block;
   vertical-align: middle;
 }
+
+/* Learn view uses the same Phaser battle scene and motion constants as a CPU match. */
+.learn-page { width: min(100%, 920px); max-width: 920px; padding-bottom: 32px; }
+.learn-live { overflow: hidden; background: rgba(18, 38, 36, .94); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 12px 28px rgba(0, 0, 0, .22); }
+.learn-live-head { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 11px; padding: 12px 14px; }
+.learn-live-icon { width: 38px; height: 38px; display: grid; place-items: center; color: var(--jade-light); background: rgba(76, 199, 178, .12); border-radius: 10px; }
+.learn-live h2, .learn-finale h2 { margin: 0; color: var(--fg); font-family: var(--label); font-size: 19px; line-height: 1; letter-spacing: .07em; text-transform: uppercase; }
+.learn-live p, .learn-finale p { margin: 3px 0 0; color: var(--muted); font-size: 13px; }
+.learn-engine-badge { color: var(--jade-light); font: 700 11px var(--label); letter-spacing: .08em; text-transform: uppercase; }
+.learn-arena { border-inline: 0; border-radius: 0; box-shadow: none; }
+#learnBattlePreview { width: 100%; height: 100%; }
+.learn-action-track { display: grid; grid-template-columns: repeat(4, 1fr); background: rgba(8, 16, 15, .42); }
+.learn-action-track span { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 38px; color: var(--muted); font: 700 12px var(--label); letter-spacing: .06em; text-transform: uppercase; border-top: 2px solid transparent; transition: color .16s ease, background-color .16s ease, border-color .16s ease; }
+.learn-action-track span.active { color: var(--amber-light); background: rgba(242, 163, 58, .1); border-color: var(--amber); }
+.learn-p1-keys { display: flex; justify-content: center; flex-wrap: wrap; gap: 9px; padding: 11px 12px 13px; }
+.learn-key { display: inline-grid; justify-items: center; gap: 2px; min-width: 46px; color: var(--muted); font-family: var(--label); font-weight: 600; font-size: 10px; letter-spacing: .05em; line-height: 1; text-transform: uppercase; }
+.learn-key kbd { min-width: 38px; padding: 5px 7px 4px; color: var(--fg); background: #172522; border: 1px solid #54736d; border-bottom-width: 3px; border-radius: 6px; font: 700 13px var(--label); text-align: center; box-shadow: 0 5px 10px rgba(0, 0, 0, .24); transition: transform .14s ease, background-color .14s ease, border-color .14s ease; }
+.learn-key small { font: inherit; }
+.learn-key.active kbd { color: #fff; background: var(--amber-dark); border-color: var(--amber); transform: translateY(2px); }
+.learn-finale { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 14px; padding: 15px 16px; border-radius: 14px; background: linear-gradient(110deg, rgba(242, 163, 58, .13), rgba(76, 199, 178, .13)); border: 1px solid rgba(242, 163, 58, .32); }
+.learn-finale-icon { display: grid; place-items: center; width: 42px; height: 42px; color: var(--amber-light); }
+.learn-skill-keys, .learn-key-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.learn-controls { padding: 10px 14px 14px; background: rgba(25, 41, 39, .76); border: 1px solid var(--line); border-radius: 12px; }
+.learn-controls summary { cursor: pointer; color: var(--jade-light); font-family: var(--label); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.learn-controls .learn-key-row { margin-top: 12px; }
+
+@media (max-width: 700px) {
+  .learn-finale { grid-template-columns: auto 1fr; }
+  .learn-skill-keys { grid-column: 1 / -1; }
+}
+
+@media (max-width: 430px) {
+  .learn-live-head { grid-template-columns: auto 1fr; }
+  .learn-engine-badge { grid-column: 2; }
+  .learn-action-track b { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .learn-action-track span, .learn-key kbd { transition: none; }
+}

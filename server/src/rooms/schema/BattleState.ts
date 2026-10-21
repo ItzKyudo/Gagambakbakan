@@ -83,7 +83,6 @@ export interface WebStateData {
 }
 
 export interface BattleStateData {
-  roomCode: string;
   mode: string;         // 'pvp'
   status: 'waiting' | 'draft' | 'ready' | 'fight' | 'roundEnd' | 'matchEnd';
   stateT: number;

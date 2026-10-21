@@ -1,0 +1,736 @@
+/* ====================================================
+   GAME PAGE & ARENA
+   ==================================================== */
+.game-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.game-top h1 {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(22px, 5vw, 32px);
+  line-height: 1;
+  margin: 0;
+}
+
+.game-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* HUD */
+.hud {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 18px;
+  align-items: center;
+}
+
+.fighter {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.p1 { --c: var(--amber); }
+.p2 { --c: var(--jade); }
+
+.fhead {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  font-family: var(--label);
+  font-weight: 700;
+  font-size: 21px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.p2 .fhead {
+  flex-direction: row-reverse;
+}
+
+.who {
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 15px;
+}
+
+.pips {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.p2 .pips {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+.pip {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  background: var(--surface-2);
+}
+
+.pip.on {
+  background: var(--c);
+  border-color: var(--c);
+  box-shadow: 0 0 6px var(--c);
+}
+
+.meter {
+  display: grid;
+  grid-template-columns: 66px 1fr;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--label);
+  font-size: 13px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.p2 .meter {
+  grid-template-columns: 1fr 66px;
+}
+
+.p2 .meter span {
+  order: 2;
+  text-align: right;
+}
+
+.bar {
+  height: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.bar i {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: var(--c);
+  transition: width 0.1s linear;
+}
+
+.p2 .bar i {
+  margin-left: auto;
+}
+
+.bar.low i {
+  background: var(--danger);
+  animation: pulse-danger 0.8s infinite;
+}
+
+@keyframes pulse-danger {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+.bar.guard {
+  height: 7px;
+}
+
+.bar.guard i {
+  background: var(--guard);
+}
+
+.bar.stam i {
+  background: var(--c);
+  opacity: .75;
+  transition: width .4s;
+}
+
+.center {
+  text-align: center;
+  font-family: var(--label);
+}
+
+#roundLbl {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--fg);
+}
+
+.best {
+  font-size: 13px;
+  color: var(--muted);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+/* Arena Container & Fullscreen Game */
+body:has(.game-screen-fullscreen) {
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+}
+
+.game-screen-fullscreen {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #0b1414;
+  display: flex;
+  flex-direction: column;
+  z-index: 10;
+}
+
+.arena {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1200 / 560;
+  container-type: inline-size;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #12201f;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+
+.arena canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.game-screen-fullscreen .arena {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  max-width: 100vw;
+  max-height: 100vh;
+  aspect-ratio: auto;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: #0b1414;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.game-screen-fullscreen #phaserContainer {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.game-screen-fullscreen .arena canvas {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  box-shadow: 0 0 50px rgba(0, 0, 0, 0.7);
+}
+
+/* Floating in-screen HUD overlay inside and above the game screen */
+.in-game-hud-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(8px, 1.4vh, 16px) clamp(16px, 2.5vw, 36px);
+  gap: clamp(6px, 1vh, 10px);
+  background: linear-gradient(180deg, rgba(8, 16, 16, 0.92) 0%, rgba(8, 16, 16, 0.5) 65%, rgba(8, 16, 16, 0) 100%);
+}
+
+.in-game-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.in-game-top-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.in-game-logo {
+  font-family: var(--display);
+  font-size: clamp(16px, 1.8vw, 22px);
+  line-height: 1;
+  margin: 0;
+  letter-spacing: 0.04em;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.8));
+}
+
+.in-game-logo .a { color: var(--amber); }
+.in-game-logo .j { color: var(--jade); }
+
+.in-game-top-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+.in-game-top-right .btn {
+  background: rgba(14, 26, 25, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(8px);
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: var(--label);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.in-game-top-right .btn:hover {
+  background: rgba(28, 48, 46, 0.9);
+  border-color: rgba(255, 255, 255, 0.28);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+/* In-game HUD fighter stats */
+.in-game-hud {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: clamp(12px, 2vw, 32px);
+  max-width: 1160px;
+  margin: 0 auto;
+  width: 100%;
+  pointer-events: none;
+}
+
+.in-game-hud .fighter {
+  background: rgba(8, 17, 17, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 10px;
+  padding: 8px 14px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+  min-width: 0;
+}
+
+.in-game-hud .fighter.p1 {
+  border-left: 3.5px solid var(--c);
+}
+
+.in-game-hud .fighter.p2 {
+  border-right: 3.5px solid var(--c);
+}
+
+.in-game-hud .center {
+  background: rgba(8, 17, 17, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 6px 18px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+  text-align: center;
+}
+
+.in-game-hud #roundLbl {
+  font-size: clamp(15px, 1.6vw, 20px);
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #ffffff;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+}
+
+.in-game-hud .best {
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Fullscreen Ability Rails */
+.game-screen-fullscreen .rail {
+  position: absolute;
+  bottom: clamp(14px, 2.5vh, 26px);
+  top: auto;
+  z-index: 25;
+  pointer-events: auto;
+}
+
+.game-screen-fullscreen .rail.l {
+  left: clamp(16px, 2.5vw, 36px);
+}
+
+.game-screen-fullscreen .rail.r {
+  right: clamp(16px, 2.5vw, 36px);
+}
+
+/* Overlays inside fullscreen game */
+.game-screen-fullscreen .overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  pointer-events: auto;
+}
+
+/* Ability gems in Arena (Positioned at bottom, compact size) */
+.rail {
+  position: absolute;
+  bottom: clamp(10px, 1.8cqw, 18px);
+  top: auto;
+  transform: none;
+  z-index: 10;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: clamp(6px, 1.2cqw, 10px);
+  padding: 4px 8px;
+  background: rgba(8, 16, 16, 0.68);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 28px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+  transition: all 0.2s ease;
+}
+
+.rail.l {
+  left: clamp(14px, 2.2cqw, 28px);
+  border-color: rgba(242, 163, 58, 0.35);
+}
+
+.rail.r {
+  right: clamp(14px, 2.2cqw, 28px);
+  flex-direction: row-reverse;
+  border-color: rgba(76, 199, 178, 0.35);
+}
+
+.rail .gem {
+  --cd: 0%;
+  --size: clamp(36px, 5.2cqw, 48px);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--size);
+  height: var(--size);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--fg);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+  user-select: none;
+  transition: transform 0.15s cubic-bezier(0.2, 0.9, 0.3, 1.2), filter 0.2s ease;
+}
+
+.rail div.gem {
+  cursor: default;
+}
+
+.rail .gem:hover {
+  transform: scale(1.08);
+}
+
+.rail .gem:active, .rail .gem.down {
+  transform: scale(0.92);
+}
+
+.rail .gem .shape {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.rail .gem .bg polygon {
+  fill: rgba(8, 14, 18, 0.94);
+  stroke: rgba(255, 255, 255, 0.22);
+  stroke-width: 3;
+  stroke-linejoin: round;
+  transition: stroke 0.2s ease, stroke-width 0.2s ease, filter 0.2s ease;
+}
+
+.rail .gem-icon-frame {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 88%;
+  height: 88%;
+  clip-path: polygon(50% 1%, 93% 25%, 93% 75%, 50% 99%, 7% 75%, 7% 25%);
+  overflow: hidden;
+  background: transparent;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.rail .gem .gem-ability-icon {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  opacity: 1;
+  transition: opacity 0.15s ease, filter 0.15s ease;
+}
+
+.rail .gem .gem-cd-wipe {
+  position: absolute;
+  inset: 0;
+  background: rgba(6, 12, 16, 0.85);
+  backdrop-filter: blur(1.5px);
+  clip-path: inset(0 0 calc(100% - var(--cd, 0%)) 0);
+  pointer-events: none;
+  transition: clip-path 0.05s linear;
+}
+
+.rail .gem-cd-num {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-family: var(--f-display), var(--display), sans-serif;
+  font-weight: 800;
+  font-size: clamp(11px, 1.8cqw, 15px);
+  color: #ffffff;
+  text-shadow: 0 2px 5px #000, 0 0 8px rgba(0, 0, 0, 0.95);
+  pointer-events: none;
+  z-index: 4;
+}
+
+.rail .gem-key-badge {
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--f-sans), var(--label), sans-serif;
+  font-size: clamp(8px, 1.1cqw, 10px);
+  font-weight: 800;
+  color: #fff;
+  background: rgba(10, 16, 20, 0.96);
+  border: 1.5px solid var(--c);
+  border-radius: 4px;
+  padding: 0 4px;
+  line-height: 12px;
+  text-transform: uppercase;
+  z-index: 5;
+  pointer-events: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
+  letter-spacing: 0.04em;
+}
+
+/* READY STATE - glowing colored border, vibrant icon */
+.rail .gem.ready .bg polygon {
+  stroke: var(--c);
+  stroke-width: 4;
+  filter: drop-shadow(0 0 8px var(--c));
+}
+
+.rail .gem.ready .gem-icon-frame {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.75), 0 0 14px var(--c), inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+
+.rail .gem.ready .gem-ability-icon {
+  opacity: 1;
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.25));
+}
+
+/* DISABLED STATE (OFF - e.g. hang ability while clinging) */
+.rail .gem.off {
+  opacity: 0.45;
+}
+
+.rail .gem.off .gem-ability-icon {
+  filter: grayscale(0.85) brightness(0.6);
+}
+
+.rail .gem.off .bg polygon {
+  stroke: rgba(255, 255, 255, 0.15);
+  filter: none;
+}
+
+.ico-skill-img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  vertical-align: middle;
+  margin-inline: 4px;
+  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.7));
+}
+
+.rail .gem:active, .rail .gem.down {
+  transform: scale(.94);
+}
+
+/* Modals & Overlays in Arena */
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+  padding: 16px;
+  background: rgba(10, 20, 19, .75);
+  backdrop-filter: blur(4px);
+}
+
+.overlay h2 {
+  font-family: var(--display);
+  font-weight: 400;
+  margin: 0;
+  font-size: clamp(24px, 5vw, 44px);
+  line-height: 1.05;
+  color: var(--fg);
+}
+
+.overlay p {
+  margin: 0;
+  max-width: 46ch;
+  font-size: clamp(13px, 2.4vw, 17px);
+  color: var(--muted);
+}
+
+.overlay .btns {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 6px;
+}
+
+/* Touch controls (mobile) */
+.touch {
+  display: none;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+@media (pointer: coarse) {
+  .touch { display: grid; }
+}
+
+.tb {
+  height: 56px;
+  padding: 0;
+  font-family: var(--label);
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  font-size: 15px;
+  border: 2px solid var(--line);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--fg);
+  touch-action: none;
+  user-select: none;
+  cursor: pointer;
+}
+
+.tb.wide {
+  grid-column: 1 / -1;
+  height: 64px;
+  font-size: 18px;
+  background: var(--surface-2);
+  border-color: var(--amber);
+}
+
+.tb.down {
+  background: var(--surface-2);
+  border-color: var(--amber);
+}
+
+/* Hideable controls strip */
+.ctl {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px 14px;
+  display: grid;
+  gap: 10px;
+}
+
+.ctl-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ctl h3 {
+  margin: 0;
+  font-family: var(--label);
+  font-size: 15px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.ctl-body {
+  display: grid;
+  gap: 10px;
+}
+
+.kp1 { --c: var(--amber); }
+.kp2 { --c: var(--jade); }
+
+.kn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 92px;
+  font-family: var(--label);
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 600px) {
+  .hud {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas: "c c" "a b";
+    gap: 10px 14px;
+  }
+  .center { grid-area: c; }
+  .p1 { grid-area: a; }
+  .p2 { grid-area: b; }
+  .fhead { font-size: 18px; }
+  .meter, .p2 .meter {
+    grid-template-columns: 54px 1fr;
+    gap: 6px;
+    letter-spacing: .06em;
+  }
+  .p2 .meter span { order: 0; text-align: left; }
+  .p2 .bar i { margin-left: 0; }
+  .btn { padding: 8px 16px; font-size: 15px; }
+}
+

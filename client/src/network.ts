@@ -60,7 +60,7 @@ export class NetworkManager {
 
     // 3. Vite environment variable
     if (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_SERVER_URL) {
-      return (import.meta as any).env.SERVER_URL;
+      return (import.meta as any).env.VITE_SERVER_URL;
     }
 
     // 4. Default to Render production server
@@ -90,69 +90,44 @@ export class NetworkManager {
     }
   }
 
-  private pendingCallbacks: NetworkCallbacks | null = null;
+  private initClient(callbacks: NetworkCallbacks): Client {
+    const client = new Client(this.serverUrl);
+    this.client = client;
 
-  private initClient(): Client {
-    if (!this.client) {
-      this.client = new Client(this.serverUrl);
-      // Colyseus 0.18 response shim for colyseus.js 0.16
-      const origConsume = (this.client as any).consumeSeatReservation.bind(this.client);
-      (this.client as any).consumeSeatReservation = function (response: any, rootSchema?: any, reuseRoomInstance?: any) {
-        if (response && !response.room && response.roomId) {
-          response.room = {
-            name: response.name,
-            roomId: response.roomId,
-            processId: response.processId
-          };
-        }
-        return origConsume(response, rootSchema, reuseRoomInstance);
-      };
+    // Colyseus 0.18 response shim for colyseus.js 0.16
+    const origConsume = (client as any).consumeSeatReservation.bind(client);
+    (client as any).consumeSeatReservation = function (response: any, rootSchema?: any, reuseRoomInstance?: any) {
+      if (response && !response.room && response.roomId) {
+        response.room = {
+          name: response.name,
+          roomId: response.roomId,
+          processId: response.processId
+        };
+      }
+      return origConsume(response, rootSchema, reuseRoomInstance);
+    };
 
-      const origCreateRoom = (this.client as any).createRoom.bind(this.client);
-      (this.client as any).createRoom = (roomName: string, rootSchema?: any) => {
-        const room = origCreateRoom(roomName, rootSchema);
-        if (this.pendingCallbacks) {
-          this.setupRoom(room, this.pendingCallbacks);
-        }
-        return room;
-      };
-    }
-    return this.client;
+    const origCreateRoom = (client as any).createRoom.bind(client);
+    (client as any).createRoom = (roomName: string, rootSchema?: any) => {
+      const room = origCreateRoom(roomName, rootSchema);
+      if (this.client === client) {
+        this.room = room;
+        this.setupRoom(room, callbacks);
+      }
+      return room;
+    };
+    return client;
   }
 
   public async quickMatch(profile: string | PlayerProfile, callbacks: NetworkCallbacks): Promise<Room> {
-    this.pendingCallbacks = callbacks;
-    const client = this.initClient();
-    const opts = typeof profile === 'string' ? { name: profile, roomCode: 'QUICK' } : { ...profile, roomCode: 'QUICK' };
+    const client = this.initClient(callbacks);
+    const opts = typeof profile === 'string' ? { name: profile } : { ...profile };
     const room = await client.joinOrCreate('battle', opts);
-    this.setupRoom(room, callbacks);
-    this.pendingCallbacks = null;
-    return room;
-  }
-
-  public async createPrivateRoom(profile: string | PlayerProfile, roomCode: string, callbacks: NetworkCallbacks): Promise<Room> {
-    this.pendingCallbacks = callbacks;
-    const client = this.initClient();
-    const opts = typeof profile === 'string' ? { name: profile, roomCode } : { ...profile, roomCode };
-    const room = await client.create('battle', opts);
-    this.setupRoom(room, callbacks);
-    this.pendingCallbacks = null;
-    return room;
-  }
-
-  public async joinByRoomCode(profile: string | PlayerProfile, roomCode: string, callbacks: NetworkCallbacks): Promise<Room> {
-    this.pendingCallbacks = callbacks;
-    const client = this.initClient();
-    const opts = typeof profile === 'string' ? { name: profile, roomCode } : { ...profile, roomCode };
-    const room = await client.joinOrCreate('battle', opts);
-    this.setupRoom(room, callbacks);
-    this.pendingCallbacks = null;
+    if (this.client === client) this.room = room;
     return room;
   }
 
   private setupRoom(room: Room, callbacks: NetworkCallbacks) {
-    this.room = room;
-
     room.onMessage('assigned', (data) => {
       this.myPlayerId = data.id;
       callbacks.onAssigned?.(data);
@@ -179,8 +154,10 @@ export class NetworkManager {
     });
 
     room.onLeave(() => {
-      this.room = null;
-      callbacks.onDisconnect?.();
+      if (this.room === room) {
+        this.room = null;
+        callbacks.onDisconnect?.();
+      }
     });
   }
 
@@ -211,6 +188,7 @@ export class NetworkManager {
   }
 
   public leave() {
+    this.client = null;
     if (this.room) {
       this.room.leave();
       this.room = null;

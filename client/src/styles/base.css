@@ -1,0 +1,61 @@
+:root {
+  color-scheme: dark;
+  --bg: #111c1b;
+  --surface: #192927;
+  --surface-2: #223633;
+  --line: #34504b;
+  --fg: #e8eee4;
+  --muted: #95aaa1;
+  --amber: #f2a33a;
+  --amber-dark: #8f4f14;
+  --amber-light: #ffd694;
+  --jade: #4cc7b2;
+  --jade-dark: #1d6a64;
+  --jade-light: #b0f2e3;
+  --guard: #8fb7d6;
+  --bark: #7b5b3e;
+  --bark-dark: #4a3524;
+  --bark-light: #a58059;
+  --danger: #e8593f;
+  --display: "Bowlby One", "Arial Black", system-ui, sans-serif;
+  --label: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  --body: "Barlow", system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--body);
+  font-size: 15px;
+  line-height: 1.45;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  padding-block: max(16px, env(safe-area-inset-top, 0px)) max(28px, env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+.wrap {
+  max-width: 980px;
+  margin-inline: auto;
+  display: grid;
+  gap: 16px;
+}
+
+.wrap.game-page {
+  max-width: 1240px;
+}
+

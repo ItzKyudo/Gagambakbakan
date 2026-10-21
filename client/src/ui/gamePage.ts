@@ -50,6 +50,7 @@ export class GamePage {
   private draftConfirmCallback: ((skills: string[]) => void) | null = null;
   public isDraftOpen: boolean = false;
   private isDraftLeaving: boolean = false;
+  private draftKeyHandler?: (e: KeyboardEvent) => void;
 
   private g1a!: HTMLElement;
   private g1b!: HTMLElement;
@@ -113,7 +114,6 @@ export class GamePage {
             <header class="in-game-top-bar">
               <div class="in-game-top-left">
                 <h1 class="in-game-logo"><span class="a">Gagam</span><span class="j">bakbakan</span></h1>
-                <span id="roomBadge" class="status-badge" style="display:none;"><span class="status-dot"></span> <span id="roomCodeText"></span></span>
               </div>
               <div class="in-game-top-right">
                 <button class="btn ghost sound-toggle-btn ${sound.enabled ? 'sound-on' : 'sound-off'}" id="btnSoundToggle" type="button">${sound.enabled ? '🔊 Sound On' : '🔇 Sound Off'}</button>
@@ -336,7 +336,7 @@ export class GamePage {
     });
 
     // Keyboard numbers 1, 2, 3 in draft
-    window.addEventListener('keydown', (e) => {
+    this.draftKeyHandler = (e) => {
       if (!this.isDraftOpen || this.isDraftLeaving) return;
       const m = /^(?:Digit|Numpad)([1-3])$/.exec(e.code);
       if (m) {
@@ -352,7 +352,12 @@ export class GamePage {
           this.confirmPick();
         }
       }
-    });
+    };
+    window.addEventListener('keydown', this.draftKeyHandler);
+  }
+
+  public destroy() {
+    if (this.draftKeyHandler) window.removeEventListener('keydown', this.draftKeyHandler);
   }
 
   public buildControlsGuide(_s1Skills?: [string, string], _s2Skills?: [string, string]) {
@@ -537,17 +542,6 @@ export class GamePage {
     }
   }
 
-  public setRoomCode(code: string) {
-    const badge = this.rootElement.querySelector('#roomBadge') as HTMLElement;
-    const codeText = this.rootElement.querySelector('#roomCodeText') as HTMLElement;
-    if (code) {
-      badge.style.display = 'inline-flex';
-      codeText.textContent = `Room: ${code}`;
-    } else {
-      badge.style.display = 'none';
-    }
-  }
-
   /* ---------- HUD UPDATES & ABILITY GEMS ---------- */
   public updateHud(state: any) {
     if (!state || !state.p1 || !state.p2) return;
@@ -696,7 +690,7 @@ export class GamePage {
   /* ---------- MODALS & OVERLAYS ---------- */
   public showModal(title: string, sub: string, buttons: Array<{ label: string; primary?: boolean; onClick: () => void }>, extraHtml?: string) {
     this.ovTitle.textContent = title;
-    this.ovSub.innerHTML = sub;
+    this.ovSub.textContent = sub;
     if (extraHtml) {
       const extraDiv = document.createElement('div');
       extraDiv.className = 'ov-extra';

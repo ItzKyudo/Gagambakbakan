@@ -1,5 +1,11 @@
-import './style.css';
-import './menu.css';
+import './styles/base.css';
+import './styles/ui.css';
+import './styles/game.css';
+import './styles/draft.css';
+import './styles/pages.css';
+import './styles/menu.css';
+import './styles/abilities.css';
+import './styles/rewards.css';
 import { renderMenuPage, type MenuStartOptions } from './ui/menuPage';
 import { GamePage } from './ui/gamePage';
 import { createPhaserGame } from './game/phaserConfig';
@@ -123,6 +129,11 @@ function showMainMenu() {
     localEngine = null;
   }
   network.leave();
+  gamePage?.destroy();
+  gamePage = null;
+  keysDown.clear();
+  touchState.left = touchState.right = touchState.strike = touchState.block = false;
+  clearInputs();
 
   sound.music.play('ambient');
 
@@ -177,6 +188,8 @@ async function startGame(opts: MenuStartOptions) {
 
 async function startOnlineGame(opts: MenuStartOptions) {
   if (!gamePage || !currentScene) return;
+  const page = gamePage;
+  const scene = currentScene;
 
   currentScene.isOnline = true;
   sound.music.play('ambient');
@@ -187,7 +200,6 @@ async function startOnlineGame(opts: MenuStartOptions) {
   ]);
 
   try {
-    let room;
     const prog = getProgress();
     const myLvl = getLevel(prog.onlineExp);
     const profile = {
@@ -201,22 +213,15 @@ async function startOnlineGame(opts: MenuStartOptions) {
       unlockedSkills: getUnlockedIds(prog)
     };
 
-    if (opts.onlineAction === 'create') {
-      const code = opts.roomCode || 'FIGHT';
-      gamePage.setRoomCode(code);
-      room = await network.createPrivateRoom(profile, code, getNetworkCallbacks());
-    } else if (opts.onlineAction === 'join') {
-      const code = opts.roomCode || '';
-      gamePage.setRoomCode(code);
-      room = await network.joinByRoomCode(profile, code, getNetworkCallbacks());
-    } else {
-      room = await network.quickMatch(profile, getNetworkCallbacks());
+    const room = await network.quickMatch(profile, getNetworkCallbacks());
+
+    if (gamePage !== page || currentScene !== scene) {
+      room.leave();
+      return;
     }
 
     if (room && (!currentScene.gameState || currentScene.gameState.status === 'waiting')) {
-      const displayCode = opts.roomCode || (room.roomId || (room as any).id || '').slice(0, 5).toUpperCase();
-      gamePage.setRoomCode(displayCode);
-      gamePage.showModal('Waiting for Opponent', `Room Code: ${displayCode}\n\nShare this code with your friend, or wait for another player to join...`, [
+      gamePage.showModal('Waiting for Opponent', 'Waiting for another player to join...', [
         { label: 'Leave', onClick: () => showMainMenu() }
       ]);
     }
@@ -232,6 +237,7 @@ async function startOnlineGame(opts: MenuStartOptions) {
     animationFrameId = requestAnimationFrame(loop);
 
   } catch (err: any) {
+    if (gamePage !== page || currentScene !== scene) return;
     console.error('Online match error:', err);
     const errText = err?.message
       ? `${err.message}\n\n(Tip: Render free instances spin down when inactive. If the server is currently waking up, please wait a moment and click Try Again!)`

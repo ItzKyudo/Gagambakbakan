@@ -26,7 +26,6 @@ listen(config({
   initializeGameServer: (gameServer) => {
     // Define the battle room
     gameServer.define('battle', BattleRoom)
-      .filterBy(['roomCode'])
       .enableRealtimeListing();
   }
 }), port).then(() => {

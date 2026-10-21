@@ -59,7 +59,6 @@ const port = Number(process.env.PORT || 2567);
     initializeGameServer: (gameServer) => {
         // Define the battle room
         gameServer.define('battle', BattleRoom_1.BattleRoom)
-            .filterBy(['roomCode'])
             .enableRealtimeListing();
     }
 }), port).then(() => {

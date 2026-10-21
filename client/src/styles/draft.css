@@ -1,0 +1,587 @@
+/* ====================================================
+   ROUND ABILITY DRAFT OVERLAY (Light Blur, Bottom-Docked Cards)
+   ==================================================== */
+.draft-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: clamp(8px, 1.8vh, 16px) 16px 0 16px; /* 0 bottom padding so cards dock at the bottom edge */
+  background: radial-gradient(ellipse at center, rgba(6, 16, 15, 0.28) 0%, rgba(3, 8, 8, 0.48) 100%);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  opacity: 1;
+  transition: opacity 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+  overflow: hidden; /* Clips the bottom portion of resting cards */
+}
+
+/* Entire overlay closing animation */
+.draft-overlay.is-closing {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.draft-overlay.is-closing .draft-content {
+  transform: translateY(70px) scale(0.97);
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Transparent layout wrapper - NO container, NO box! */
+.draft-content {
+  width: 100%;
+  height: 100%;
+  max-width: 660px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  position: relative;
+  z-index: 2;
+}
+
+/* Header floating from top - Holds title, status, and Done button safely away from cards */
+.draft-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  text-align: center;
+  animation: draft-header-appear 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  flex-shrink: 0;
+}
+
+@keyframes draft-header-appear {
+  0% {
+    opacity: 0;
+    transform: translateY(-24px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.draft-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--label);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  color: var(--amber-light);
+  background: rgba(242, 163, 58, 0.16);
+  border: 1px solid rgba(242, 163, 58, 0.4);
+  border-radius: 20px;
+  padding: 2px 10px;
+  box-shadow: 0 0 10px rgba(242, 163, 58, 0.2);
+}
+
+.draft-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--amber);
+  box-shadow: 0 0 6px var(--amber);
+  animation: pulse-dot 1.2s infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.75); }
+}
+
+.draft-header h2 {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(18px, 3vw, 24px);
+  line-height: 1.05;
+  margin: 0;
+  color: var(--fg);
+  text-shadow: 0 3px 12px rgba(0, 0, 0, 0.7);
+  letter-spacing: .02em;
+}
+
+.draft-header p {
+  margin: 0;
+  font-size: clamp(11px, 1.4vw, 12.5px);
+  color: var(--muted);
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+
+/* Header Action Row: Status + Done Button anchored safely at top */
+.draft-action-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 6px;
+  animation: draft-slide-up-footer 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
+  flex-wrap: wrap;
+}
+
+@keyframes draft-slide-up-footer {
+  0% {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.draft-status {
+  font-family: var(--label);
+  font-weight: 700;
+  font-size: 12.5px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--amber-light);
+  text-shadow: 0 0 8px rgba(242, 163, 58, 0.35);
+  transition: all 0.25s ease;
+}
+
+.draft-status.status-locked {
+  color: #fff;
+  text-shadow: 0 0 16px var(--amber), 0 0 26px var(--amber);
+  animation: badge-pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.draft-confirm-btn {
+  font-size: 14.5px;
+  padding: 6px 28px;
+  letter-spacing: .12em;
+  border-radius: 20px;
+  font-weight: 800;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.draft-confirm-btn:not(:disabled) {
+  animation: glow-pulse 1.4s infinite alternate;
+  cursor: pointer;
+}
+
+.draft-confirm-btn:not(:disabled):hover {
+  transform: translateY(-2px) scale(1.05);
+}
+
+@keyframes glow-pulse {
+  from { box-shadow: 0 0 10px rgba(242, 163, 58, 0.5); }
+  to { box-shadow: 0 0 24px rgba(242, 163, 58, 0.95); }
+}
+
+.draft-confirm-btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Cards Grid - Placed at bottom */
+.draft-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(10px, 1.8vw, 18px);
+  width: 100%;
+  max-width: 640px;
+  perspective: 1000px;
+  flex-shrink: 0;
+  align-items: flex-end;
+}
+
+/* ====================================================
+   DRAFT CARDS: Longer vertical cards, description shown,
+   bottom of card hidden under the bottom edge at rest
+   ==================================================== */
+.draft-card {
+  --card-acc: var(--amber);
+  position: relative;
+  background: linear-gradient(165deg, rgba(22, 38, 36, 0.84) 0%, rgba(10, 20, 19, 0.94) 100%);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1.5px solid rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+  padding: 12px 12px 14px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+  overflow: hidden;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  min-height: 255px; /* Longer vertical card */
+
+  /* Resting position: Hides bottom portion (~48px badge area) below the bottom edge */
+  transform: translateY(48px);
+
+  /* Smooth ease sliding from the bottom */
+  animation: draft-card-slide-up 0.65s cubic-bezier(0.16, 1, 0.3, 1) both;
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.22s ease,
+              box-shadow 0.22s ease,
+              background 0.22s ease,
+              opacity 0.4s ease,
+              filter 0.4s ease;
+}
+
+/* Staggered bottom sliding entry */
+.draft-card:nth-child(1) { animation-delay: 0.04s; }
+.draft-card:nth-child(2) { animation-delay: 0.10s; }
+.draft-card:nth-child(3) { animation-delay: 0.16s; }
+
+/* Slide up from offscreen bottom to resting position (bottom hidden) */
+@keyframes draft-card-slide-up {
+  0% {
+    opacity: 0;
+    transform: translateY(125%);
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(48px);
+  }
+}
+
+/* Card shimmer sweep line */
+.draft-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -140%;
+  width: 90%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.16), transparent);
+  transform: skewX(-25deg);
+  pointer-events: none;
+}
+
+/* Hover state: Card smoothly rises up to reveal the full card & equip badge */
+.draft-card:hover:not(.selected):not(.card-discarded):not(.card-locked):not(.just-deselected) {
+  transform: translateY(-8px) scale(1.02);
+  border-color: rgba(255, 255, 255, 0.38);
+  box-shadow: 0 22px 48px rgba(0, 0, 0, 0.75), 0 0 20px rgba(76, 199, 178, 0.28);
+  background: linear-gradient(165deg, rgba(28, 50, 48, 0.92) 0%, rgba(13, 26, 25, 0.96) 100%);
+}
+
+/* ====================================================
+   DESELECTED CARD ANIMATION
+   ==================================================== */
+/* Smooth ease slide-down when deselected back to resting submerged slot */
+.draft-card.just-deselected {
+  animation: card-deselect-slide-down 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+}
+
+@keyframes card-deselect-slide-down {
+  0% {
+    transform: translateY(-14px) scale(1.04);
+  }
+  100% {
+    transform: translateY(48px) scale(1);
+  }
+}
+
+/* ====================================================
+   PICKED CARD ANIMATION & STYLING
+   ==================================================== */
+/* Sheen sweep animation when card is picked */
+.draft-card.just-picked::before {
+  animation: card-sheen-sweep 0.65s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes card-sheen-sweep {
+  0% { left: -140%; opacity: 0; }
+  25% { opacity: 1; }
+  100% { left: 220%; opacity: 0; }
+}
+
+/* Pop bounce when picked */
+.draft-card.just-picked {
+  animation: card-pick-pop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) both !important;
+}
+
+@keyframes card-pick-pop {
+  0% { transform: translateY(48px) scale(1); }
+  45% { transform: translateY(-20px) scale(1.07); }
+  75% { transform: translateY(-11px) scale(1.02); }
+  100% { transform: translateY(-14px) scale(1.04); }
+}
+
+/* Slot 1 Selected State (Amber) - Fully elevated */
+.draft-card.selected.slot-1 {
+  border-color: #f2a33a;
+  background: linear-gradient(165deg, rgba(48, 33, 14, 0.94) 0%, rgba(18, 24, 22, 0.97) 100%);
+  box-shadow: 0 22px 50px rgba(0, 0, 0, 0.82),
+              0 0 30px rgba(242, 163, 58, 0.6),
+              inset 0 0 16px rgba(242, 163, 58, 0.22);
+  transform: translateY(-14px) scale(1.04);
+}
+
+/* Slot 2 Selected State (Jade) - Fully elevated */
+.draft-card.selected.slot-2 {
+  border-color: #4cc7b2;
+  background: linear-gradient(165deg, rgba(14, 42, 38, 0.94) 0%, rgba(11, 23, 23, 0.97) 100%);
+  box-shadow: 0 22px 50px rgba(0, 0, 0, 0.82),
+              0 0 30px rgba(76, 199, 178, 0.6),
+              inset 0 0 16px rgba(76, 199, 178, 0.22);
+  transform: translateY(-14px) scale(1.04);
+}
+
+/* Card inner contents */
+.card-top-row {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--label);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.card-tag {
+  background: rgba(255, 255, 255, 0.09);
+  padding: 2.5px 7px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 9.5px;
+}
+
+.card-cd {
+  color: var(--muted);
+  font-size: 10.5px;
+}
+
+.card-icon-wrap {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1.5px solid currentColor;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 6px;
+  box-shadow: 0 0 16px currentColor;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  flex-shrink: 0;
+}
+
+.draft-card:hover .card-icon-wrap {
+  transform: scale(1.08);
+}
+
+.draft-card.selected .card-icon-wrap {
+  transform: scale(1.12);
+}
+
+.card-glyph {
+  width: 58%;
+  height: 58%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.card-name {
+  font-family: var(--label);
+  font-weight: 700;
+  font-size: clamp(13px, 1.6vw, 15.5px);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  margin: 0 0 2px;
+  color: var(--fg);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+  flex-shrink: 0;
+}
+
+.card-summary {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--amber-light);
+  margin: 0 0 6px;
+  line-height: 1.25;
+  flex-shrink: 0;
+}
+
+/* Full card description clearly displayed */
+.card-desc {
+  font-size: 11px;
+  color: rgba(220, 235, 230, 0.8);
+  margin: 0 0 10px;
+  line-height: 1.35;
+  display: block; /* Full text shown without clamping */
+  overflow: visible;
+  text-align: center;
+  padding: 0 2px;
+  flex: 1;
+}
+
+/* Card badge - positioned at the bottom */
+.card-badge {
+  font-family: var(--label);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  padding: 6px 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--muted);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  margin-top: auto;
+  flex-shrink: 0;
+}
+
+.card-badge .slot-key {
+  opacity: 0.85;
+  font-weight: 800;
+}
+
+.draft-card.selected.slot-1 .card-badge {
+  background: linear-gradient(90deg, #f2a33a, #ffb854);
+  border-color: #f2a33a;
+  color: #1a1002;
+  box-shadow: 0 0 16px rgba(242, 163, 58, 0.8);
+  animation: badge-pop 0.32s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.draft-card.selected.slot-2 .card-badge {
+  background: linear-gradient(90deg, #3db8a3, #5ae0ca);
+  border-color: #4cc7b2;
+  color: #031814;
+  box-shadow: 0 0 16px rgba(76, 199, 178, 0.8);
+  animation: badge-pop 0.32s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes badge-pop {
+  0% { transform: scale(0.85); }
+  60% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+/* ====================================================
+   LOCKED CARD ANIMATION
+   ==================================================== */
+/* Unselected card smoothly slides down offscreen & dissolves */
+.draft-card.card-discarded {
+  opacity: 0.08 !important;
+  transform: translateY(125%) scale(0.85) !important;
+  filter: blur(4px) grayscale(90%) !important;
+  pointer-events: none !important;
+  transition: all 0.45s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Selected cards lock-in ignition pulse */
+.draft-card.card-locked {
+  pointer-events: none !important;
+  animation: card-locked-surge 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+}
+
+.draft-card.card-locked.slot-1 {
+  border-color: #ffc266 !important;
+  box-shadow: 0 24px 55px rgba(0, 0, 0, 0.85),
+              0 0 42px rgba(242, 163, 58, 0.85),
+              inset 0 0 20px rgba(242, 163, 58, 0.35) !important;
+}
+
+.draft-card.card-locked.slot-2 {
+  border-color: #72ebd7 !important;
+  box-shadow: 0 24px 55px rgba(0, 0, 0, 0.85),
+              0 0 42px rgba(76, 199, 178, 0.85),
+              inset 0 0 20px rgba(76, 199, 178, 0.35) !important;
+}
+
+@keyframes card-locked-surge {
+  0% {
+    transform: translateY(-14px) scale(1.04);
+  }
+  35% {
+    transform: translateY(-24px) scale(1.10);
+  }
+  65% {
+    transform: translateY(-18px) scale(1.06);
+  }
+  100% {
+    transform: translateY(-20px) scale(1.06);
+  }
+}
+
+.draft-card.card-locked .card-badge {
+  letter-spacing: .12em;
+  font-weight: 800;
+  box-shadow: 0 0 20px currentColor;
+  animation: badge-lock-pulse 0.6s infinite alternate;
+}
+
+@keyframes badge-lock-pulse {
+  from { transform: scale(1); filter: brightness(1); }
+  to { transform: scale(1.06); filter: brightness(1.25); }
+}
+
+/* Mobile responsiveness */
+@media (max-width: 640px) {
+  .draft-overlay {
+    padding: 6px 8px 0 8px;
+  }
+  .draft-content {
+    max-width: 100%;
+  }
+  .draft-cards {
+    gap: 6px;
+    max-width: 100%;
+  }
+  .draft-card {
+    min-height: 220px;
+    padding: 8px 6px 10px 6px;
+    border-radius: 12px;
+    transform: translateY(42px);
+  }
+  .card-icon-wrap {
+    width: 32px;
+    height: 32px;
+    margin-bottom: 4px;
+  }
+  .card-name {
+    font-size: 11.5px;
+  }
+  .card-summary {
+    font-size: 9.5px;
+    margin-bottom: 3px;
+  }
+  .card-desc {
+    display: block !important;
+    font-size: 8.5px;
+    line-height: 1.25;
+    margin-bottom: 6px;
+  }
+  .card-badge {
+    padding: 4px 8px;
+    font-size: 9px;
+  }
+  .draft-confirm-btn {
+    font-size: 13px;
+    padding: 6px 22px;
+  }
+}
+

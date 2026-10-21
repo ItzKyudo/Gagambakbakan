@@ -303,6 +303,19 @@ export const SKILLS_LIST: AbilityDef[] = [
 
 export const ALL_ABILITY_IDS: AbilityId[] = SKILLS_LIST.map(s => s.id);
 
+export function isAbilityId(id: unknown): id is AbilityId {
+  return typeof id === 'string' && id in ABILITIES;
+}
+
+export function selectDraftAbilities(skills: unknown, choices: AbilityId[]): [AbilityId, AbilityId | ''] {
+  const submitted = Array.isArray(skills) ? skills : [];
+  const skill1 = isAbilityId(submitted[0]) && choices.includes(submitted[0]) ? submitted[0] : (choices[0] || 'dash');
+  const skill2 = isAbilityId(submitted[1]) && submitted[1] !== skill1 && choices.includes(submitted[1])
+    ? submitted[1]
+    : (choices.find(skill => skill !== skill1) || '');
+  return [skill1, skill2];
+}
+
 export const WEB_EDGES: [AbilityId, AbilityId][] = [
   // Radial Spoke 1: North (Aerial Silk)
   ['dash', 'surge'],
@@ -377,12 +390,12 @@ export function shuffle<T>(arr: T[]): T[] {
 export function getRandomAbilities(count: number = 3, exclude: AbilityId[] = [], maxLevelOrPool: number | string[] = 12): AbilityId[] {
   let pool: AbilityId[];
   if (Array.isArray(maxLevelOrPool)) {
-    pool = maxLevelOrPool.filter(id => !exclude.includes(id as AbilityId)) as AbilityId[];
+    pool = [...new Set(maxLevelOrPool.filter(isAbilityId))].filter(id => !exclude.includes(id));
   } else {
     pool = SKILLS_LIST
       .filter(s => s.unlock.level <= maxLevelOrPool && !exclude.includes(s.id))
       .map(s => s.id);
   }
-  const finalPool = pool.length > 0 ? pool : ALL_ABILITY_IDS;
+  const finalPool: AbilityId[] = pool.length > 0 ? pool : ['dash'];
   return shuffle(finalPool).slice(0, Math.min(count, finalPool.length));
 }

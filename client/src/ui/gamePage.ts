@@ -210,13 +210,13 @@ export class GamePage {
             <h2 id="pkTitle">Pick 2 skills</h2>
             <p class="pk-sub" id="pkSub">Choose 2 of these 3 cards. You keep them for the whole match. Press 1, 2 or 3 to choose.</p>
           </div>
+          <div class="cards" id="pkCards"></div>
           <div class="pk-foot">
             <span id="pkCount" aria-live="polite">0 of 2 picked</span>
             <div class="pk-timer" id="pkTimer" aria-label="Time remaining"><span class="pk-timer-num" id="pkTimeVal">15</span>s</div>
             <button type="button" class="btn primary" id="pkGo" disabled>Confirm</button>
             <button type="button" class="btn ghost" id="pkMenu">Menu</button>
           </div>
-          <div class="cards" id="pkCards"></div>
         </div>
       </div>
     `;
@@ -431,16 +431,22 @@ export class GamePage {
       btn.setAttribute('aria-pressed', this.selectedDraftSlots.includes(k) ? 'true' : 'false');
       btn.style.setProperty('--i', String(k));
 
+      const slotIdx = this.selectedDraftSlots.indexOf(k);
+      const slotText = slotIdx >= 0 ? (targetCount === 1 ? '✓ Selected' : `✓ Slot ${slotIdx + 1}`) : 'Tap to select';
+
       btn.innerHTML = `
         <span class="num">${k + 1}</span>
         <span class="pgem">
           <img src="/abilities/${s.id}.png" alt="${s.name}" class="card-icon-img" style="width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 6px 14px rgba(0,0,0,0.65));" />
         </span>
-        <div>
+        <div class="card-info">
           <h3>${s.name}</h3>
           <div class="meta">${s.cd}s cooldown · ${s.use === 'hang' ? 'while dangling' : 'while clinging'} · <span style="color:var(--amber-light); font-weight:700;">Lvl ${s.unlock.level}</span></div>
         </div>
         <p class="desc">${s.desc}</p>
+        <div class="card-pick-footer">
+          <span class="card-pick-indicator">${slotText}</span>
+        </div>
       `;
 
       btn.addEventListener('click', () => {
@@ -565,7 +571,17 @@ export class GamePage {
   private syncPickUI() {
     const target = this.targetDraftCount;
     Array.from(this.pkCards.children).forEach((c, k) => {
-      c.setAttribute('aria-pressed', this.selectedDraftSlots.includes(k) ? 'true' : 'false');
+      const isSelected = this.selectedDraftSlots.includes(k);
+      c.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+      const indicator = c.querySelector('.card-pick-indicator');
+      if (indicator) {
+        if (isSelected) {
+          const slotIndex = this.selectedDraftSlots.indexOf(k);
+          indicator.textContent = target === 1 ? '✓ Selected' : `✓ Slot ${slotIndex + 1}`;
+        } else {
+          indicator.textContent = 'Tap to select';
+        }
+      }
     });
     this.pkCount.textContent = `${this.selectedDraftSlots.length} of ${target} picked`;
     this.pkGo.disabled = this.selectedDraftSlots.length !== target;
@@ -578,20 +594,33 @@ export class GamePage {
     this.isDraftLeaving = true;
     sound.play('card_confirm');
 
-    this.pickModal.classList.add('leave');
+    // Picking animation: dismiss unpicked cards, lock in chosen cards
+    Array.from(this.pkCards.children).forEach((c, k) => {
+      const isPicked = this.selectedDraftSlots.includes(k);
+      if (isPicked) {
+        c.classList.add('picked-locked');
+        const indicator = c.querySelector('.card-pick-indicator');
+        if (indicator) indicator.textContent = 'Locked In ✓';
+      } else {
+        c.classList.add('dismissed');
+      }
+    });
+
     const chosen = this.selectedDraftSlots.map(k => this.currentDraftOffer[k]);
     const cb = this.draftConfirmCallback;
 
     setTimeout(() => {
       this.isDraftLeaving = false;
-      this.pickModal.classList.remove('leave');
       if (this.gameMode === 'online') {
         this.showDraftWaiting(chosen);
       } else {
-        this.hideDraftModal();
+        this.pickModal.classList.add('leave');
+        setTimeout(() => {
+          this.hideDraftModal();
+        }, 300);
       }
       if (cb) cb(chosen);
-    }, 400);
+    }, 450);
   }
 
   public showDraftWaiting(chosen: string[]) {
@@ -599,17 +628,32 @@ export class GamePage {
     this.isDraftOpen = true;
     this.isDraftLeaving = false;
     this.pickModal.hidden = false;
+    this.pickModal.classList.remove('leave');
     this.pkTitle.textContent = 'Waiting for Opponent...';
     const names = chosen.map(id => ABILITIES[id as AbilityId]?.name || id).join(' & ');
-    this.pkSub.textContent = `You picked ${names}. Waiting for your opponent to choose their abilities...`;
+    this.pkSub.textContent = `You locked in ${names}. Waiting for your opponent to choose their abilities...`;
     this.pkCount.textContent = 'Ready ✓';
     this.pkGo.disabled = true;
     this.pkGo.textContent = 'Locked In';
     if (this.pkTimer) this.pkTimer.style.display = 'none';
-    Array.from(this.pkCards.children).forEach(c => {
-      (c as HTMLElement).style.pointerEvents = 'none';
-      (c as HTMLElement).style.opacity = '0.5';
+
+    // Keep ONLY picked cards displayed full and centered
+    Array.from(this.pkCards.children).forEach((c, k) => {
+      const isPicked = this.selectedDraftSlots.includes(k);
+      const el = c as HTMLElement;
+      if (isPicked) {
+        el.classList.add('picked-locked');
+        el.classList.remove('dismissed');
+        el.style.display = 'flex';
+        el.style.pointerEvents = 'none';
+        el.style.opacity = '1';
+        const indicator = el.querySelector('.card-pick-indicator');
+        if (indicator) indicator.textContent = 'Locked In ✓';
+      } else {
+        el.style.display = 'none';
+      }
     });
+    this.pkCards.classList.remove('has-scroll');
   }
 
   public hideDraftModal() {
@@ -617,6 +661,7 @@ export class GamePage {
     this.isDraftOpen = false;
     this.isDraftLeaving = false;
     this.pickModal.hidden = true;
+    this.pickModal.classList.remove('leave');
     this.selectedDraftSlots = [];
     this.draftConfirmCallback = null;
     this.pkGo.disabled = false;
@@ -624,8 +669,11 @@ export class GamePage {
     if (this.pkTimer) this.pkTimer.style.display = '';
     this.pkCards.classList.remove('has-scroll');
     Array.from(this.pkCards.children).forEach(c => {
-      (c as HTMLElement).style.pointerEvents = '';
-      (c as HTMLElement).style.opacity = '';
+      const el = c as HTMLElement;
+      el.classList.remove('picked-locked', 'dismissed', 'pop');
+      el.style.display = '';
+      el.style.pointerEvents = '';
+      el.style.opacity = '';
     });
   }
 

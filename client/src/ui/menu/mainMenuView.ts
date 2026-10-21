@@ -1,7 +1,12 @@
+import { createElement, Volume2, VolumeX, BookOpen, type IconNode } from 'lucide';
 import { sound } from '../../audio';
 import { getColor, getExpProgress, getLooks, getProgress, getSettings, getUnlockedIds, spiderSVG } from '../../gb';
 import { SKILLS_LIST } from '../../game/abilities';
 import { getPlayerRankTitle } from './rankTitle';
+
+function icon(node: IconNode, attrs: Record<string, string | number> = {}): string {
+  return createElement(node, attrs).outerHTML;
+}
 
 /* ====================================================
    1. MAIN MENU VIEW (Matching menu.html)
@@ -12,12 +17,19 @@ export function renderMainMenuView(): string {
   const prog = getProgress();
   const expInfo = getExpProgress(prog.onlineExp);
   const unlockedCount = getUnlockedIds(prog).length;
+  const soundIconSvg = icon(sound.enabled ? Volume2 : VolumeX, {
+    class: 'ico snd-ico',
+    width: 15,
+    height: 15,
+    'stroke-width': 2.2
+  });
 
   return `
     <!-- TOP CENTER TITLE WITH NO CONTAINER -->
     <header class="menu-title-header">
       <button type="button" class="menu-corner-sound-btn sound-toggle-btn ${sound.enabled ? 'sound-on' : 'sound-off'}" id="btnCornerSoundToggle" title="Toggle Sound (Mute/Unmute)">
-        ${sound.enabled ? '&#128266; Sound: ON' : '&#128263; Sound: OFF'}
+        ${soundIconSvg}
+        <span>Sound: ${sound.enabled ? 'ON' : 'OFF'}</span>
       </button>
       <svg class="title-twig" viewBox="0 0 300 78" aria-hidden="true">
         <rect x="6" y="8" width="288" height="14" rx="7" fill="#7b5b3e"/>
@@ -41,11 +53,6 @@ export function renderMainMenuView(): string {
             <span class="mi"><svg class="ico"><use href="#ic-play"/></svg></span>
             <span class="ml">Play</span>
           </button>
-          <button type="button" class="mb" id="btnGoCustomize">
-            <span class="mi"><svg class="ico"><use href="#ic-palette"/></svg></span>
-            <span class="ml">Customize</span>
-            <small>Your spider</small>
-          </button>
           <button type="button" class="mb" id="btnGoAbilities">
             <span class="mi"><svg class="ico"><use href="#ic-gem"/></svg></span>
             <span class="ml">Abilities</span>
@@ -55,6 +62,11 @@ export function renderMainMenuView(): string {
             <span class="mi"><svg class="ico"><use href="#ic-gear"/></svg></span>
             <span class="ml">Settings</span>
             <small>Keys, sound, music</small>
+          </button>
+          <button type="button" class="mb" id="btnGoAbout">
+            <span class="mi">${icon(BookOpen, { class: 'ico', width: 20, height: 20, 'stroke-width': 2.1 })}</span>
+            <span class="ml">About</span>
+            <small>Lore, rules &amp; credits</small>
           </button>
         </nav>
 
@@ -92,10 +104,6 @@ export function renderMainMenuView(): string {
             <span class="mi"><svg class="ico"><use href="#ic-back"/></svg></span>
             <span class="ml">Back</span>
           </button>
-        </div>
-
-        <div class="menu-sound-pod">
-          <span class="engine-badge">PHASER 4 &middot; COLYSEUS 0.18</span>
         </div>
       </div>
 

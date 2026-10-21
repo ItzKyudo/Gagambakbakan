@@ -1,6 +1,35 @@
+import {
+  createElement,
+  type IconNode,
+  ArrowLeft,
+  Zap,
+  RotateCcw,
+  Plus,
+  Minus,
+  Maximize,
+  Crosshair,
+  Compass,
+  ChevronLeft,
+  X,
+  Check,
+  Lock,
+  Clock,
+  Anchor,
+  Shield,
+  Lightbulb,
+  Info,
+  Wind,
+  Flame,
+  Sparkles,
+  ShieldCheck
+} from 'lucide';
 import { getAbilityPoints, getExpProgress, getProgress, getUnlockedIds } from '../../gb';
 import { ABILITIES, SKILLS_LIST, WEB_EDGES, isNodeAvailableToUnlock, type AbilityId } from '../../game/abilities';
 import { getPlayerRankTitle } from './rankTitle';
+
+function icon(node: IconNode, attrs: Record<string, string | number> = {}): string {
+  return createElement(node, attrs).outerHTML;
+}
 
 /* ====================================================
    3. ABILITIES SPIDER WEB VIEW
@@ -17,7 +46,7 @@ export function renderDetailCardHtml(nodeId: AbilityId): string {
   if (selUnlocked) {
     actionHtml = `
       <div class="ac-acquired-banner">
-        <svg class="ico mini" viewBox="0 0 24 24" width="16" height="16"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        ${icon(Check, { class: 'ico mini', width: 16, height: 16, 'stroke-width': 2.5 })}
         <span>SKILL ACQUIRED &amp; EQUIPPED</span>
       </div>
     `;
@@ -25,7 +54,7 @@ export function renderDetailCardHtml(nodeId: AbilityId): string {
     if (pts.available > 0) {
       actionHtml = `
         <button type="button" class="btn-acquire-action" id="btnAcquireSkill" data-id="${sel.id}">
-          <svg class="ico" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          ${icon(Zap, { class: 'ico', width: 16, height: 16, fill: 'currentColor' })}
           <span>ACQUIRE FOR 1 POINT</span>
         </button>
       `;
@@ -40,7 +69,7 @@ export function renderDetailCardHtml(nodeId: AbilityId): string {
   } else {
     actionHtml = `
       <div class="ac-locked-banner">
-        <svg class="ico mini" viewBox="0 0 24 24" width="16" height="16"><rect x="5" y="11" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 11V8a4 4 0 018 0v3" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+        ${icon(Lock, { class: 'ico mini', width: 16, height: 16, 'stroke-width': 2 })}
         <span>LOCKED &mdash; PATH NOT REACHED</span>
         <small>Unlock adjacent connecting skills in the spider web first.</small>
       </div>
@@ -51,7 +80,7 @@ export function renderDetailCardHtml(nodeId: AbilityId): string {
     <div class="ac-card-top-row">
       <span class="ac-sector-tag" style="color:${sel.sectorColor}; border-color:${sel.sectorColor}66; background:${sel.sectorColor}1a;">${sel.sectorName}</span>
       <button type="button" class="ac-close-btn" id="btnCloseDetailCard" title="Minimize details panel" aria-label="Close details">
-        <svg class="ico close-ico" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        ${icon(X, { class: 'ico close-ico', width: 14, height: 14, 'stroke-width': 2.5 })}
       </button>
     </div>
 
@@ -63,15 +92,15 @@ export function renderDetailCardHtml(nodeId: AbilityId): string {
         <h2 class="ac-name">${sel.name}</h2>
         <div class="ac-chips">
           <span class="ac-chip cd">
-            <svg class="ico chip-ico" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2"/><path d="M10 2h4"/></svg>
+            ${icon(Clock, { class: 'ico chip-ico', width: 13, height: 13, 'stroke-width': 2 })}
             <span>${sel.cd}s Cooldown</span>
           </span>
           <span class="ac-chip stance ${sel.use}">
             ${sel.use === 'hang' ? `
-              <svg class="ico chip-ico" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2"/><line x1="12" y1="7" x2="12" y2="21"/><line x1="5" y1="12" x2="19" y2="12"/><path d="M5 15a7 7 0 0 0 14 0"/></svg>
+              ${icon(Anchor, { class: 'ico chip-ico', width: 13, height: 13, 'stroke-width': 2 })}
               <span>Dangling only</span>
             ` : `
-              <svg class="ico chip-ico" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              ${icon(Shield, { class: 'ico chip-ico', width: 13, height: 13, 'stroke-width': 2 })}
               <span>Clinging</span>
             `}
           </span>
@@ -83,7 +112,7 @@ export function renderDetailCardHtml(nodeId: AbilityId): string {
 
     <div class="ac-tip-box">
       <span class="ac-tip-label">
-        <svg class="ico tactic-ico" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg>
+        ${icon(Lightbulb, { class: 'ico tactic-ico', width: 14, height: 14, 'stroke-width': 2 })}
         <span>COMBAT TACTIC</span>
       </span>
       ${sel.tip}
@@ -205,7 +234,7 @@ export function renderAbilitiesView(
       <!-- TOP HEADER: NAV & POINTS HUD -->
       <header class="swv-header">
         <button type="button" class="swv-back-btn" id="btnBackToMain">
-          <svg class="ico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          ${icon(ArrowLeft, { class: 'ico', width: 16, height: 16, 'stroke-width': 2.2 })}
           <span>Menu</span>
         </button>
 
@@ -213,19 +242,19 @@ export function renderAbilitiesView(
           <h1 class="swv-title"><span class="a">SPIDER WEB</span> <span class="j">OF ABILITIES</span></h1>
           <div class="swv-sectors-pill">
             <span class="sec-pill aerial">
-              <svg class="ico sec-ico" viewBox="0 0 24 24" width="11" height="11" fill="currentColor"><path d="M12 4l-7 12h14z"/></svg>
+              ${icon(Wind, { class: 'ico sec-ico', width: 11, height: 11, 'stroke-width': 2.5 })}
               <span>Aerial Silk</span>
             </span>
             <span class="sec-pill control">
-              <svg class="ico sec-ico" viewBox="0 0 24 24" width="11" height="11" fill="currentColor"><path d="M4 12l12-7v14z"/></svg>
+              ${icon(Sparkles, { class: 'ico sec-ico', width: 11, height: 11, 'stroke-width': 2.5 })}
               <span>Venom Control</span>
             </span>
             <span class="sec-pill assault">
-              <svg class="ico sec-ico" viewBox="0 0 24 24" width="11" height="11" fill="currentColor"><path d="M20 12l-12-7v14z"/></svg>
+              ${icon(Flame, { class: 'ico sec-ico', width: 11, height: 11, 'stroke-width': 2.5 })}
               <span>Mandible Assault</span>
             </span>
             <span class="sec-pill vitality">
-              <svg class="ico sec-ico" viewBox="0 0 24 24" width="11" height="11" fill="currentColor"><path d="M12 20l-7-12h14z"/></svg>
+              ${icon(ShieldCheck, { class: 'ico sec-ico', width: 11, height: 11, 'stroke-width': 2.5 })}
               <span>Carapace Bulwark</span>
             </span>
           </div>
@@ -248,15 +277,12 @@ export function renderAbilitiesView(
         <div class="swv-top-hud">
           <div class="swv-points-badge ${pts.available > 0 ? 'has-points' : ''}" title="${pts.available} Ability Points ready to allocate">
             <span class="sp-icon">
-              <svg class="ico pts-ico" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+              ${icon(Zap, { class: 'ico pts-ico', width: 17, height: 17, fill: 'currentColor' })}
             </span>
             <span class="sp-val">${pts.available}</span>
           </div>
           <button type="button" class="btn-respec ${pts.spent === 0 ? 'dim' : ''}" id="btnRespecWeb" title="${pts.spent > 0 ? `Reset Points & refund ${pts.spent} spent point${pts.spent === 1 ? '' : 's'}` : 'Reset Points (No points spent)'}" aria-label="Reset Points">
-            <svg class="ico respec-ico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-              <path d="M3 3v5h5"/>
-            </svg>
+            ${icon(RotateCcw, { class: 'ico respec-ico', width: 16, height: 16, 'stroke-width': 2.2 })}
           </button>
         </div>
 
@@ -264,23 +290,23 @@ export function renderAbilitiesView(
         <div class="swv-nav-hud">
           <div class="swv-zoom-group">
             <button type="button" class="swv-hud-btn" id="btnZoomIn" title="Zoom In (+)">
-              <svg class="ico hud-ico" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              ${icon(Plus, { class: 'ico hud-ico', width: 14, height: 14, 'stroke-width': 2.5 })}
             </button>
             <button type="button" class="swv-hud-btn" id="btnZoomOut" title="Zoom Out (−)">
-              <svg class="ico hud-ico" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              ${icon(Minus, { class: 'ico hud-ico', width: 14, height: 14, 'stroke-width': 2.5 })}
             </button>
             <button type="button" class="swv-hud-btn" id="btnZoomFit" title="Fit Entire Web (0 / F)">
-              <svg class="ico hud-ico" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+              ${icon(Maximize, { class: 'ico hud-ico', width: 13, height: 13, 'stroke-width': 2 })}
               <span>Fit</span>
             </button>
             <button type="button" class="swv-hud-btn" id="btnZoomCenter" title="Center Selected Node (C)">
-              <svg class="ico hud-ico" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+              ${icon(Crosshair, { class: 'ico hud-ico', width: 13, height: 13, 'stroke-width': 2 })}
               <span>Focus</span>
             </button>
           </div>
           <div class="swv-hud-help">
             <span class="hud-help-icon">
-              <svg class="ico hud-help-ico" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l3 3M16 16l3 3M5 19l3-3M16 8l3-3"/></svg>
+              ${icon(Compass, { class: 'ico hud-help-ico', width: 14, height: 14, 'stroke-width': 2 })}
             </span>
             <span><strong>Drag</strong> to Pan &middot; <strong>Scroll</strong> to Zoom &middot; <strong>Arrows/WASD</strong> to Move &middot; <strong>Space</strong> to Unlock</span>
           </div>
@@ -288,7 +314,7 @@ export function renderAbilitiesView(
 
         <!-- Unhide Tab when Panel is Collapsed -->
         <button type="button" class="swv-open-card-tab ${isPanelCollapsed ? 'visible' : ''}" id="btnOpenCardTab" title="Show Ability Details">
-          <svg class="ico tab-ico" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          ${icon(ChevronLeft, { class: 'ico tab-ico', width: 13, height: 13, 'stroke-width': 2.5 })}
           <span>Skill Details</span>
         </button>
 
@@ -347,14 +373,11 @@ export function renderAbilitiesView(
           <div class="swv-modal-card" role="dialog" aria-modal="true" aria-labelledby="respecModalTitle">
             <div class="swv-modal-header">
               <div class="swv-modal-title-group">
-                <svg class="ico respec-modal-ico" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                  <path d="M3 3v5h5"/>
-                </svg>
+                ${icon(RotateCcw, { class: 'ico respec-modal-ico', width: 22, height: 22, 'stroke-width': 2.2 })}
                 <h2 id="respecModalTitle">Reset Abilities?</h2>
               </div>
               <button type="button" class="swv-modal-close-btn" id="btnCancelRespecX" aria-label="Close dialog">
-                <svg class="ico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                ${icon(X, { class: 'ico', width: 16, height: 16, 'stroke-width': 2.5 })}
               </button>
             </div>
 
@@ -376,7 +399,7 @@ export function renderAbilitiesView(
               </div>
 
               <div class="swv-modal-note">
-                <svg class="ico note-ico" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                ${icon(Info, { class: 'ico note-ico', width: 15, height: 15, 'stroke-width': 2 })}
                 <span>All unlocked ability branches will be cleared. You can immediately re-allocate all ${pts.total} points anywhere in the web.</span>
               </div>
             </div>
@@ -384,10 +407,7 @@ export function renderAbilitiesView(
             <div class="swv-modal-footer">
               <button type="button" class="swv-btn-cancel" id="btnCancelRespec">Cancel</button>
               <button type="button" class="swv-btn-confirm-respec" id="btnConfirmRespec">
-                <svg class="ico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                  <path d="M3 3v5h5"/>
-                </svg>
+                ${icon(RotateCcw, { class: 'ico', width: 16, height: 16, 'stroke-width': 2.2 })}
                 <span>Reset &amp; Refund Points</span>
               </button>
             </div>

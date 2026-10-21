@@ -204,10 +204,10 @@ export function bindMainMenuEvents(container: HTMLElement, actions: MainMenuActi
     pQuit.hidden = true;
   });
 
-  container.querySelector('#btnGoCustomize')?.addEventListener('click', () => {
+  container.querySelector('#btnGoAbout')?.addEventListener('click', () => {
     cancelQueue();
     sound.playTone(520, 0.08, 'triangle', 0.05, 200);
-    actions.navigate('customize');
+    actions.navigate('about');
   });
 
   container.querySelector('#btnGoAbilities')?.addEventListener('click', () => {

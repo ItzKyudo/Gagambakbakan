@@ -12,6 +12,7 @@ import { renderAbilitiesView } from './menu/abilitiesView';
 import { bindAbilitiesEvents, clearAbilitiesKeyHandler, createAbilitiesViewState } from './menu/abilitiesController';
 import { renderSettingsView } from './menu/settingsView';
 import { bindSettingsEvents, type SettingsState } from './menu/settingsController';
+import { renderAboutView } from './menu/aboutView';
 
 export type { MenuStartOptions } from './menu/menuTypes';
 
@@ -153,6 +154,8 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
         );
       case 'settings':
         return renderSettingsView(settingsState.listeningKey);
+      case 'about':
+        return renderAboutView();
       default:
         return renderMainMenuView();
     }
@@ -210,7 +213,7 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
       render();
     };
 
-    container.querySelectorAll('#btnMenuSoundToggle, #btnCornerSoundToggle, #btnCustomSoundToggle, #btnSettingsSoundToggle, #btnWebSoundToggle, #btnQuickSoundToggle').forEach(btn => {
+    container.querySelectorAll('#btnMenuSoundToggle, #btnCornerSoundToggle, #btnCustomSoundToggle, #btnSettingsSoundToggle, #btnWebSoundToggle, #btnQuickSoundToggle, #btnAboutSoundToggle').forEach(btn => {
       btn.addEventListener('click', handleSoundToggle);
     });
 

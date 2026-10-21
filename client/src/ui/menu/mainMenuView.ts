@@ -1,4 +1,4 @@
-import { createElement, Volume2, VolumeX, BookOpen, Settings, type IconNode } from 'lucide';
+import { createElement, Volume2, VolumeX, BookOpen, GraduationCap, Settings, type IconNode } from 'lucide';
 import { sound } from '../../audio';
 import { getColor, getExpProgress, getLooks, getProgress, getSettings, getUnlockedIds, spiderSVG } from '../../gb';
 import { SKILLS_LIST } from '../../game/abilities';
@@ -57,6 +57,11 @@ export function renderMainMenuView(): string {
             <span class="mi"><svg class="ico"><use href="#ic-web"/></svg></span>
             <span class="ml">Abilities</span>
             <small id="abCount">Level ${expInfo.level} &middot; ${unlockedCount} of ${SKILLS_LIST.length} unlocked</small>
+          </button>
+          <button type="button" class="mb" id="btnGoLearn">
+            <span class="mi">${icon(GraduationCap, { class: 'ico', width: 20, height: 20, 'stroke-width': 2.1 })}</span>
+            <span class="ml">Learn</span>
+            <small>Interactive battle tutorial</small>
           </button>
           <button type="button" class="mb" id="btnGoSettings">
             <span class="mi">${icon(Settings, { class: 'ico', width: 20, height: 20, 'stroke-width': 2.1 })}</span>

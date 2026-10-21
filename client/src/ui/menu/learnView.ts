@@ -34,17 +34,17 @@ export function renderLearnView(): string {
   return `
     <div class="page learn-page">
       <header class="page-top">
-        <div class="about-title-group">
-          <h1><span class="a">Watch.</span> <span class="j">Fight.</span></h1>
-          <p class="note">The real battle engine demonstrates every move.</p>
-        </div>
         <div class="page-actions">
-          <button type="button" class="btn ghost sound-toggle-btn ${sound.enabled ? 'sound-on' : 'sound-off'}" id="btnLearnSoundToggle" title="Toggle Sound">
-            ${soundIconSvg}<span>Sound: ${sound.enabled ? 'ON' : 'OFF'}</span>
-          </button>
           <button type="button" class="btn ghost" id="btnBackToMain" title="Back to Menu">
             ${icon(ArrowLeft, { class: 'ico', width: 15, height: 15, 'stroke-width': 2.2 })}<span>Menu</span>
           </button>
+          <button type="button" class="btn ghost sound-toggle-btn ${sound.enabled ? 'sound-on' : 'sound-off'}" id="btnLearnSoundToggle" title="Toggle Sound">
+            ${soundIconSvg}<span>Sound: ${sound.enabled ? 'ON' : 'OFF'}</span>
+          </button>
+        </div>
+        <div class="about-title-group">
+          <h1><span class="a">Watch.</span> <span class="j">Fight.</span></h1>
+          <p class="note">The real battle engine demonstrates every move.</p>
         </div>
       </header>
 

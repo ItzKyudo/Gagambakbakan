@@ -204,6 +204,12 @@ export function bindMainMenuEvents(container: HTMLElement, actions: MainMenuActi
     pQuit.hidden = true;
   });
 
+  container.querySelector('#btnGoLearn')?.addEventListener('click', () => {
+    cancelQueue();
+    sound.playTone(520, 0.08, 'triangle', 0.05, 200);
+    actions.navigate('learn');
+  });
+
   container.querySelector('#btnGoAbout')?.addEventListener('click', () => {
     cancelQueue();
     sound.playTone(520, 0.08, 'triangle', 0.05, 200);

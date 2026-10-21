@@ -206,16 +206,26 @@ export class GamePage {
       <div class="pick" id="pick" hidden role="dialog" aria-modal="true" aria-labelledby="pkTitle">
         <div class="pick-in">
           <div class="pk-head">
-            <p class="pk-who" id="pkWho"></p>
-            <h2 id="pkTitle">Pick 2 skills</h2>
+            <div class="pk-badge"><span class="pk-dot"></span><span class="pk-who" id="pkWho"></span></div>
+            <h2 id="pkTitle" class="pk-title">Pick 2 skills</h2>
             <p class="pk-sub" id="pkSub">Choose 2 of these 3 cards. You keep them for the whole match. Press 1, 2 or 3 to choose.</p>
           </div>
           <div class="cards" id="pkCards"></div>
           <div class="pk-foot">
-            <span id="pkCount" aria-live="polite">0 of 2 picked</span>
-            <div class="pk-timer" id="pkTimer" aria-label="Time remaining"><span class="pk-timer-num" id="pkTimeVal">15</span>s</div>
-            <button type="button" class="btn primary" id="pkGo" disabled>Confirm</button>
-            <button type="button" class="btn ghost" id="pkMenu">Menu</button>
+            <div class="pk-status-bar">
+              <div class="pk-count-badge">
+                <span class="pk-status-dot"></span>
+                <span id="pkCount" aria-live="polite">0 of 2 picked</span>
+              </div>
+              <div class="pk-timer" id="pkTimer" aria-label="Time remaining">
+                <span class="pk-timer-clock">⏱</span>
+                <span class="pk-timer-num" id="pkTimeVal">15</span><span class="pk-timer-sec">s</span>
+              </div>
+            </div>
+            <div class="pk-actions">
+              <button type="button" class="btn pk-action-btn primary" id="pkGo" disabled>Confirm</button>
+              <button type="button" class="btn pk-action-btn ghost" id="pkMenu">Menu</button>
+            </div>
           </div>
         </div>
       </div>
@@ -434,14 +444,25 @@ export class GamePage {
       const slotIdx = this.selectedDraftSlots.indexOf(k);
       const slotText = slotIdx >= 0 ? (targetCount === 1 ? '✓ Selected' : `✓ Slot ${slotIdx + 1}`) : 'Tap to select';
 
+      const stanceLabel = s.use === 'hang' ? 'Dangling' : 'Clinging';
+      const sectorTag = s.sectorName || 'CORE';
+      const sectorColor = s.sectorColor || '#ffd694';
+
       btn.innerHTML = `
-        <span class="num">${k + 1}</span>
-        <span class="pgem">
-          <img src="/abilities/${s.id}.png" alt="${s.name}" class="card-icon-img" style="width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 6px 14px rgba(0,0,0,0.65));" />
-        </span>
+        <div class="card-top-bar">
+          <span class="num card-key-badge" title="Press ${k + 1} to choose"><kbd>${k + 1}</kbd></span>
+          <span class="card-sector-tag" style="color:${sectorColor}; border-color:${sectorColor}66; background:${sectorColor}18;">${sectorTag}</span>
+        </div>
+        <div class="card-gem-frame pgem">
+          <img src="/abilities/${s.id}.png" alt="${s.name}" class="card-icon-img" />
+        </div>
         <div class="card-info">
-          <h3>${s.name}</h3>
-          <div class="meta">${s.cd}s cooldown · ${s.use === 'hang' ? 'while dangling' : 'while clinging'} · <span style="color:var(--amber-light); font-weight:700;">Lvl ${s.unlock.level}</span></div>
+          <h3 class="card-name">${s.name}</h3>
+          <div class="card-chips">
+            <span class="card-chip cd">⏱ ${s.cd}s CD</span>
+            <span class="card-chip stance">${stanceLabel}</span>
+            <span class="card-chip lvl">Lv.${s.unlock.level}</span>
+          </div>
         </div>
         <p class="desc">${s.desc}</p>
         <div class="card-pick-footer">

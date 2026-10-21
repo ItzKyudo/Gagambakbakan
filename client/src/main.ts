@@ -208,6 +208,7 @@ async function startOnlineGame(opts: MenuStartOptions) {
       colorDark: opts.playerColor?.dark,
       colorLight: opts.playerColor?.light,
       pattern: opts.playerPattern || 'stripes',
+      customPattern: opts.playerCustomPattern || '',
       acc: opts.playerAcc || 'none',
       level: myLvl,
       unlockedSkills: getUnlockedIds(prog)
@@ -398,6 +399,7 @@ function startLocalGame(opts: MenuStartOptions) {
       colorDark: opts.playerColor?.dark || c1.dark,
       colorLight: opts.playerColor?.light || c1.light,
       pattern: opts.playerPattern || lks.p1.pattern,
+      customPattern: opts.playerCustomPattern || lks.p1.customPattern,
       acc: opts.playerAcc || lks.p1.acc
     },
     {
@@ -406,6 +408,7 @@ function startLocalGame(opts: MenuStartOptions) {
       colorDark: cpuColor.dark,
       colorLight: cpuColor.light,
       pattern: opts.mode === 'cpu' ? 'stripes' : lks.p2.pattern,
+      customPattern: opts.mode === 'cpu' ? '' : lks.p2.customPattern,
       acc: opts.mode === 'cpu' ? 'none' : lks.p2.acc
     }
   );

@@ -19,9 +19,10 @@ export type { MenuStartOptions } from './menu/menuTypes';
 
 export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuStartOptions) => void) {
   let activeTab: MenuTab = 'main';
-  const customizeState: CustomizeState = { player: 'p1' };
+  const customizeState: CustomizeState = { player: 'p1', drawColor: '#e8593f' };
   const settingsState: SettingsState = { listeningKey: null };
   let onlineModalOpen = false;
+  let spiderLookFrame = 0;
   const abilitiesState = createAbilitiesViewState();
 
   const onStart = (opts: MenuStartOptions) => {
@@ -144,7 +145,7 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
   function renderActiveTab(): string {
     switch (activeTab) {
       case 'customize':
-        return renderCustomizeView(customizeState.player);
+        return renderCustomizeView(customizeState.player, customizeState.drawColor);
       case 'abilities':
         return renderAbilitiesView(
           abilitiesState.selectedNodeId,
@@ -165,6 +166,34 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
      ==================================================== */
   function bindEvents() {
     clearAbilitiesKeyHandler(abilitiesState);
+
+    cancelAnimationFrame(spiderLookFrame);
+    container.onpointermove = event => {
+      if (event.pointerType === 'touch') return;
+      cancelAnimationFrame(spiderLookFrame);
+      const { clientX, clientY } = event;
+      spiderLookFrame = requestAnimationFrame(() => {
+        const spider = container.querySelector<SVGSVGElement>('#showcaseStage > .spider-art, #preview > .spider-art');
+        if (!spider) return;
+        const rect = spider.getBoundingClientRect();
+        const x = Math.max(-1, Math.min(1, (clientX - rect.left - rect.width / 2) / (rect.width * .65)));
+        const y = Math.max(-1, Math.min(1, (clientY - rect.top - rect.height / 2) / (rect.height * .65)));
+        spider.style.setProperty('--look-x', `${(x * 2.6).toFixed(2)}px`);
+        spider.style.setProperty('--look-y', `${(y * 1.8).toFixed(2)}px`);
+        spider.style.setProperty('--look-r', `${(y * 2.4).toFixed(2)}deg`);
+        spider.style.setProperty('--eye-x', `${(x * 2.2).toFixed(2)}px`);
+        spider.style.setProperty('--eye-y', `${(y * 1.4).toFixed(2)}px`);
+      });
+    };
+    container.onpointerleave = () => {
+      cancelAnimationFrame(spiderLookFrame);
+      const spider = container.querySelector<SVGSVGElement>('#showcaseStage > .spider-art, #preview > .spider-art');
+      spider?.style.removeProperty('--look-x');
+      spider?.style.removeProperty('--look-y');
+      spider?.style.removeProperty('--look-r');
+      spider?.style.removeProperty('--eye-x');
+      spider?.style.removeProperty('--eye-y');
+    };
 
     // Top menu back buttons
     container.querySelectorAll('#btnBackToMain').forEach(btn => {

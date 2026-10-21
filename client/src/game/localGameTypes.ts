@@ -7,6 +7,7 @@ export interface LocalPlayerState {
   colorDark: string;
   colorLight: string;
   pattern: string;
+  customPattern: string;
   acc: string;
   x: number;
   face: number;

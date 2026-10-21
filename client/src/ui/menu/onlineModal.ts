@@ -46,6 +46,7 @@ export function bindOnlineModalEvents(
       playerName: looks.p1.name,
       playerColor: { main: color.main, light: color.light, dark: color.dark },
       playerPattern: looks.p1.pattern,
+      playerCustomPattern: looks.p1.customPattern,
       playerAcc: looks.p1.acc
     });
   });

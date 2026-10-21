@@ -10,6 +10,7 @@ export interface MenuStartOptions {
     dark: string;
   };
   playerPattern?: string;
+  playerCustomPattern?: string;
   playerAcc?: string;
 }
 

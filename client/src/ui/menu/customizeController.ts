@@ -1,8 +1,10 @@
 import { sound } from '../../audio';
-import { DEF_LOOK, getColor, getLooks, randomLook, saveLooks } from '../../gb';
+import { DEF_LOOK, customPatternSVG, getColor, getLooks, randomLook, saveLooks } from '../../gb';
+import { decodePatternArt, encodePatternArt, type PatternStroke } from '../../patternArt';
 
 export interface CustomizeState {
   player: 'p1' | 'p2';
+  drawColor: string;
 }
 
 export function bindCustomizeEvents(container: HTMLElement, state: CustomizeState, render: () => void) {
@@ -52,6 +54,65 @@ export function bindCustomizeEvents(container: HTMLElement, state: CustomizeStat
       render();
     });
   });
+
+  const colorInput = container.querySelector('#patternColor') as HTMLInputElement | null;
+  colorInput?.addEventListener('input', () => { state.drawColor = colorInput.value; });
+
+  container.querySelector('#btnPatternUndo')?.addEventListener('click', () => {
+    const strokes = decodePatternArt(lk.customPattern);
+    strokes.pop();
+    lk.customPattern = encodePatternArt(strokes);
+    saveLooks(looks);
+    render();
+  });
+  container.querySelector('#btnPatternClear')?.addEventListener('click', () => {
+    lk.customPattern = '';
+    saveLooks(looks);
+    render();
+  });
+
+  if (lk.pattern === 'custom') {
+    const preview = container.querySelector('#preview') as HTMLElement | null;
+    const svg = preview?.querySelector('.spider-art') as SVGSVGElement | null;
+    let current: PatternStroke | null = null;
+    const pointFromEvent = (event: PointerEvent): [number, number] | null => {
+      if (!svg) return null;
+      const rect = svg.getBoundingClientRect();
+      const scale = Math.min(rect.width / 240, rect.height / 180);
+      const x = ((event.clientX - rect.left - (rect.width - 240 * scale) / 2) / scale - 41) / 95;
+      const y = ((event.clientY - rect.top - (rect.height - 180 * scale) / 2) / scale - 54) / 75;
+      return ((x - .5) / .5) ** 2 + ((y - .5) / .5) ** 2 <= 1 ? [x, y] : null;
+    };
+    const paint = () => {
+      const group = svg?.querySelector('.custom-pattern');
+      if (group) group.innerHTML = customPatternSVG(encodePatternArt([...decodePatternArt(lk.customPattern), ...(current ? [current] : [])]));
+    };
+    preview?.addEventListener('pointerdown', event => {
+      const point = pointFromEvent(event);
+      if (!point) return;
+      current = { color: state.drawColor, points: [point] };
+      preview.setPointerCapture(event.pointerId);
+      paint();
+    });
+    preview?.addEventListener('pointermove', event => {
+      if (!current || current.points.length >= 40) return;
+      const point = pointFromEvent(event);
+      const last = current.points[current.points.length - 1];
+      if (point && Math.hypot(point[0] - last[0], point[1] - last[1]) > .018) {
+        current.points.push(point);
+        paint();
+      }
+    });
+    const finish = () => {
+      if (!current) return;
+      lk.customPattern = encodePatternArt([...decodePatternArt(lk.customPattern), current]);
+      current = null;
+      saveLooks(looks);
+      paint();
+    };
+    preview?.addEventListener('pointerup', finish);
+    preview?.addEventListener('pointercancel', finish);
+  }
 
   // Accessories
   container.querySelectorAll('.opt[data-acc]').forEach(btn => {

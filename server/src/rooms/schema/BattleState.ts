@@ -7,6 +7,7 @@ export interface PlayerStateData {
   colorDark: string;
   colorLight: string;
   pattern: string;      // 'stripes' | 'dots' | 'chevron' | 'plain'
+  customPattern: string;
   acc: string;          // 'none' | 'band' | 'crown' | 'horns'
   level: number;        // Player online level
   unlockedSkills?: string[]; // Player unlocked ability web skills

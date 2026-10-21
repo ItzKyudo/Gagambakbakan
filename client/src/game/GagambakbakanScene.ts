@@ -4,6 +4,7 @@ import {
   CANVAS_WIDTH, CANVAS_HEIGHT, COLORS, clamp, lerp
 } from './constants';
 import { keyLabel, getKeys } from '../gb';
+import { decodePatternArt } from '../patternArt';
 
 interface Particle {
   x: number;
@@ -778,7 +779,25 @@ export class GagambakbakanScene extends Phaser.Scene {
 
     // Pattern
     ctx.fillStyle = 'rgba(20,12,6,.36)';
-    if (pattern === 'dots') {
+    if (pattern === 'custom') {
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = 3.8;
+      decodePatternArt(s.customPattern).forEach(stroke => {
+        ctx.strokeStyle = stroke.color;
+        ctx.fillStyle = stroke.color;
+        ctx.beginPath();
+        stroke.points.forEach(([x, y], index) => {
+          const px = cx + (x - .5) * 44;
+          const py = cy + (y - .5) * 34;
+          if (index) ctx.lineTo(px, py); else ctx.moveTo(px, py);
+        });
+        if (stroke.points.length === 1) {
+          ctx.arc(cx + (stroke.points[0][0] - .5) * 44, cy + (stroke.points[0][1] - .5) * 34, 2, 0, Math.PI * 2);
+          ctx.fill();
+        } else ctx.stroke();
+      });
+    } else if (pattern === 'dots') {
       [[-12, -5], [-4, 7], [5, -6], [-1, -11], [11, 6], [-14, 8]].forEach(([dx, dy]) => {
         ctx.beginPath();
         ctx.arc(cx + dx, cy + dy, 3.4, 0, Math.PI * 2);

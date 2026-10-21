@@ -20,6 +20,7 @@ export interface PlayerProfile {
   colorDark?: string;
   colorLight?: string;
   pattern?: string;
+  customPattern?: string;
   acc?: string;
   level?: number;
   unlockedSkills?: string[];

@@ -5,6 +5,22 @@ const colyseus_1 = require("colyseus");
 const BattleCombat_1 = require("./BattleCombat");
 const abilities_1 = require("../abilities");
 const TAP = 8, FALL_DEPTH = 100, SINK = 17;
+function isValidCustomPattern(value) {
+    if (value === '')
+        return true;
+    if (typeof value !== 'string' || value.length > 1400)
+        return false;
+    const strokes = value.split('|');
+    return strokes.length <= 8 && strokes.every(stroke => {
+        const [color, points, extra] = stroke.split(':');
+        if (extra !== undefined || !/^[0-9a-f]{6}$/i.test(color) || !points || points.length % 4 || points.length > 160)
+            return false;
+        for (let i = 0; i < points.length; i += 2)
+            if (parseInt(points.slice(i, i + 2), 16) > 100)
+                return false;
+        return /^[0-9a-f]+$/i.test(points);
+    });
+}
 class BattleRoom extends colyseus_1.Room {
     maxClients = 2;
     battleState;
@@ -94,6 +110,7 @@ class BattleRoom extends colyseus_1.Room {
         s.colorDark = s.colorDark || (id === 0 ? '#8f4f14' : '#1d6a64');
         s.colorLight = s.colorLight || (id === 0 ? '#ffd694' : '#b0f2e3');
         s.pattern = s.pattern || 'stripes';
+        s.customPattern = s.customPattern || '';
         s.acc = s.acc || 'none';
         s.level = s.level || 1;
         s.connected = false;
@@ -156,8 +173,10 @@ class BattleRoom extends colyseus_1.Room {
             player.colorDark = options.colorDark.slice(0, 20);
         if (typeof options.colorLight === 'string')
             player.colorLight = options.colorLight.slice(0, 20);
-        if (['stripes', 'dots', 'chevron', 'rings', 'cross', 'split', 'webmark', 'diamonds', 'plain'].includes(options.pattern))
+        if (['stripes', 'dots', 'chevron', 'rings', 'cross', 'split', 'webmark', 'diamonds', 'plain', 'custom'].includes(options.pattern))
             player.pattern = options.pattern;
+        if (isValidCustomPattern(options.customPattern))
+            player.customPattern = options.customPattern;
         if (['none', 'band', 'crown', 'horns', 'goggles', 'halo', 'mohawk', 'mask', 'tophat'].includes(options.acc))
             player.acc = options.acc;
         if (options.level)

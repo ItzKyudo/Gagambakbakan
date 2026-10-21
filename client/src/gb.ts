@@ -5,6 +5,7 @@ import {
   type AbilityId,
   shuffle
 } from './game/abilities';
+import { decodePatternArt } from './patternArt';
 
 export interface SpiderColor {
   id: string;
@@ -19,6 +20,7 @@ export interface SpiderLook {
   color: string;
   pattern: string;
   acc: string;
+  customPattern: string;
 }
 
 export interface GameSettings {
@@ -141,7 +143,8 @@ export const PATTERNS: [string, string][] = [
   ['split', 'Split'],
   ['webmark', 'Web Lattice'],
   ['diamonds', 'Diamonds'],
-  ['plain', 'Plain']
+  ['plain', 'Plain'],
+  ['custom', 'Draw yours']
 ];
 
 export const ACCS: [string, string][] = [
@@ -157,8 +160,8 @@ export const ACCS: [string, string][] = [
 ];
 
 export const DEF_LOOK: { p1: SpiderLook; p2: SpiderLook } = {
-  p1: { name: 'Amber', color: 'amber', pattern: 'stripes', acc: 'none' },
-  p2: { name: 'Jade', color: 'jade', pattern: 'stripes', acc: 'none' }
+  p1: { name: 'Amber', color: 'amber', pattern: 'stripes', acc: 'none', customPattern: '' },
+  p2: { name: 'Jade', color: 'jade', pattern: 'stripes', acc: 'none', customPattern: '' }
 };
 
 export function getColor(idOrHex: string): SpiderColor {
@@ -196,7 +199,8 @@ function cleanLook(v: any, d: SpiderLook): SpiderLook {
     name: typeof v.name === 'string' ? v.name.replace(/[<>&"]/g, '').trim().slice(0, 10) : d.name,
     color: COLORS.some(c => c.id === v.color) ? v.color : d.color,
     pattern: hasOption(PATTERNS, v.pattern) ? v.pattern : d.pattern,
-    acc: hasOption(ACCS, v.acc) ? v.acc : d.acc
+    acc: hasOption(ACCS, v.acc) ? v.acc : d.acc,
+    customPattern: typeof v.customPattern === 'string' && decodePatternArt(v.customPattern).length ? v.customPattern : ''
   };
   if (!o.name) o.name = getColor(o.color).label;
   return o;
@@ -216,29 +220,35 @@ export function randomLook(): SpiderLook {
   return {
     name: c.label,
     color: c.id,
-    pattern: PATTERNS[Math.floor(Math.random() * PATTERNS.length)][0],
-    acc: ACCS[Math.floor(Math.random() * ACCS.length)][0]
+    pattern: PATTERNS[Math.floor(Math.random() * (PATTERNS.length - 1))][0],
+    acc: ACCS[Math.floor(Math.random() * ACCS.length)][0],
+    customPattern: ''
   };
+}
+
+export function customPatternSVG(value: string): string {
+  return decodePatternArt(value).map(stroke => {
+    const points = stroke.points.map(([x, y]) => `${(41 + x * 95).toFixed(1)},${(54 + y * 75).toFixed(1)}`).join(' ');
+    if (stroke.points.length === 1) return `<circle cx="${(41 + stroke.points[0][0] * 95).toFixed(1)}" cy="${(54 + stroke.points[0][1] * 75).toFixed(1)}" r="3.2" fill="${stroke.color}"/>`;
+    return `<polyline points="${points}" fill="none" stroke="${stroke.color}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>`;
+  }).join('');
 }
 
 export function spiderSVGraw(look: SpiderLook): string {
   const c = getColor(look.color);
   const OUT = 'rgba(8,16,15,.78)';
-  let legs = '';
-  let far = '';
-
-  for (let i = 0; i < 4; i++) {
-    const hx = 66 + i * 20;
-    const fx = 52 + i * 30;
-    const kx = (hx + fx) / 2 + (i < 2 ? -16 : 16);
-    legs += `<path d="M${hx} 114 Q${kx} 78 ${fx} 146" />`;
-    far += `<path d="M${hx + 8} 112 Q${kx + 10} 82 ${fx + 14} 146" />`;
-  }
+  const body = 'M41 94 C40 70 59 55 87 54 C116 53 136 69 136 92 C136 115 115 129 87 129 C59 129 42 116 41 94 Z';
+  const head = 'M121 91 C121 73 135 62 153 63 C171 64 181 77 180 95 C179 112 165 121 147 118 C131 116 121 107 121 91 Z';
+  const far = '<path d="M65 97 L44 88 Q37 86 32 94 L15 134"/><path d="M76 108 L57 109 Q49 111 45 121 L36 144"/><path d="M112 109 L132 115 Q140 119 143 130 L146 145"/><path d="M131 98 L154 96 Q165 97 174 107 L204 136"/>';
+  const legs = '<path d="M62 102 L38 101 Q29 104 25 116 L14 143"/><path d="M75 114 L56 120 Q49 125 49 135 L47 146"/><path d="M114 113 L129 123 Q135 130 131 145"/>';
+  const foreleg = '<path d="M132 102 L158 105 Q169 108 177 119 L198 142"/>';
 
   let pat = '';
-  if (look.pattern === 'stripes') {
+  if (look.pattern === 'custom') {
+    pat = customPatternSVG(look.customPattern);
+  } else if (look.pattern === 'stripes') {
     [72, 88, 104].forEach(x => {
-      pat += `<rect x="${x}" y="60" width="9" height="76" fill="rgba(20,12,6,.36)"/>`;
+      pat += `<path d="M${x} 56 C${x - 6} 78 ${x + 6} 105 ${x} 132" fill="none" stroke="${c.dark}" stroke-width="8" opacity=".56"/>`;
     });
   } else if (look.pattern === 'dots') {
     [[74, 88], [90, 106], [104, 90], [86, 76], [112, 108], [68, 108]].forEach(p => {
@@ -280,6 +290,9 @@ export function spiderSVGraw(look: SpiderLook): string {
       pat += `<polygon points="${x},76 ${x + 11},98 ${x},120 ${x - 11},98" fill="rgba(20,12,6,.36)"/>`;
     });
   }
+  if (look.pattern !== 'custom') {
+    pat = pat.replaceAll('rgba(20,12,6,.36)', c.dark).replaceAll('rgba(20,12,6,.5)', c.dark);
+  }
 
   let acc = '';
   if (look.acc === 'band') {
@@ -315,24 +328,37 @@ export function spiderSVGraw(look: SpiderLook): string {
       `<ellipse cx="148" cy="41" rx="10" ry="3" fill="#1e272e"/>`;
   }
 
-  return `<svg viewBox="0 0 240 180" aria-hidden="true"><defs><radialGradient id="pb" cx=".4" cy=".3" r=".8"><stop offset="0" stop-color="${c.light}"/><stop offset=".5" stop-color="${c.main}"/><stop offset="1" stop-color="${c.dark}"/></radialGradient>` +
-    `<radialGradient id="ph" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="${c.main}"/><stop offset="1" stop-color="${c.dark}"/></radialGradient><clipPath id="pc"><ellipse cx="90" cy="98" rx="44" ry="34"/></clipPath></defs>` +
+  return `<svg xmlns="http://www.w3.org/2000/svg" class="spider-art" width="240" height="180" viewBox="0 0 240 180" data-codeart="inline-vector" data-anchor="120 145" data-facing="right" aria-hidden="true"><defs><radialGradient id="pb" cx=".35" cy=".25" r=".8"><stop offset="0" stop-color="${c.light}"/><stop offset=".48" stop-color="${c.main}"/><stop offset="1" stop-color="${c.dark}"/></radialGradient>` +
+    `<radialGradient id="ph" cx=".32" cy=".24" r=".82"><stop offset="0" stop-color="${c.light}"/><stop offset=".42" stop-color="${c.main}"/><stop offset="1" stop-color="${c.dark}"/></radialGradient><clipPath id="pc"><path d="${body}"/></clipPath></defs>` +
     `<g id="perch-twig"><rect x="8" y="145" width="224" height="22" rx="11" fill="#6d4c2f" stroke="${OUT}" stroke-width="1.8"/>` +
     `<rect x="12" y="146" width="216" height="5.5" rx="2.7" fill="#9e744d"/>` +
     `<path d="M26 156 Q62 153 98 156 M136 156 Q176 158 212 155 M76 161 Q116 163 156 161" stroke="#4a331e" stroke-width="1.4" fill="none" stroke-linecap="round"/>` +
     `<path d="M216 144 C220 137 228 139 227 146 C223 147 218 145 216 144 Z" fill="#2ed573" stroke="${OUT}" stroke-width="1.2"/></g>` +
-    `<g class="bob"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><g stroke="${OUT}" stroke-width="6.4">${far}</g><g stroke="${c.dark}" stroke-width="4">${far}</g></g>` +
-    `<ellipse cx="90" cy="98" rx="44" ry="34" fill="url(#pb)"/><g clip-path="url(#pc)">${pat}</g><ellipse cx="90" cy="98" rx="44" ry="34" fill="none" stroke="${OUT}" stroke-width="2.4"/>` +
-    `<ellipse cx="150" cy="92" rx="28" ry="23" fill="url(#ph)" stroke="${OUT}" stroke-width="2.4"/>` +
-    `<g fill="none" stroke-linecap="round" stroke-linejoin="round"><g stroke="${OUT}" stroke-width="6.4">${legs}</g><g stroke="${c.main}" stroke-width="4">${legs}</g></g>` +
-    `<g><circle cx="162" cy="84" r="5.4" fill="#f4f7ee"/><circle cx="163.5" cy="85" r="2.7" fill="#10201f"/><circle cx="151" cy="79" r="4.4" fill="#f4f7ee"/><circle cx="152.5" cy="80" r="2.2" fill="#10201f"/><circle cx="171" cy="94" r="3.8" fill="#f4f7ee"/><circle cx="172" cy="94.6" r="1.9" fill="#10201f"/></g>` +
-    `<path d="M174 100 L184 106 L176 108 Z" fill="#10201f"/>${acc}</g></svg>`;
+    `<g class="spider-rig"><g class="spider-legs spider-legs-far" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity=".72"><g stroke="${OUT}" stroke-width="6.4">${far}</g><g stroke="${c.dark}" stroke-width="3.5">${far}</g></g>` +
+    `<g class="spider-abdomen"><path d="${body}" fill="url(#pb)"/><g class="custom-pattern" clip-path="url(#pc)" opacity="${look.pattern === 'custom' ? 1 : .55}">${pat}</g><path d="${body}" fill="none" stroke="${OUT}" stroke-width="2.3"/>` +
+    `<path d="M54 77 C68 59 96 57 117 68" fill="none" stroke="${c.light}" stroke-width="2.6" stroke-linecap="round" opacity=".26"/>` +
+    `<g fill="none" stroke="${c.dark}" stroke-width="1.1" stroke-linecap="round" opacity=".7"><path d="M50 70 l-5 -5 M60 62 l-3 -6 M73 57 l-1 -7 M101 57 l2 -7 M115 63 l4 -6 M128 74 l6 -4 M45 105 l-6 3 M56 120 l-4 6 M72 127 l-1 7 M105 126 l3 7 M122 117 l6 5"/></g></g>` +
+    `<g class="spider-legs spider-legs-near" fill="none" stroke-linecap="round" stroke-linejoin="round"><g stroke="${OUT}" stroke-width="6.6">${legs}</g><g stroke="${c.main}" stroke-width="3.7">${legs}</g></g>` +
+    `<g class="spider-foreleg" fill="none" stroke-linecap="round" stroke-linejoin="round"><g stroke="${OUT}" stroke-width="6.6">${foreleg}</g><g stroke="${c.main}" stroke-width="3.7">${foreleg}</g></g>` +
+    `<g class="spider-head"><g class="spider-head-motion"><path d="${head}" fill="url(#ph)" stroke="${OUT}" stroke-width="2.5"/>` +
+    `<path d="M132 78 C142 66 160 66 170 77" fill="none" stroke="${c.light}" stroke-width="2.3" stroke-linecap="round" opacity=".24"/>` +
+    `<g fill="none" stroke="${c.dark}" stroke-width="1" stroke-linecap="round" opacity=".75"><path d="M128 75 l-4 -5 M139 67 l-2 -6 M153 64 l0 -6 M167 69 l4 -5 M177 82 l6 -2 M176 104 l6 3 M164 115 l3 6 M138 114 l-2 6"/></g>` +
+    `<g class="spider-eyes" fill="#07100f" stroke="${c.light}" stroke-width="1.2"><circle cx="151" cy="88" r="5.1"/><circle cx="164" cy="89" r="4.7"/><circle cx="142" cy="89" r="2.8"/><circle cx="173" cy="93" r="2.7"/><circle cx="143" cy="78" r="2.2"/><circle cx="151" cy="75" r="2.3"/><circle cx="161" cy="76" r="2.2"/><circle cx="170" cy="81" r="2"/></g>` +
+    `<g class="spider-eye-glints" fill="#f4f7ee"><circle cx="149.3" cy="86.3" r="1.35"/><circle cx="162.5" cy="87.4" r="1.2"/><circle cx="141.2" cy="88" r=".7"/><circle cx="172.2" cy="92.2" r=".65"/><circle cx="150.3" cy="74.3" r=".55"/><circle cx="160.4" cy="75.4" r=".5"/></g>` +
+    `<g class="spider-palps" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M166 103 Q180 103 182 112 Q182 119 176 119 M163 106 Q175 109 175 117" stroke="${OUT}" stroke-width="5.4"/><path d="M166 103 Q180 103 182 112 Q182 119 176 119 M163 106 Q175 109 175 117" stroke="${c.dark}" stroke-width="2.8"/><path d="M173 105 L181 109 L176 113" stroke="#d9d2bd" stroke-width="1.8"/></g>${acc}</g></g></g></svg>`;
 }
 
 export function spiderSVG(look: SpiderLook, u: string = ''): string {
   return spiderSVGraw(look)
     .replace(/id="(pb|ph|pc)"/g, `id="$1${u}"`)
     .replace(/url\(#(pb|ph|pc)\)/g, `url(#$1${u})`);
+}
+
+export function accessorySVG(acc: string): string {
+  const look = { ...DEF_LOOK.p1, pattern: 'plain', acc };
+  const full = spiderSVGraw(look);
+  const match = full.match(/<g class="spider-palps"[\s\S]*?<\/g>([\s\S]*?)<\/g><\/g><\/g><\/svg>$/);
+  return `<svg xmlns="http://www.w3.org/2000/svg" class="accessory-art" viewBox="105 34 90 88" aria-hidden="true">${match?.[1] || ''}</svg>`;
 }
 
 /* ---------- key binds ---------- */

@@ -21,8 +21,8 @@ export class LocalGameEngine {
   constructor(
     mode: 'cpu' | '2p' = 'cpu',
     diff: 'easy' | 'normal' | 'hard' = 'normal',
-    customP1?: { name?: string; color?: string; colorDark?: string; colorLight?: string; pattern?: string; acc?: string },
-    customP2?: { name?: string; color?: string; colorDark?: string; colorLight?: string; pattern?: string; acc?: string }
+    customP1?: { name?: string; color?: string; colorDark?: string; colorLight?: string; pattern?: string; customPattern?: string; acc?: string },
+    customP2?: { name?: string; color?: string; colorDark?: string; colorLight?: string; pattern?: string; customPattern?: string; acc?: string }
   ) {
     this.mode = mode;
     this.diff = diff;
@@ -46,6 +46,7 @@ export class LocalGameEngine {
       p1Dark,
       p1Light,
       customP1?.pattern || 'stripes',
+      customP1?.customPattern || '',
       customP1?.acc || 'none'
     );
 
@@ -58,6 +59,7 @@ export class LocalGameEngine {
       p2Dark,
       p2Light,
       customP2?.pattern || 'stripes',
+      customP2?.customPattern || '',
       customP2?.acc || 'none'
     );
 
@@ -90,6 +92,7 @@ export class LocalGameEngine {
     dark: string,
     light: string,
     pattern: string,
+    customPattern: string,
     acc: string
   ): LocalPlayerState {
     return {
@@ -99,6 +102,7 @@ export class LocalGameEngine {
       colorDark: dark,
       colorLight: light,
       pattern,
+      customPattern,
       acc,
       x,
       face,

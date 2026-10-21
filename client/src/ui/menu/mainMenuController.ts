@@ -82,6 +82,7 @@ export function bindMainMenuEvents(container: HTMLElement, actions: MainMenuActi
       playerName: lks.p1.name,
       playerColor: { main: col.main, light: col.light, dark: col.dark },
       playerPattern: lks.p1.pattern,
+      playerCustomPattern: lks.p1.customPattern,
       playerAcc: lks.p1.acc
     });
   });
@@ -98,6 +99,7 @@ export function bindMainMenuEvents(container: HTMLElement, actions: MainMenuActi
       playerName: lks.p1.name,
       playerColor: { main: col.main, light: col.light, dark: col.dark },
       playerPattern: lks.p1.pattern,
+      playerCustomPattern: lks.p1.customPattern,
       playerAcc: lks.p1.acc
     });
   });

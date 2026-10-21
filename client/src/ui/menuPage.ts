@@ -12,7 +12,6 @@ import { renderAbilitiesView } from './menu/abilitiesView';
 import { bindAbilitiesEvents, clearAbilitiesKeyHandler, createAbilitiesViewState } from './menu/abilitiesController';
 import { renderSettingsView } from './menu/settingsView';
 import { bindSettingsEvents, type SettingsState } from './menu/settingsController';
-import { bindOnlineModalEvents, renderOnlineModal } from './menu/onlineModal';
 
 export type { MenuStartOptions } from './menu/menuTypes';
 
@@ -21,7 +20,6 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
   let activeTab: MenuTab = 'main';
   const customizeState: CustomizeState = { player: 'p1', drawColor: '#e8593f' };
   const settingsState: SettingsState = { listeningKey: null };
-  let onlineModalOpen = false;
   let spiderLookFrame = 0;
   const abilitiesState = createAbilitiesViewState();
 
@@ -135,8 +133,6 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
       <div class="menu-view-container">
         ${renderActiveTab()}
       </div>
-
-      ${renderOnlineModal(onlineModalOpen)}
     `;
 
     bindEvents();
@@ -232,10 +228,6 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
           activeTab = tab;
           render();
         },
-        openOnline: () => {
-          onlineModalOpen = true;
-          render();
-        },
         start: onStart
       });
     }
@@ -245,16 +237,6 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
     if (activeTab === 'settings') bindSettingsEvents(container, settingsState, render);
 
     if (activeTab === 'abilities') bindAbilitiesEvents(container, abilitiesState, render);
-
-    if (onlineModalOpen) {
-      bindOnlineModalEvents(container, () => {
-        onlineModalOpen = false;
-        render();
-      }, options => {
-        onlineModalOpen = false;
-        onStart(options);
-      });
-    }
   }
 
   // Window key listener for interactive key remap

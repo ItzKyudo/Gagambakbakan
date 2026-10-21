@@ -194,6 +194,45 @@ async function startOnlineGame(opts: MenuStartOptions) {
   currentScene.isOnline = true;
   sound.music.play('ambient');
 
+  // If match was already found via menu queue, start directly without modal delay
+  if (network.room) {
+    network.setCallbacks(getNetworkCallbacks());
+    if (network.myPlayerId >= 0) {
+      currentScene.myPlayerId = network.myPlayerId;
+      gamePage.setLabels('online', 'normal', network.myPlayerId);
+    }
+
+    if (network.room.state) {
+      currentScene.gameState = network.room.state;
+      gamePage.updateHud(network.room.state);
+
+      if (network.room.state.status === 'draft') {
+        const myId = network.myPlayerId;
+        const myDrafted = myId === 0 ? network.room.state.p1Drafted : network.room.state.p2Drafted;
+        const myChoices = myId === 0 ? network.room.state.draftChoicesP1 : network.room.state.draftChoicesP2;
+        const myName = myId === 0 ? network.room.state.p1?.name : network.room.state.p2?.name;
+
+        if (!myDrafted && myChoices && myChoices.length >= 1 && !gamePage.isDraftOpen) {
+          gamePage.showDraftModal(myChoices, network.room.state.round || 1, myName || 'Player', (skills) => {
+            network.sendSelectSkills(skills);
+          });
+        }
+      } else if (network.room.state.status === 'ready' || network.room.state.status === 'fight') {
+        sound.music.play('duel');
+      }
+    }
+
+    function loop() {
+      const inp = getPlayerInput(false);
+      network.sendInput(inp);
+      clearInputs();
+
+      animationFrameId = requestAnimationFrame(loop);
+    }
+    animationFrameId = requestAnimationFrame(loop);
+    return;
+  }
+
   const serverHost = network.serverUrl.replace(/^https?:\/\//, '').replace(/^wss?:\/\//, '').replace(/\/.*$/, '');
   gamePage.showModal('Connecting...', `Connecting to Gagambakbakan Battle Server (${serverHost})...\n\nNote: If the server was idle, Render free tier takes ~30-50s to wake up.`, [
     { label: 'Cancel', onClick: () => showMainMenu() }

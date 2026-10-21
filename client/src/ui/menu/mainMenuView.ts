@@ -65,10 +65,14 @@ export function renderMainMenuView(): string {
             <span class="ml">vs AI</span>
             <small id="diffNote">${st.diff.charAt(0).toUpperCase() + st.diff.slice(1)} diff</small>
           </button>
-          <button type="button" class="mb" id="btnModeOnline">
+          <button type="button" class="mb mb-online" id="btnModeOnline">
             <span class="mi"><svg class="ico"><use href="#ic-globe"/></svg></span>
-            <span class="ml">Multiplayer Online</span>
-            <small>Quick match or Room</small>
+            <span class="ml" id="onlineBtnLabel">Multiplayer Online</span>
+            <small id="onlineBtnTag">Quick match</small>
+            <div class="online-queue-side" id="onlineQueueSide" style="display:none;">
+              <span class="queue-timer-val" id="onlineQueueTimer">00:00</span>
+              <span class="queue-cancel-x" id="btnCancelQueue" title="Cancel Queue" aria-label="Cancel queue">✕</span>
+            </div>
           </button>
           <button type="button" class="mb" id="btnMode2p">
             <span class="mi"><svg class="ico"><use href="#ic-versus"/></svg></span>

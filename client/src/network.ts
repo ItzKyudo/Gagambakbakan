@@ -91,7 +91,16 @@ export class NetworkManager {
     }
   }
 
-  private initClient(callbacks: NetworkCallbacks): Client {
+  public callbacks: NetworkCallbacks = {};
+
+  public setCallbacks(callbacks: NetworkCallbacks) {
+    this.callbacks = callbacks;
+  }
+
+  private initClient(callbacks?: NetworkCallbacks): Client {
+    if (callbacks) {
+      this.callbacks = callbacks;
+    }
     const client = new Client(this.serverUrl);
     this.client = client;
 
@@ -113,14 +122,17 @@ export class NetworkManager {
       const room = origCreateRoom(roomName, rootSchema);
       if (this.client === client) {
         this.room = room;
-        this.setupRoom(room, callbacks);
+        this.setupRoom(room);
       }
       return room;
     };
     return client;
   }
 
-  public async quickMatch(profile: string | PlayerProfile, callbacks: NetworkCallbacks): Promise<Room> {
+  public async quickMatch(profile: string | PlayerProfile, callbacks?: NetworkCallbacks): Promise<Room> {
+    if (callbacks) {
+      this.callbacks = callbacks;
+    }
     const client = this.initClient(callbacks);
     const opts = typeof profile === 'string' ? { name: profile } : { ...profile };
     const room = await client.joinOrCreate('battle', opts);
@@ -128,36 +140,36 @@ export class NetworkManager {
     return room;
   }
 
-  private setupRoom(room: Room, callbacks: NetworkCallbacks) {
+  private setupRoom(room: Room) {
     room.onMessage('assigned', (data) => {
       this.myPlayerId = data.id;
-      callbacks.onAssigned?.(data);
+      this.callbacks.onAssigned?.(data);
     });
 
     room.onMessage('state', (state) => {
-      callbacks.onStateChange?.(state);
+      this.callbacks.onStateChange?.(state);
     });
 
     room.onStateChange((state) => {
-      callbacks.onStateChange?.(state);
+      this.callbacks.onStateChange?.(state);
     });
 
-    room.onMessage('fx', (data) => callbacks.onFx?.(data));
-    room.onMessage('snd', (data) => callbacks.onSnd?.(data));
-    room.onMessage('shake', (data) => callbacks.onShake?.(data));
-    room.onMessage('roundStart', (data) => callbacks.onRoundStart?.(data));
-    room.onMessage('roundWon', (data) => callbacks.onRoundWon?.(data));
-    room.onMessage('matchEnd', (data) => callbacks.onMatchEnd?.(data));
-    room.onMessage('playerLeft', (data) => callbacks.onPlayerLeft?.(data));
+    room.onMessage('fx', (data) => this.callbacks.onFx?.(data));
+    room.onMessage('snd', (data) => this.callbacks.onSnd?.(data));
+    room.onMessage('shake', (data) => this.callbacks.onShake?.(data));
+    room.onMessage('roundStart', (data) => this.callbacks.onRoundStart?.(data));
+    room.onMessage('roundWon', (data) => this.callbacks.onRoundWon?.(data));
+    room.onMessage('matchEnd', (data) => this.callbacks.onMatchEnd?.(data));
+    room.onMessage('playerLeft', (data) => this.callbacks.onPlayerLeft?.(data));
 
     room.onError((code, message) => {
-      callbacks.onError?.({ code, message });
+      this.callbacks.onError?.({ code, message });
     });
 
     room.onLeave(() => {
       if (this.room === room) {
         this.room = null;
-        callbacks.onDisconnect?.();
+        this.callbacks.onDisconnect?.();
       }
     });
   }
@@ -189,6 +201,7 @@ export class NetworkManager {
   }
 
   public leave() {
+    this.callbacks = {};
     this.client = null;
     if (this.room) {
       this.room.leave();

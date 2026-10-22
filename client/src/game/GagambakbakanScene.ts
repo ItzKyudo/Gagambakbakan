@@ -5,7 +5,7 @@ import {
 } from './constants';
 import { keyLabel, getKeys } from '../gb';
 import { decodePatternArt } from '../patternArt';
-import { attackMotion, gaitMotion, smoothMotion } from './spiderMotion';
+import { attackPose, gaitMotion, skillBurst, smoothMotion, type SkillBurst } from './spiderMotion';
 
 interface Particle {
   x: number;
@@ -17,6 +17,17 @@ interface Particle {
   sz: number;
   col: string;
   g: number;
+  streak?: boolean;
+}
+
+interface ImpactRing {
+  x: number;
+  y: number;
+  r: number;
+  maxR: number;
+  col: string;
+  life: number;
+  max: number;
 }
 
 interface FloatingText {
@@ -37,7 +48,10 @@ export class GagambakbakanScene extends Phaser.Scene {
   private flies: Array<{ x: number; y: number; ph: number; sp: number }> = [];
   private grain: Array<{ x: number; y: number; len: number }> = [];
   private particles: Particle[] = [];
+  private impactRings: ImpactRing[] = [];
   private floatingTexts: FloatingText[] = [];
+  private powerTrailUntil: [number, number] = [0, 0];
+  private leechTrailUntil: [number, number] = [0, 0];
 
   private renderCanvas!: HTMLCanvasElement;
   private renderCtx!: CanvasRenderingContext2D;
@@ -192,17 +206,32 @@ export class GagambakbakanScene extends Phaser.Scene {
   public addFx(fx: any) {
     if (fx.type === 'spark') {
       const sp = fx.sp || 200;
-      for (let i = 0; i < (fx.count || 8); i++) {
+      const count = fx.count || 8;
+      for (let i = 0; i < count; i++) {
+        const angle = (i / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+        const speed = sp * (0.55 + Math.random() * 0.65);
         this.particles.push({
           x: fx.x,
           y: fx.y,
-          vx: (Math.random() - 0.5) * sp * 2,
-          vy: (Math.random() - 0.85) * sp,
-          life: 0.3 + Math.random() * 0.4,
-          max: 0.7,
-          sz: 1.8 + Math.random() * 2.2,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed - 65,
+          life: 0.26 + Math.random() * 0.34,
+          max: 0.6,
+          sz: 1.9 + Math.random() * 2.2,
           col: fx.col,
-          g: 520
+          g: 520,
+          streak: sp >= 170
+        });
+      }
+      if (sp >= 170) {
+        this.impactRings.push({
+          x: fx.x,
+          y: fx.y,
+          r: 6,
+          maxR: sp >= 250 ? 40 : 28,
+          col: fx.col || '#ffffff',
+          life: 0.2,
+          max: 0.2
         });
       }
     } else if (fx.type === 'dust') {
@@ -262,6 +291,13 @@ export class GagambakbakanScene extends Phaser.Scene {
       if (p.life <= 0) this.particles.splice(i, 1);
     }
 
+    // Update impact rings
+    for (let r = this.impactRings.length - 1; r >= 0; r--) {
+      const ring = this.impactRings[r];
+      ring.life -= dt;
+      if (ring.life <= 0) this.impactRings.splice(r, 1);
+    }
+
     // Update floating texts
     for (let j = this.floatingTexts.length - 1; j >= 0; j--) {
       const f = this.floatingTexts[j];
@@ -314,33 +350,57 @@ export class GagambakbakanScene extends Phaser.Scene {
     this.drawStick(ctx);
 
     // Earthquake tremors
-    this.drawQuakes(ctx);
+    this.drawQuakes(ctx, t);
 
     if (this.gameState && this.gameState.p1 && this.gameState.p2) {
       const p1 = this.gameState.p1;
       const p2 = this.gameState.p2;
 
-      // Order spiders so a dangling/rising spider overlaps correctly
-      const order = p1.hang && !p2.hang ? [p2, p1] : [p1, p2];
+      // Order spiders so a dangling/rising spider overlaps correctly, or attacker renders in front
+      const order = p1.hang && !p2.hang
+        ? [p2, p1]
+        : (!p1.hang && p2.hang
+          ? [p1, p2]
+          : (p1.atkT > 0 && p2.atkT <= 0 ? [p2, p1] : [p1, p2]));
       order.forEach((s) => this.drawSpider(ctx, s, t));
 
       // Draw Webs & Projectiles
       const webs = this.gameState.webs || [];
       webs.forEach((w: any) => {
+        const sg = Math.sign(w.vx) || 1;
         if (w.k === 'spit') {
           ctx.save();
           ctx.translate(w.x, w.y);
-          ctx.fillStyle = 'rgba(156,240,106,.4)';
+
+          // Undulating toxic vapor wake & dripping venom globules
+          ctx.fillStyle = 'rgba(156, 240, 106, 0.28)';
           ctx.beginPath();
-          ctx.ellipse(-w.vx * 0.02, 0, 14, 3, 0, 0, Math.PI * 2);
+          ctx.ellipse(-sg * 16, Math.sin(t * 28) * 1.5, 18, 4.5, 0, 0, Math.PI * 2);
           ctx.fill();
-          ctx.fillStyle = '#9cf06a';
-          ctx.strokeStyle = 'rgba(8,16,15,.8)';
+
+          for (let d = 1; d <= 3; d++) {
+            const dx = -sg * (8 + d * 8);
+            const dy = Math.sin(t * 24 + d * 1.8) * (1.5 + d * 0.8);
+            ctx.fillStyle = d === 1 ? 'rgba(216, 255, 156, 0.85)' : 'rgba(156, 240, 106, 0.55)';
+            ctx.beginPath();
+            ctx.arc(dx, dy, 3.8 - d * 0.7, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          // Outer venom sac
+          ctx.fillStyle = '#7ed957';
+          ctx.strokeStyle = 'rgba(8,16,15,.85)';
           ctx.lineWidth = 2;
           ctx.beginPath();
-          ctx.ellipse(0, 0, 10, 6, 0, 0, Math.PI * 2);
+          ctx.ellipse(0, 0, 11, 6.5, 0, 0, Math.PI * 2);
           ctx.fill();
           ctx.stroke();
+
+          // Glowing acid core
+          ctx.fillStyle = '#e2ffab';
+          ctx.beginPath();
+          ctx.ellipse(sg * 2.5, -1.2, 5.5, 2.8, 0, 0, Math.PI * 2);
+          ctx.fill();
           ctx.restore();
           return;
         }
@@ -348,44 +408,98 @@ export class GagambakbakanScene extends Phaser.Scene {
         if (w.k === 'hook') {
           const owner = w.owner === 0 ? p1 : p2;
           const ox = owner.x + owner.face * 20;
-          const sg2 = Math.sign(w.vx);
+          const age = Math.max(0, 1 - (w.life || 0));
+          const whipAmp = Math.max(0, 1 - age * 4) * 6;
           ctx.save();
-          ctx.strokeStyle = 'rgba(244,248,238,.85)';
-          ctx.lineWidth = 1.6;
+
+          // Taut braided silk cable with launch whip-wave oscillation
+          ctx.strokeStyle = 'rgba(20, 32, 30, 0.65)';
+          ctx.lineWidth = 3.6;
           ctx.beginPath();
           ctx.moveTo(ox, w.y);
-          ctx.lineTo(w.x, w.y);
+          for (let step = 1; step <= 8; step++) {
+            const u = step / 8;
+            const lx = lerp(ox, w.x, u);
+            const ly = w.y + Math.sin(u * Math.PI * 3 + t * 35) * whipAmp * Math.sin(u * Math.PI);
+            ctx.lineTo(lx, ly);
+          }
           ctx.stroke();
-          ctx.strokeStyle = '#ffffff';
-          ctx.lineWidth = 3;
-          ctx.lineCap = 'round';
+
+          ctx.strokeStyle = 'rgba(244,248,238,.95)';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          // Speed-cone ring behind harpoon head
+          ctx.strokeStyle = 'rgba(207, 233, 255, 0.55)';
+          ctx.lineWidth = 1.6;
           ctx.beginPath();
-          ctx.moveTo(w.x - sg2 * 8, w.y - 6);
-          ctx.quadraticCurveTo(w.x + sg2 * 9, w.y - 6, w.x + sg2 * 6, w.y + 7);
+          ctx.ellipse(w.x - sg * 8, w.y, 3.5, 8.5, 0, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // Multi-barbed chitin harpoon head
+          ctx.fillStyle = '#ffffff';
+          ctx.strokeStyle = COLORS.outline;
+          ctx.lineWidth = 1.6;
+          ctx.lineJoin = 'round';
+          ctx.beginPath();
+          ctx.moveTo(w.x + sg * 12, w.y);
+          ctx.lineTo(w.x - sg * 6, w.y - 8);
+          ctx.lineTo(w.x - sg * 2, w.y - 2);
+          ctx.lineTo(w.x - sg * 9, w.y);
+          ctx.lineTo(w.x - sg * 2, w.y + 2);
+          ctx.lineTo(w.x - sg * 6, w.y + 8);
+          ctx.closePath();
+          ctx.fill();
           ctx.stroke();
           ctx.restore();
           return;
         }
 
-        // Standard Web Disc
+        // Standard Web Disc with trailing gossamer ribbons & dew nodes
         ctx.save();
         ctx.translate(w.x, w.y);
-        ctx.rotate(w.x * 0.05);
+
+        // Trailing gossamer silk streamers
+        ctx.strokeStyle = 'rgba(244, 248, 238, 0.42)';
+        ctx.lineWidth = 1.4;
+        ctx.lineCap = 'round';
+        [-5, 0, 5].forEach((offY, idx) => {
+          ctx.beginPath();
+          ctx.moveTo(-sg * 6, offY);
+          ctx.quadraticCurveTo(
+            -sg * 18,
+            offY + Math.sin(t * 22 + idx * 2) * 4,
+            -sg * (28 + idx * 4),
+            offY + Math.cos(t * 20 + idx) * 3
+          );
+          ctx.stroke();
+        });
+
+        ctx.rotate(w.x * 0.06);
         ctx.strokeStyle = 'rgba(244,248,238,.95)';
         ctx.lineWidth = 1.6;
         for (let q = 0; q < 6; q++) {
           const an = q * Math.PI / 3;
           ctx.beginPath();
           ctx.moveTo(0, 0);
-          ctx.lineTo(Math.cos(an) * 11, Math.sin(an) * 11);
+          ctx.lineTo(Math.cos(an) * 12.5, Math.sin(an) * 12.5);
           ctx.stroke();
         }
         ctx.beginPath();
         ctx.arc(0, 0, 6, 0, Math.PI * 2);
         ctx.stroke();
         ctx.beginPath();
-        ctx.arc(0, 0, 11, 0, Math.PI * 2);
+        ctx.arc(0, 0, 11.5, 0, Math.PI * 2);
         ctx.stroke();
+
+        // Dew-drop highlights on outer web spokes
+        ctx.fillStyle = '#ffffff';
+        for (let q = 0; q < 6; q += 2) {
+          const an = q * Math.PI / 3;
+          ctx.beginPath();
+          ctx.arc(Math.cos(an) * 11.5, Math.sin(an) * 11.5, 1.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
         ctx.restore();
       });
     }
@@ -560,26 +674,72 @@ export class GagambakbakanScene extends Phaser.Scene {
     });
   }
 
-  private drawQuakes(ctx: CanvasRenderingContext2D) {
+  private drawQuakes(ctx: CanvasRenderingContext2D, t: number) {
     if (!this.gameState) return;
     const spiders = [this.gameState.p1, this.gameState.p2].filter(Boolean);
     spiders.forEach((s) => {
       if (s.quake && s.quake > 0) {
         const k = 1 - s.quake / 0.5;
+        const colLight = s.colorLight || (s.id === 0 ? COLORS.amberLight : COLORS.jadeLight);
+        const baseY = STICK.y + STICK.th + 4;
         ctx.save();
-        ctx.globalAlpha = 1 - k;
-        ctx.strokeStyle = '#e8d9b0';
-        ctx.lineWidth = 4;
         ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.ellipse(s.x, STICK.y + STICK.th + 6, k * 340, 10 + k * 8, 0, 0, Math.PI * 2);
-        ctx.stroke();
+
+        // Outer & inner concentric seismic rings
+        [1, 0.65].forEach((scale, idx) => {
+          const radiusX = k * 280 * scale;
+          const radiusY = (10 + k * 10) * scale;
+          ctx.globalAlpha = (1 - k) * (idx === 0 ? 0.9 : 0.65);
+          ctx.strokeStyle = idx === 0 ? '#e8d9b0' : colLight;
+          ctx.lineWidth = idx === 0 ? 4 : 2.5;
+          ctx.beginPath();
+          ctx.ellipse(s.x, baseY + 2, radiusX, radiusY, 0, 0, Math.PI * 2);
+          ctx.stroke();
+        });
+
+        // Traveling seismic fault spikes rippling outward along the twig (±260px range)
+        const waveDist = k * 260;
+        [-1, 1].forEach((dir) => {
+          const wx = clamp(s.x + dir * waveDist, STICK.l, STICK.r);
+          ctx.globalAlpha = (1 - k) * 0.85;
+          ctx.strokeStyle = '#fff3d1';
+          ctx.lineWidth = 2.6;
+          ctx.beginPath();
+          for (let j = -2; j <= 2; j++) {
+            const sx = wx + j * 10;
+            const amp = (1 - Math.abs(j) * 0.28) * (1 - k) * 16;
+            ctx.moveTo(sx, STICK.y + STICK.th);
+            ctx.lineTo(sx + dir * 4, STICK.y + STICK.th + amp);
+          }
+          ctx.stroke();
+        });
+
+        // Vibrating bark splinters kicking off the branch
+        ctx.fillStyle = '#d8c7a0';
+        ctx.globalAlpha = (1 - k) * 0.85;
+        for (let sp = 0; sp < 6; sp++) {
+          const side = sp % 2 === 0 ? 1 : -1;
+          const dist = (25 + sp * 34) * k;
+          const py = baseY + Math.sin(k * Math.PI) * (12 + (sp % 3) * 7) + Math.sin(t * 20 + sp) * 2;
+          ctx.beginPath();
+          ctx.arc(s.x + side * dist, py, 2.2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
         ctx.restore();
       }
     });
   }
 
-  private legStroke(ctx: CanvasRenderingContext2D, a: { x: number; y: number }, k: { x: number; y: number }, f: { x: number; y: number }, w: number, col: string) {
+  private legStroke(
+    ctx: CanvasRenderingContext2D,
+    a: { x: number; y: number },
+    k: { x: number; y: number },
+    f: { x: number; y: number },
+    w: number,
+    col: string,
+    clawTipCol?: string
+  ) {
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.beginPath();
@@ -592,111 +752,347 @@ export class GagambakbakanScene extends Phaser.Scene {
     ctx.strokeStyle = col;
     ctx.lineWidth = w;
     ctx.stroke();
+
+    // Articulated sharp tarsal claw tip on foreground/striking legs
+    if (clawTipCol) {
+      const dx = f.x - k.x;
+      const dy = f.y - k.y;
+      const len = Math.hypot(dx, dy) || 1;
+      const ux = dx / len;
+      const uy = dy / len;
+      const nx = -uy;
+      const ny = ux;
+
+      ctx.fillStyle = clawTipCol;
+      ctx.strokeStyle = COLORS.outline;
+      ctx.lineWidth = 1.1;
+      ctx.beginPath();
+      ctx.moveTo(f.x - ux * 2 + nx * (w * 0.48), f.y - uy * 2 + ny * (w * 0.48));
+      ctx.lineTo(f.x + ux * 6.5, f.y + uy * 6.5);
+      ctx.lineTo(f.x - ux * 2 - nx * (w * 0.48), f.y - uy * 2 - ny * (w * 0.48));
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
   }
 
-  private projectileCast(s: any): number {
+  private skillCast(s: any, id: string, duration = 0.4): SkillBurst {
+    const c1 = s.skill1 === id && s.cd1max > 0 && s.cd1 > 0 ? s.cd1max - s.cd1 : 999;
+    const c2 = s.skill2 === id && s.cd2max > 0 && s.cd2 > 0 ? s.cd2max - s.cd2 : 999;
+    return skillBurst(Math.min(c1, c2), duration);
+  }
+
+  private projectileCastInfo(s: any): { amount: number; kind: 'web' | 'spit' | 'hook' | null } {
     const starts: Record<string, number> = { web: 1.6, spit: 1.2, hook: 1 };
-    const shot = Array.from((this.gameState?.webs || []) as any[]).find((w: any) => w.owner === s.id && starts[w.k] - w.life < .3) as any;
-    if (!shot) return 0;
-    const progress = Math.max(0, Math.min(1, (starts[shot.k] - shot.life) / .3));
-    return Math.sin(progress * Math.PI);
+    const shot = Array.from((this.gameState?.webs || []) as any[]).find(
+      (w: any) => w.owner === s.id && starts[w.k] - w.life < .32
+    ) as any;
+    if (!shot) return { amount: 0, kind: null };
+    const progress = Math.max(0, Math.min(1, (starts[shot.k] - shot.life) / .32));
+    return { amount: Math.sin(progress * Math.PI), kind: shot.k };
   }
 
-  private drawLegs(ctx: CanvasRenderingContext2D, s: any, bx: number, by: number, far: boolean, colMain: string, colDark: string) {
+  private sweepCast(s: any): number {
+    return this.skillCast(s, 'sweep', 0.34).progress;
+  }
+
+  private drawCrescentSlash(
+    ctx: CanvasRenderingContext2D,
+    x0: number,
+    y0: number,
+    cx: number,
+    cy: number,
+    x1: number,
+    y1: number,
+    tStart: number,
+    tEnd: number,
+    maxHalfWidth: number,
+    colEdge: string,
+    colCore: string,
+    alpha: number
+  ) {
+    if (alpha <= 0.01 || tEnd - tStart <= 0.02) return;
+    const steps = 14;
+    const outerPts: Array<{ x: number; y: number }> = [];
+    const innerPts: Array<{ x: number; y: number }> = [];
+
+    for (let i = 0; i <= steps; i++) {
+      const s = i / steps;
+      const t = lerp(tStart, tEnd, s);
+      const mt = 1 - t;
+      const px = mt * mt * x0 + 2 * mt * t * cx + t * t * x1;
+      const py = mt * mt * y0 + 2 * mt * t * cy + t * t * y1;
+
+      const tx = 2 * mt * (cx - x0) + 2 * t * (x1 - cx);
+      const ty = 2 * mt * (cy - y0) + 2 * t * (y1 - cy);
+      const tLen = Math.hypot(tx, ty) || 1;
+      const nx = -ty / tLen;
+      const ny = tx / tLen;
+
+      // Taper sharply at tail (s=0) and tip (s=1), biased toward the leading head
+      const profile = Math.sin(Math.pow(s, 0.75) * Math.PI) * maxHalfWidth;
+      outerPts.push({ x: px + nx * profile, y: py + ny * profile });
+      innerPts.push({ x: px - nx * profile * 0.55, y: py - ny * profile * 0.55 });
+    }
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = colEdge;
+    ctx.beginPath();
+    outerPts.forEach((pt, idx) => {
+      if (idx === 0) ctx.moveTo(pt.x, pt.y);
+      else ctx.lineTo(pt.x, pt.y);
+    });
+    for (let i = innerPts.length - 1; i >= 0; i--) {
+      ctx.lineTo(innerPts[i].x, innerPts[i].y);
+    }
+    ctx.closePath();
+    ctx.fill();
+
+    // Bright razor core along the outer leading edge
+    ctx.globalAlpha = Math.min(1, alpha * 1.15);
+    ctx.strokeStyle = colCore;
+    ctx.lineCap = 'round';
+    ctx.lineWidth = Math.max(1.4, maxHalfWidth * 0.52);
+    ctx.beginPath();
+    outerPts.forEach((pt, idx) => {
+      if (idx === 0) ctx.moveTo(pt.x, pt.y);
+      else ctx.lineTo(pt.x, pt.y);
+    });
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  private drawLegs(
+    ctx: CanvasRenderingContext2D,
+    s: any,
+    bx: number,
+    by: number,
+    far: boolean,
+    colMain: string,
+    colDark: string,
+    colLight: string
+  ) {
     const f = s.face;
     const hb = s.hb || 0;
-    const t = (this.time.now / 1000);
-    const u = s.atkT > 0 ? this.atkProgress(s.atkT) : 0;
-    const shaky = (s.stun > 0 && !s.hang) ? 1 : 0;
-    const cast = this.projectileCast(s);
+    const t = this.time.now / 1000;
+    const sweep = this.sweepCast(s);
+    const sweepArc = sweep > 0 ? Math.sin(sweep * Math.PI) : 0;
+    const powerBurst = this.skillCast(s, 'power', 0.4).pulse;
+    const mendBurst = this.skillCast(s, 'mend', 0.5).pulse;
+    const carapaceBurst = this.skillCast(s, 'carapace', 0.5).pulse;
+    const leechBurst = this.skillCast(s, 'leech', 0.4).pulse;
+    const surgeBurst = this.skillCast(s, 'surge', 0.45);
+    const isRealStun = s.stun > 0 && !s.hang && sweep <= 0 && (s.stun > 0.26 || s.hitFlash > 0 || s.gLock);
+    const proj = this.projectileCastInfo(s);
+    const cast = proj.amount;
 
     for (let i = 0; i < 4; i++) {
       const ax = bx + f * (15 - i * 8) + (far ? f * 2 : 0);
       const ay = by + 5;
       const gait = gaitMotion((s.walkPhase || 0) + (i === 1 || i === 2 ? .5 : 0) + (far ? .5 : 0));
       const moving = Math.min(1, Math.abs(s.move || 0));
-      const pace = s.hasteT > 0 ? 1.18 : 1;
-      let fx = bx + f * (42 - i * 27) + (far ? f * 10 : 0) + f * gait.reach * 9 * moving * pace;
-      let fy = STICK.y - 1 - gait.lift * 8 * moving;
-      let kx = (ax + fx) / 2 + f * (i < 2 ? 6 : -6);
-      let ky = Math.min(ay, fy) - 24 - gait.lift * 2 * moving;
+      const pace = s.hasteT > 0 ? 1.24 : 1;
 
-      if (i < 2 && !s.hang) {
-        if (s.atkT > 0) {
+      const baseFx = bx + f * (42 - i * 27) + (far ? f * 10 : 0) + f * gait.reach * 9 * moving * pace;
+      const baseFy = STICK.y - 1 - gait.lift * (s.hasteT > 0 ? 11 : 8) * moving;
+      const baseKx = (ax + baseFx) / 2 + f * (i < 2 ? 6 : -6);
+      const baseKy = Math.min(ay, baseFy) - 24 - gait.lift * 2 * moving;
+
+      let fx = baseFx;
+      let fy = baseFy;
+      let kx = baseKx;
+      let ky = baseKy;
+      let clawCol: string | undefined;
+
+      if (!s.hang) {
+        if (s.atkT > 0 && i < 2) {
           const atkType = (s.atkType !== undefined ? s.atkType : (s.atkId || 0)) % 3;
+          // Stagger front 4 legs so near/far and lead/secondary legs whip in an articulated sequence
+          const delay = (i === 0 ? 0 : 0.026) + (far ? 0.014 : 0);
+          const shiftedT = s.atkT > delay ? s.atkT - delay : s.atkT * 0.4;
+          const lp = attackPose(shiftedT);
+
+          let wFx = baseFx, wFy = baseFy, wKx = baseKx, wKy = baseKy;
+          let sFx = baseFx, sFy = baseFy, sKx = baseKx, sKy = baseKy;
+          let arcDx = 0, arcDy = 0, arcKx = 0, arcKy = 0;
+          let folDx = 0, folDy = 0;
+
           if (atkType === 0) {
-            // Animation 0: Overhead Claw Cleave (Downward Slash)
-            const lead = i === 0 ? 1 : 0.65;
-            if (u < 0) {
-              const p = -u; // windup 0 -> 1
-              fx = bx + f * (32 - p * (i === 0 ? 10 : 6));
-              fy = lerp(STICK.y - 1, by - (i === 0 ? 44 : 34), p);
-              kx = (ax + fx) / 2 + f * (i === 0 ? 4 : 0);
-              ky = Math.min(ay, fy) - (i === 0 ? 20 : 16);
-            } else {
-              fx = bx + f * (38 + u * 52 * lead);
-              fy = lerp(STICK.y - 1, by + (i === 0 ? 3 : 1), u);
-              kx = (ax + fx) / 2;
-              ky = Math.min(ay, fy) - 15;
-            }
+            // Animation 0: Overhead Claw Cleave
+            const lead = i === 0 ? 1 : 0.78;
+            const depthOff = far ? 6 : 0;
+            wFx = bx + f * ((i === 0 ? 18 : 10) + depthOff);
+            wFy = by - (i === 0 ? 52 : 38) - (far ? 4 : 0);
+            wKx = bx + f * ((i === 0 ? 12 : 6) + depthOff * 0.5);
+            wKy = by - (i === 0 ? 60 : 46);
+
+            arcDx = f * (28 * lead);
+            arcDy = -22 * lead;
+            arcKx = f * (14 * lead);
+            arcKy = -16 * lead;
+
+            sFx = bx + f * ((i === 0 ? 94 : 76) + depthOff);
+            sFy = by + (i === 0 ? 9 : 4) + (far ? -3 : 2);
+            sKx = bx + f * ((i === 0 ? 48 : 38) + depthOff * 0.5);
+            sKy = by - (i === 0 ? 19 : 14);
+
+            folDx = -f * 6;
+            folDy = 4;
           } else if (atkType === 1) {
-            // Animation 1: Piercing Spear Thrust (Horizontal Dual Puncture)
-            const lead = i === 0 ? 1 : 0.85;
-            if (u < 0) {
-              const p = -u; // coil back tightly
-              fx = bx + f * (22 - p * (i === 0 ? 12 : 9));
-              fy = by - (i === 0 ? 10 : 4) - p * 3;
-              kx = bx + f * (i === 0 ? 12 : 8);
-              ky = by - (i === 0 ? 38 : 32);
-            } else {
-              fx = bx + f * (28 + u * 62 * lead);
-              fy = by - (i === 0 ? 8 : 2) - u * 2;
-              kx = (ax + fx) / 2 + f * 2;
-              ky = by - (i === 0 ? 18 : 14);
-            }
+            // Animation 1: Piercing Viper Thrust
+            const depthOff = far ? 5 : 0;
+            wFx = bx + f * ((i === 0 ? 8 : 2) + depthOff);
+            wFy = by - (i === 0 ? 14 : 5) - (far ? 3 : 0);
+            wKx = bx - f * ((i === 0 ? 4 : 10) - depthOff * 0.4);
+            wKy = by - (i === 0 ? 44 : 35);
+
+            arcDx = f * 16;
+            arcDy = i === 0 ? -4 : 2;
+            arcKx = f * 10;
+            arcKy = -6;
+
+            sFx = bx + f * ((i === 0 ? 98 : 84) + depthOff);
+            sFy = by - (i === 0 ? 12 : 2) + (far ? -4 : 1);
+            sKx = bx + f * ((i === 0 ? 52 : 43) + depthOff * 0.5);
+            sKy = by - (i === 0 ? 22 : 13);
+
+            folDx = -f * 10;
+            folDy = 2;
           } else {
-            // Animation 2: Rising Uppercut (Low-to-High Scoop)
-            const lead = i === 0 ? 1 : 0.75;
-            if (u < 0) {
-              const p = -u; // drop low scraping stick
-              fx = bx + f * (32 - p * (i === 0 ? 12 : 8));
-              fy = lerp(STICK.y - 1, STICK.y + 3, p);
-              kx = (ax + fx) / 2 + f * 2;
-              ky = by - 8;
-            } else {
-              fx = bx + f * (34 + u * 48 * lead);
-              fy = lerp(STICK.y + 3, by - (i === 0 ? 48 : 36), u);
-              kx = (ax + fx) / 2 + f * (i === 0 ? 3 : 1);
-              ky = by - (i === 0 ? 60 : 48);
-            }
+            // Animation 2: Rising Scythe Uppercut
+            const lead = i === 0 ? 1 : 0.8;
+            const depthOff = far ? 6 : 0;
+            wFx = bx + f * ((i === 0 ? 16 : 8) + depthOff);
+            wFy = STICK.y + 4;
+            wKx = bx + f * ((i === 0 ? 10 : 4) + depthOff * 0.5);
+            wKy = by - (i === 0 ? 9 : 6);
+
+            arcDx = f * (30 * lead);
+            arcDy = 12 * lead;
+            arcKx = f * (16 * lead);
+            arcKy = 6 * lead;
+
+            sFx = bx + f * ((i === 0 ? 88 : 72) + depthOff);
+            sFy = by - (i === 0 ? 52 : 38) - (far ? 5 : 0);
+            sKx = bx + f * ((i === 0 ? 44 : 34) + depthOff * 0.5);
+            sKy = by - (i === 0 ? 64 : 50);
+
+            folDx = -f * 5;
+            folDy = -6;
           }
+
+          fx = baseFx + lp.wind * (wFx - baseFx) + lp.strike * (sFx - baseFx) + lp.arc * arcDx + lp.follow * folDx;
+          fy = baseFy + lp.wind * (wFy - baseFy) + lp.strike * (sFy - baseFy) + lp.arc * arcDy + lp.follow * folDy;
+          kx = baseKx + lp.wind * (wKx - baseKx) + lp.strike * (sKx - baseKx) + lp.arc * arcKx;
+          ky = baseKy + lp.wind * (wKy - baseKy) + lp.strike * (sKy - baseKy) + lp.arc * arcKy;
+          clawCol = s.power > 0 ? '#ffeaa7' : (s.leech > 0 ? '#ff6b81' : colLight);
+        } else if (s.atkT > 0 && i >= 2) {
+          // Rear legs (i = 2, 3) brace firmly on the twig during windup and drive/extend during the lunge
+          const bp = attackPose(s.atkT);
+          const bodyShiftX = bx - s.x;
+          fx = baseFx - bodyShiftX * 0.75 - f * (bp.strike * 6 - bp.wind * 4);
+          fy = STICK.y - 1;
+          kx = (ax + fx) / 2 - f * (6 + bp.wind * 5 - bp.strike * 4);
+          ky = Math.min(ay, fy) - 24 - bp.wind * 6 + bp.strike * 5;
+        } else if (sweep > 0 && i < 2) {
+          // Low 360-style spinning scythe sweep
+          const reachSweep = Math.sin(sweep * Math.PI);
+          const sweepPhase = sweep * Math.PI * 1.35 - (i * 0.35) - (far ? 0.2 : 0);
+          fx = bx + f * (24 + Math.sin(sweepPhase) * (i === 0 ? 74 : 58));
+          fy = lerp(STICK.y - 1, STICK.y + 3 - reachSweep * 10, reachSweep);
+          kx = (ax + fx) / 2 + f * 8;
+          ky = by - 12 - reachSweep * 8;
+          clawCol = colLight;
         } else if (s.dashT > 0) {
           const burst = smoothMotion(Math.min(1, s.dashT / .16));
-          fx = bx + f * (46 + i * 17) * (s.pounce ? 1.16 : 1);
-          fy = by - 10 - i * 8 - burst * (s.pounce ? 15 : 5);
-          kx = bx + f * (20 + i * 7);
-          ky = by - 28 - burst * 10;
+          if (i < 2) {
+            fx = bx + f * (48 + (1 - i) * 20 + (far ? 6 : 0)) * (s.pounce ? 1.24 : 1);
+            fy = by - 14 - (1 - i) * 10 - burst * (s.pounce ? 22 : 7);
+            kx = bx + f * (22 + (1 - i) * 8);
+            ky = by - 32 - burst * (s.pounce ? 16 : 8);
+            clawCol = s.pounce ? '#ffd694' : colLight;
+          } else {
+            // Hind legs trail stretched behind during dash/pounce
+            fx = bx - f * (28 + (i - 1) * 22) - f * burst * (s.pounce ? 20 : 12);
+            fy = s.pounce ? STICK.y - 4 - burst * 9 : STICK.y - 1;
+            kx = (ax + fx) / 2 - f * 8;
+            ky = Math.min(ay, fy) - 18;
+          }
         } else if (s.quake > 0) {
-          fx = bx + f * (38 + i * 18);
+          // Dynamic slam-and-rebound over the 0.5s tremor duration
+          const qProgress = 1 - s.quake / 0.5;
+          const slam = qProgress < 0.22
+            ? smoothMotion(qProgress / 0.22)
+            : Math.max(0, 1 - smoothMotion((qProgress - 0.22) / 0.78));
+          if (i < 2) {
+            fx = bx + f * (44 + (1 - i) * 20);
+            fy = STICK.y - 1 + slam * 3.5;
+            kx = bx + f * (19 + (1 - i) * 8);
+            ky = by - 10 - i * 3 + slam * 10;
+          } else {
+            fx = baseFx - f * slam * 8;
+            fy = STICK.y - 1;
+            kx = baseKx - f * slam * 4;
+            ky = baseKy + slam * 6;
+          }
+        } else if (cast > 0 && i < 2) {
+          if (proj.kind === 'hook') {
+            // Harpoon launch brace: lead legs shoot straight out like a rail-launcher
+            fx = bx + f * (48 + (1 - i) * 22 + cast * 24);
+            fy = by - 10 - i * 6;
+            kx = bx + f * (24 + (1 - i) * 10);
+            ky = by - 28 - cast * 6;
+            clawCol = '#ffffff';
+          } else if (proj.kind === 'spit') {
+            // Venom spit: front legs flare wide beside the fangs
+            fx = bx + f * (34 + (1 - i) * 14 - cast * 6);
+            fy = by - 26 - (1 - i) * 10 - cast * 10;
+            kx = bx + f * (16 + (1 - i) * 6);
+            ky = by - 44 - cast * 8;
+            clawCol = '#9cf06a';
+          } else {
+            // Web cast: wide net-flinging arc
+            fx = bx + f * (45 + (1 - i) * 18 + cast * 18);
+            fy = by - 20 - (1 - i) * 12 - cast * 6;
+            kx = bx + f * (20 + (1 - i) * 8);
+            ky = by - 40 - cast * 6;
+            clawCol = '#f3f7ee';
+          }
+        } else if ((powerBurst > 0 || leechBurst > 0) && i < 2) {
+          // Battle-cry threat pose when activating Power Strike or Leech Fang
+          const b = Math.max(powerBurst, leechBurst);
+          fx = lerp(baseFx, bx + f * (26 + (1 - i) * 14 + (far ? 5 : 0)), b);
+          fy = lerp(baseFy, by - (i === 0 ? 46 : 34), b);
+          kx = lerp(baseKx, bx + f * (16 + (1 - i) * 6), b);
+          ky = lerp(baseKy, by - (i === 0 ? 54 : 42), b);
+          clawCol = powerBurst >= leechBurst ? '#ffb347' : '#ff4d6d';
+        } else if (mendBurst > 0) {
+          // Mend: spider presses and weaves silk onto the twig under its feet
+          const press = Math.sin(mendBurst * Math.PI * 2 + i) * 4 * mendBurst;
+          fx = baseFx + f * press;
           fy = STICK.y - 1;
-          kx = bx + f * (17 + i * 7);
-          ky = by - 8 - i * 3;
-        } else if (cast > 0) {
-          fx = bx + f * (43 + i * 18 + cast * 12);
-          fy = by - 18 - i * 12;
-          kx = bx + f * (19 + i * 8);
-          ky = by - 38 - cast * 5;
-        } else if (s.blocking || s.shield > 0) {
+          ky = baseKy + mendBurst * 5;
+        } else if (carapaceBurst > 0 && i < 2) {
+          // Carapace: armored shell guard brace
+          fx = lerp(baseFx, bx + f * (28 + i * 10), carapaceBurst);
+          fy = lerp(baseFy, by - 22 - i * 8, carapaceBurst);
+          kx = lerp(baseKx, bx + f * (14 + i * 6), carapaceBurst);
+          ky = lerp(baseKy, by - 42, carapaceBurst);
+          clawCol = '#d4ecff';
+        } else if ((s.blocking || s.shield > 0) && i < 2) {
           fx = bx + f * (31 + i * 11);
           fy = by - 25 - i * 8;
           kx = bx + f * (13 + i * 6);
           ky = by - 43;
-        } else if (s.riposte > 0) {
-          fx = bx + f * (i === 0 ? 57 : 38);
-          fy = by + (i === 0 ? 4 : -31);
-          kx = bx + f * (24 + i * 5);
-          ky = by - 34;
-        } else if (s.cheer) {
+        } else if (s.riposte > 0 && i < 2) {
+          // Crossed X-blade counter guard
+          fx = bx + f * (i === 0 ? 58 : 42);
+          fy = by + (i === 0 ? 6 : -34);
+          kx = bx + f * (24 + i * 6);
+          ky = by - (i === 0 ? 32 : 18);
+          clawCol = '#ffffff';
+        } else if (s.cheer && i < 2) {
           fx = bx + f * (26 + i * 12) + Math.sin(t * 11 + i) * 5;
           fy = by - 44 + Math.cos(t * 9 + i) * 6;
           kx = bx + f * (18 + i * 6);
@@ -704,28 +1100,81 @@ export class GagambakbakanScene extends Phaser.Scene {
         }
       }
 
-      if (shaky) {
+      if (isRealStun) {
         fx += Math.sin(t * 45 + i * 2) * 3;
         fy -= Math.abs(Math.sin(t * 40 + i)) * 4;
       }
 
       if (hb > 0.01) {
-        const hx = bx + f * (-34 + i * 24) * (far ? 1.12 : 1) + Math.sin(t * 8 + i * 1.7) * (5 + (s.pump || 0) * 8);
-        const hy = by - 38 - 8 * Math.sin(t * 6 + i) - (s.pump || 0) * 16;
-        const hkx = (ax + hx) / 2 + f * (i < 2 ? 12 : -12);
-        const hky = Math.min(ay, hy) - 6;
+        const surgePull = surgeBurst.active ? surgeBurst.pulse : 0;
+        const anchorBrace = s.anchorT > 0 ? Math.min(1, s.anchorT * 3) : 0;
+        let hx = bx + f * (-34 + i * 24) * (far ? 1.12 : 1) + Math.sin(t * 8 + i * 1.7) * (5 + (s.pump || 0) * 8) * (1 - anchorBrace * 0.7);
+        let hy = by - 38 - 8 * Math.sin(t * 6 + i) * (1 - anchorBrace * 0.7) - (s.pump || 0) * 16;
+        let hkx = (ax + hx) / 2 + f * (i < 2 ? 12 : -12);
+        let hky = Math.min(ay, hy) - 6;
+
+        // Surge skill: front legs reach high up the silk line and yank downward
+        if (surgePull > 0 && i < 2) {
+          hx = lerp(hx, bx - f * 6 + (i === 0 ? -4 : 4), surgePull);
+          hy = lerp(hy, by - 58 + surgeBurst.progress * 26, surgePull);
+          hkx = bx + f * (i === 0 ? 14 : -14);
+          hky = by - 42;
+          clawCol = '#ffffff';
+        } else if (anchorBrace > 0 && (i === 1 || i === 2)) {
+          // Anchor Line: middle legs plant wide onto the silk stabilizer bar
+          hx = bx + f * (i === 1 ? 38 : -38) * (far ? 1.08 : 1);
+          hy = by - 22;
+          hkx = (ax + hx) / 2 + f * (i === 1 ? 10 : -10);
+          hky = by - 34;
+        }
+
         fx = lerp(fx, hx, hb);
         fy = lerp(fy, hy, hb);
         kx = lerp(kx, hkx, hb);
         ky = lerp(ky, hky, hb);
       }
 
-      this.legStroke(ctx, { x: ax, y: ay }, { x: kx, y: ky }, { x: fx, y: fy }, far ? 3.2 : 4, far ? colDark : colMain);
-    }
-  }
+      // Haste footwork blur arc on moving legs
+      if (!far && s.hasteT > 0 && moving > 0.2 && !s.hang) {
+        ctx.save();
+        ctx.globalAlpha = 0.35;
+        ctx.strokeStyle = '#70d6ff';
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.arc(fx - f * 6, fy - 2, 7, Math.PI * 0.15, Math.PI * 0.85);
+        ctx.stroke();
+        ctx.restore();
+      }
 
-  private atkProgress(t: number): number {
-    return attackMotion(t);
+      this.legStroke(
+        ctx,
+        { x: ax, y: ay },
+        { x: kx, y: ky },
+        { x: fx, y: fy },
+        far ? 3.2 : (i < 2 && (s.atkT > 0 || sweepArc > 0) ? 4.4 : 4),
+        far ? colDark : colMain,
+        !far ? clawCol : undefined
+      );
+
+      // Lead claw windup telegraph glint star
+      if (!far && i === 0 && s.atkT > 0 && !s.hang) {
+        const glint = attackPose(s.atkT).glint;
+        if (glint > 0.15) {
+          ctx.save();
+          ctx.globalAlpha = glint * 0.9;
+          ctx.strokeStyle = s.power > 0 ? '#ffeaa7' : '#ffffff';
+          ctx.lineWidth = 1.8;
+          const r = 4 + glint * 4;
+          ctx.beginPath();
+          ctx.moveTo(fx - r, fy);
+          ctx.lineTo(fx + r, fy);
+          ctx.moveTo(fx, fy - r);
+          ctx.lineTo(fx, fy + r);
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+    }
   }
 
   private drawSpider(ctx: CanvasRenderingContext2D, s: any, t: number) {
@@ -736,30 +1185,103 @@ export class GagambakbakanScene extends Phaser.Scene {
     const pattern = s.pattern || 'stripes';
     const acc = s.acc || 'none';
 
+    // Track recent power/leech buffs so active strikes keep their empowered visual trail even after hit consumption
+    const slot = s.id === 1 ? 1 : 0;
+    if (s.power > 0) this.powerTrailUntil[slot] = t + 0.36;
+    if (s.leech > 0) this.leechTrailUntil[slot] = t + 0.36;
+    const empoweredPower = s.power > 0 || t < this.powerTrailUntil[slot];
+    const empoweredLeech = s.leech > 0 || t < this.leechTrailUntil[slot];
+
     const f = s.face;
     const hb = s.hb || 0;
-    const u = s.atkT > 0 ? this.atkProgress(s.atkT) : 0;
+    const pose = s.atkT > 0 ? attackPose(s.atkT) : { wind: 0, strike: 0, arc: 0, swing: 0, follow: 0, glint: 0 };
+    const sweep = this.sweepCast(s);
+    const sweepArc = sweep > 0 ? Math.sin(sweep * Math.PI) : 0;
+    const powerBurst = this.skillCast(s, 'power', 0.42);
+    const shieldBurst = this.skillCast(s, 'shield', 0.42);
+    const mendBurst = this.skillCast(s, 'mend', 0.55);
+    const carapaceBurst = this.skillCast(s, 'carapace', 0.62);
+    const leechBurst = this.skillCast(s, 'leech', 0.42);
+    const hasteBurst = this.skillCast(s, 'haste', 0.4);
+    const surgeBurst = this.skillCast(s, 'surge', 0.45);
+    const anchorBurst = this.skillCast(s, 'anchor', 0.45);
+
     const atkType = (s.atkType !== undefined ? s.atkType : (s.atkId || 0)) % 3;
     const moving = Math.min(1, Math.abs(s.move || 0));
     const gait = gaitMotion(s.walkPhase || 0);
-    const cast = this.projectileCast(s);
+    const proj = this.projectileCastInfo(s);
+    const cast = proj.amount;
 
     let atkXOffset = 0;
     let atkYOffset = 0;
+    let abdomenTilt = 0;
+    let abdomenScaleX = 1;
+    let abdomenScaleY = 1;
+    let headOffsetX = 0;
+    let headOffsetY = 0;
+
     if (s.atkT > 0) {
       if (atkType === 0) {
-        // Overhead slash: lunges forward on strike, body rears slightly on windup
-        atkXOffset = u * 8;
-        atkYOffset = u < 0 ? -u * 3 : u * 2;
+        // Overhead Claw Cleave: rears high on windup, lunges forward and down on strike
+        atkXOffset = -pose.wind * 7 + pose.strike * 13 + pose.arc * 4;
+        atkYOffset = -pose.wind * 6 + pose.strike * 3 - pose.arc * 4;
+        abdomenTilt = f * (pose.wind * 0.22 - pose.strike * 0.16);
+        abdomenScaleX = 1 - pose.wind * 0.05 + pose.strike * 0.07;
+        abdomenScaleY = 1 + pose.wind * 0.05 - pose.strike * 0.05;
+        headOffsetX = f * (-pose.wind * 2 + pose.strike * 4);
+        headOffsetY = -pose.wind * 4 + pose.strike * 3;
       } else if (atkType === 1) {
-        // Spear thrust: pulls back on windup, deep thrust surge on strike
-        atkXOffset = u < 0 ? u * 5 : u * 12;
-        atkYOffset = 0;
+        // Piercing Viper Thrust: coils tightly back, then shoots forward horizontally
+        atkXOffset = -pose.wind * 10 + pose.strike * 17 + pose.arc * 5;
+        atkYOffset = pose.wind * 2 - pose.strike * 2;
+        abdomenTilt = f * (-pose.wind * 0.12 + pose.strike * 0.08);
+        abdomenScaleX = 1 - pose.wind * 0.08 + pose.strike * 0.11;
+        abdomenScaleY = 1 + pose.wind * 0.06 - pose.strike * 0.07;
+        headOffsetX = f * (-pose.wind * 3 + pose.strike * 6);
+        headOffsetY = -pose.strike * 1.5;
       } else {
-        // Rising uppercut: ducks low on windup, scoops up on strike
-        atkXOffset = u * 9;
-        atkYOffset = u < 0 ? -u * 4 : -u * 7;
+        // Rising Scythe Uppercut: crouches low against twig, then scoops upward
+        atkXOffset = -pose.wind * 6 + pose.strike * 13 + pose.arc * 5;
+        atkYOffset = pose.wind * 5 - pose.strike * 10 + pose.arc * 3;
+        abdomenTilt = f * (-pose.wind * 0.18 + pose.strike * 0.24);
+        abdomenScaleX = 1 + pose.wind * 0.05 + pose.strike * 0.06;
+        abdomenScaleY = 1 - pose.wind * 0.06 - pose.strike * 0.04;
+        headOffsetX = f * (pose.strike * 4);
+        headOffsetY = pose.wind * 3 - pose.strike * 6;
       }
+    } else if (sweepArc > 0) {
+      atkXOffset = sweepArc * 11;
+      atkYOffset = sweepArc * 3;
+      abdomenTilt = -f * sweepArc * 0.18;
+      abdomenScaleX = 1 + sweepArc * 0.08;
+      headOffsetX = f * sweepArc * 4;
+    } else if (s.dashT > 0) {
+      const dashArc = Math.sin(Math.min(1, s.dashT / (s.pounce ? 0.14 : 0.16)) * Math.PI);
+      atkYOffset = s.pounce ? -dashArc * 14 : -dashArc * 4;
+      abdomenTilt = f * dashArc * (s.pounce ? 0.22 : -0.1);
+      abdomenScaleX = 1 + dashArc * 0.09;
+      abdomenScaleY = 1 - dashArc * 0.06;
+      headOffsetY = s.pounce ? -dashArc * 5 : 0;
+    } else if (cast > 0) {
+      if (proj.kind === 'web') {
+        abdomenTilt = f * cast * 0.24;
+        abdomenScaleX = 1 + cast * 0.08;
+      } else if (proj.kind === 'spit') {
+        headOffsetX = f * cast * 5;
+        headOffsetY = -cast * 3;
+        abdomenTilt = -f * cast * 0.12;
+      } else if (proj.kind === 'hook') {
+        atkXOffset = -cast * 3;
+        headOffsetX = f * cast * 6;
+      }
+    } else if (powerBurst.active || leechBurst.active) {
+      const b = Math.max(powerBurst.pulse, leechBurst.pulse);
+      atkYOffset = -b * 5;
+      abdomenTilt = f * b * 0.18;
+      headOffsetY = -b * 4;
+    } else if (s.hasteT > 0 && moving > 0.1) {
+      abdomenTilt = -f * 0.12 * moving;
+      headOffsetX = f * 2.5 * moving;
     }
 
     const bx = s.x + f * atkXOffset - (s.blocking ? f * 4 : 0) - f * cast * 4;
@@ -767,7 +1289,8 @@ export class GagambakbakanScene extends Phaser.Scene {
     by += Math.sin(t * 2.1 + s.id * 1.7) * .55 * (1 - moving) * (1 - hb);
     by -= gait.lift * 1.4 * moving;
     by -= cast * 2;
-    if (s.stun > 0 && !s.hang) by += 3;
+    const isRealStun = s.stun > 0 && !s.hang && sweep <= 0 && (s.stun > 0.26 || s.hitFlash > 0 || s.gLock);
+    if (isRealStun) by += 3;
 
     const byW = BODY_Y + (s.drop || 0) + 26 * hb;
     let flip = lerp(-1, 1, hb);
@@ -776,31 +1299,138 @@ export class GagambakbakanScene extends Phaser.Scene {
     ctx.save();
     if (s.inv > 0 && Math.floor(t * 18) % 2) ctx.globalAlpha = 0.55;
 
-    // Silk thread
+    // Silk thread & Hang Skill VFX (Surge & Anchor Line)
     if (hb > 0.04) {
       const tx = bx - f * 8;
       const ty = byW - 16;
       const ax0 = clamp(s.x, STICK.l, STICK.r);
       const ay0 = STICK.y + STICK.th - 2;
-      const sway = Math.sin(t * 2.2 + s.id) * Math.min(10, (s.drop || 0) * 0.08);
-      ctx.strokeStyle = 'rgba(238,244,232,.85)';
-      ctx.lineWidth = 1.6;
-      ctx.beginPath();
-      ctx.moveTo(ax0, ay0);
-      ctx.quadraticCurveTo(ax0 + sway, (ay0 + ty) / 2, tx, ty);
-      ctx.stroke();
+      const anchored = s.anchorT > 0;
+      const sway = anchored ? 0 : Math.sin(t * 2.2 + s.id) * Math.min(10, (s.drop || 0) * 0.08);
+      const midX = ax0 + sway;
+      const midY = (ay0 + ty) / 2;
+
+      if (anchored) {
+        // Anchor Line: reinforced glowing golden-cyan braided cable & twig lock clamp
+        ctx.save();
+        ctx.strokeStyle = 'rgba(90, 195, 255, 0.45)';
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.moveTo(ax0, ay0);
+        ctx.lineTo(tx, ty);
+        ctx.stroke();
+
+        ctx.strokeStyle = '#d4f1ff';
+        ctx.lineWidth = 2.4;
+        ctx.beginPath();
+        ctx.moveTo(ax0, ay0);
+        ctx.lineTo(tx, ty);
+        ctx.stroke();
+
+        // Cross-anchor grappling clamp on the twig bark
+        ctx.strokeStyle = '#5aa9f0';
+        ctx.fillStyle = '#e6f7ff';
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.moveTo(ax0 - 14, ay0 - 2);
+        ctx.lineTo(ax0 + 14, ay0 - 2);
+        ctx.moveTo(ax0 - 9, ay0 + 5);
+        ctx.lineTo(ax0, ay0 - 5);
+        ctx.lineTo(ax0 + 9, ay0 + 5);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(ax0, ay0, 3.8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Horizontal silk stabilizer bar & lock ring near the spider
+        const barY = byW - 20;
+        const pulseA = 0.65 + 0.25 * Math.sin(t * 10);
+        ctx.globalAlpha = pulseA;
+        ctx.strokeStyle = '#70d6ff';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(bx - 36, barY);
+        ctx.lineTo(bx + 36, barY);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.ellipse(tx, barY, 16 + (anchorBurst.active ? anchorBurst.pulse * 12 : 0), 5, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      } else {
+        ctx.strokeStyle = 'rgba(238,244,232,.85)';
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(ax0, ay0);
+        ctx.quadraticCurveTo(midX, midY, tx, ty);
+        ctx.stroke();
+      }
+
+      // Surge VFX: rising wind-vortex rings & upward tension streaks along silk thread
+      if (surgeBurst.active) {
+        ctx.save();
+        const p = surgeBurst.progress;
+        const pulse = surgeBurst.pulse;
+        ctx.strokeStyle = '#70d6ff';
+        ctx.lineWidth = 2.4;
+        for (let r = 0; r < 3; r++) {
+          const ringP = ((p * 1.4 + r * 0.28) % 1);
+          const ry = lerp(byW + 18, ay0 + 12, ringP);
+          const rx = lerp(tx, ax0, ringP);
+          ctx.globalAlpha = (1 - ringP) * pulse * 0.9;
+          ctx.beginPath();
+          ctx.ellipse(rx, ry, 18 + (1 - ringP) * 14, 5, 0, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        // Vertical lift speed lines around the rising spider
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        [-28, -14, 14, 28].forEach((ox, idx) => {
+          ctx.globalAlpha = pulse * 0.8;
+          const sy = byW - 10 + ((idx % 2) * 12) + p * 28;
+          ctx.beginPath();
+          ctx.moveTo(bx + ox, sy);
+          ctx.lineTo(bx + ox, sy + 26);
+          ctx.stroke();
+        });
+        ctx.restore();
+      }
     }
 
     ctx.translate(0, byW);
     ctx.scale(1, flip);
     ctx.translate(0, -(STICK.y - BODY_H));
 
-    // Far legs
-    this.drawLegs(ctx, s, bx, by, true, colMain, colDark);
+    // Dash / Pounce translucent afterimage ghosts
+    if (s.dashT > 0) {
+      const dashDir = s.dashDir || f;
+      const ghosts = s.pounce ? 3 : 2;
+      for (let gIdx = ghosts; gIdx >= 1; gIdx--) {
+        const gx = bx - dashDir * gIdx * (s.pounce ? 22 : 17);
+        const gy = by + (s.pounce ? gIdx * 3.5 : 0);
+        ctx.save();
+        ctx.globalAlpha = (0.24 / gIdx) * Math.min(1, s.dashT / 0.12);
+        ctx.fillStyle = s.pounce ? '#ffb347' : colLight;
+        ctx.beginPath();
+        ctx.ellipse(gx - f * 21, gy - 1, 21, 15, 0, 0, Math.PI * 2);
+        ctx.ellipse(gx + f * 11, gy, 14, 13, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
 
-    // Abdomen
-    const cx = bx - f * 21;
-    const cy = by - 1;
+    // Far legs
+    this.drawLegs(ctx, s, bx, by, true, colMain, colDark, colLight);
+
+    // Abdomen (with attack/skill pitch & squash/stretch)
+    const cx = bx - f * 21 - f * (pose.strike * 2 - pose.wind * 1.5);
+    const cy = by - 1 - pose.wind * 2 + pose.strike * 1.5;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(abdomenTilt);
+    ctx.scale(abdomenScaleX, abdomenScaleY);
+    ctx.translate(-cx, -cy);
+
     ctx.save();
     ctx.beginPath();
     ctx.ellipse(cx, cy, 22, 17, 0, 0, Math.PI * 2);
@@ -815,7 +1445,7 @@ export class GagambakbakanScene extends Phaser.Scene {
     // Pattern
     ctx.fillStyle = colDark;
     ctx.strokeStyle = colDark;
-    if (pattern !== 'custom') ctx.globalAlpha *= .55;
+    if (pattern !== 'custom') ctx.globalAlpha *= .68;
     if (pattern === 'custom') {
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
@@ -835,53 +1465,148 @@ export class GagambakbakanScene extends Phaser.Scene {
         } else ctx.stroke();
       });
     } else if (pattern === 'dots') {
-      [[-12, -5], [-4, 7], [5, -6], [-1, -11], [11, 6], [-14, 8]].forEach(([dx, dy]) => {
+      // Leopard / Ladybug rosettes with light halo rings and varied sizes
+      [
+        [0, 0, 4.2],
+        [-11, -6, 3.1], [-11, 6, 3.1],
+        [10, -7, 3.2], [10, 6, 3.2],
+        [-1, -12, 2.5], [-1, 12, 2.5],
+        [-18, 0, 2.3]
+      ].forEach(([dx, dy, r]) => {
+        const px = cx + f * dx;
+        const py = cy + dy;
+        ctx.fillStyle = colLight;
+        ctx.globalAlpha *= 0.55;
         ctx.beginPath();
-        ctx.arc(cx + dx, cy + dy, 3.4, 0, Math.PI * 2);
+        ctx.arc(px, py, r + 1.2, 0, Math.PI * 2);
         ctx.fill();
+        ctx.globalAlpha /= 0.55;
+
+        ctx.fillStyle = colDark;
+        ctx.beginPath();
+        ctx.arc(px, py, r, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = colLight;
+        ctx.globalAlpha *= 0.7;
+        ctx.beginPath();
+        ctx.arc(px - f * r * 0.28, py - r * 0.28, Math.max(0.8, r * 0.26), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha /= 0.7;
       });
     } else if (pattern === 'chevron') {
-      ctx.strokeStyle = colDark;
-      ctx.lineWidth = 4.5;
+      // Interlocking armored viper chevrons with light edge piping
+      ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
-      [-12, -3, 6].forEach((k) => {
+      [-13, -4, 5, 13].forEach((k, idx) => {
+        const span = idx === 3 ? 9 : 13;
+        ctx.strokeStyle = colLight;
+        ctx.lineWidth = 5.2;
+        ctx.globalAlpha *= 0.45;
         ctx.beginPath();
-        ctx.moveTo(cx + k - f * 6, cy - 13);
-        ctx.lineTo(cx + k, cy);
-        ctx.lineTo(cx + k - f * 6, cy + 13);
+        ctx.moveTo(cx + f * (k - 6), cy - span);
+        ctx.lineTo(cx + f * (k + 2), cy);
+        ctx.lineTo(cx + f * (k - 6), cy + span);
+        ctx.stroke();
+        ctx.globalAlpha /= 0.45;
+
+        ctx.strokeStyle = colDark;
+        ctx.lineWidth = 3.6;
+        ctx.beginPath();
+        ctx.moveTo(cx + f * (k - 6), cy - span);
+        ctx.lineTo(cx + f * (k + 2), cy);
+        ctx.lineTo(cx + f * (k - 6), cy + span);
         ctx.stroke();
       });
     } else if (pattern === 'rings') {
+      // Ocellus target bullseye with alternating dark & light rings
       ctx.strokeStyle = colDark;
-      ctx.lineWidth = 3.2;
-      [6, 12, 17].forEach((r) => {
+      ctx.lineWidth = 3;
+      [17.5, 10.5].forEach((r) => {
         ctx.beginPath();
         ctx.ellipse(cx, cy, r, r * 0.75, 0, 0, Math.PI * 2);
         ctx.stroke();
       });
-      ctx.fillStyle = colDark;
+      ctx.strokeStyle = colLight;
+      ctx.lineWidth = 1.6;
+      ctx.globalAlpha *= 0.65;
       ctx.beginPath();
-      ctx.arc(cx, cy, 2.5, 0, Math.PI * 2);
+      ctx.ellipse(cx, cy, 14, 10.5, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha /= 0.65;
+
+      ctx.fillStyle = colDark;
+      ctx.strokeStyle = colLight;
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, 5.5, 4.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = colLight;
+      ctx.beginPath();
+      ctx.arc(cx - f * 1.2, cy - 1, 1.5, 0, Math.PI * 2);
       ctx.fill();
     } else if (pattern === 'cross') {
+      // Ornate Argiope St. Andrew's cross with central diamond medallion
       ctx.fillStyle = colDark;
+      ctx.strokeStyle = colLight;
+      ctx.lineWidth = 1.2;
       ctx.fillRect(cx - 3.5, cy - 18, 7, 36);
-      ctx.fillRect(cx - 15, cy - 3.5, 30, 7);
+      ctx.fillRect(cx - 17, cy - 3.5, 34, 7);
+      ctx.strokeRect(cx - 3.5, cy - 18, 7, 36);
+      ctx.strokeRect(cx - 17, cy - 3.5, 34, 7);
+
+      ctx.fillStyle = colLight;
       ctx.beginPath();
-      ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+      ctx.moveTo(cx, cy - 7);
+      ctx.lineTo(cx + 7, cy);
+      ctx.lineTo(cx, cy + 7);
+      ctx.lineTo(cx - 7, cy);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = colDark;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - 4.2);
+      ctx.lineTo(cx + 4.2, cy);
+      ctx.lineTo(cx, cy + 4.2);
+      ctx.lineTo(cx - 4.2, cy);
+      ctx.closePath();
       ctx.fill();
     } else if (pattern === 'split') {
+      // Harlequin dual-tone split with central crest & counter-dots
       ctx.fillStyle = colDark;
       ctx.fillRect(cx - 30, cy - 24, 60, 24);
-      ctx.strokeStyle = colDark;
-      ctx.lineWidth = 3;
+      ctx.strokeStyle = colLight;
+      ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(cx - 24, cy);
-      ctx.lineTo(cx + 24, cy);
+      ctx.moveTo(cx - 24, cy - 0.5);
+      ctx.lineTo(cx + 24, cy - 0.5);
       ctx.stroke();
-    } else if (pattern === 'webmark') {
       ctx.strokeStyle = colDark;
       ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(cx - 24, cy + 1.5);
+      ctx.lineTo(cx + 24, cy + 1.5);
+      ctx.stroke();
+
+      ctx.fillStyle = colLight;
+      [-9, 9].forEach((dx) => {
+        ctx.beginPath();
+        ctx.arc(cx + dx, cy - 8, 2.3, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.fillStyle = colDark;
+      [-9, 9].forEach((dx) => {
+        ctx.beginPath();
+        ctx.arc(cx + dx, cy + 8, 2.4, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    } else if (pattern === 'webmark') {
+      // Scalloped radial orb-web lattice with dew-drop center
+      ctx.strokeStyle = colDark;
+      ctx.lineWidth = 1.8;
       for (let a = 0; a < 8; a++) {
         const rad = a * Math.PI / 4;
         ctx.beginPath();
@@ -889,34 +1614,83 @@ export class GagambakbakanScene extends Phaser.Scene {
         ctx.lineTo(cx + Math.cos(rad) * 26, cy + Math.sin(rad) * 20);
         ctx.stroke();
       }
-      [7, 14, 21].forEach((r) => {
+      [6.5, 13, 19.5].forEach((r) => {
         ctx.beginPath();
         for (let a = 0; a <= 8; a++) {
           const rad = a * Math.PI / 4;
           const px = cx + Math.cos(rad) * r;
-          const py = cy + Math.sin(rad) * (r * 0.75);
-          if (a === 0) ctx.moveTo(px, py);
-          else ctx.lineTo(px, py);
+          const py = cy + Math.sin(rad) * (r * 0.76);
+          if (a === 0) {
+            ctx.moveTo(px, py);
+          } else {
+            const midRad = (a - 0.5) * Math.PI / 4;
+            const qx = cx + Math.cos(midRad) * (r * 0.85);
+            const qy = cy + Math.sin(midRad) * (r * 0.76 * 0.85);
+            ctx.quadraticCurveTo(qx, qy, px, py);
+          }
         }
         ctx.stroke();
       });
+      ctx.fillStyle = colLight;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 2.2, 0, Math.PI * 2);
+      ctx.fill();
     } else if (pattern === 'diamonds') {
-      ctx.fillStyle = colDark;
-      [-12, 0, 12].forEach((dx) => {
+      // Royal Argyle diamond chain with inner light cores
+      [-12, 0, 12].forEach((dx, idx) => {
+        const h = idx === 1 ? 11.5 : 9.5;
+        const w = idx === 1 ? 6.2 : 5;
+        ctx.fillStyle = colDark;
+        ctx.strokeStyle = colLight;
+        ctx.lineWidth = 1.1;
         ctx.beginPath();
-        ctx.moveTo(cx + dx, cy - 11);
-        ctx.lineTo(cx + dx + 5.5, cy);
-        ctx.lineTo(cx + dx, cy + 11);
-        ctx.lineTo(cx + dx - 5.5, cy);
+        ctx.moveTo(cx + dx, cy - h);
+        ctx.lineTo(cx + dx + w, cy);
+        ctx.lineTo(cx + dx, cy + h);
+        ctx.lineTo(cx + dx - w, cy);
         ctx.closePath();
         ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = colLight;
+        ctx.globalAlpha *= 0.65;
+        ctx.beginPath();
+        ctx.moveTo(cx + dx, cy - h * 0.42);
+        ctx.lineTo(cx + dx + w * 0.42, cy);
+        ctx.lineTo(cx + dx, cy + h * 0.42);
+        ctx.lineTo(cx + dx - w * 0.42, cy);
+        ctx.closePath();
+        ctx.fill();
+        ctx.globalAlpha /= 0.65;
       });
     } else if (pattern !== 'plain') {
-      [-12, -3, 6].forEach((k) => {
+      // Tapered tiger stripes with dorsal spine & light contour rim
+      ctx.strokeStyle = colDark;
+      ctx.lineWidth = 2;
+      ctx.globalAlpha *= 0.55;
+      ctx.beginPath();
+      ctx.moveTo(cx - 20, cy);
+      ctx.lineTo(cx + 20, cy);
+      ctx.stroke();
+      ctx.globalAlpha /= 0.55;
+
+      [-12, -4, 4, 11].forEach((k, idx) => {
+        const w = idx === 1 || idx === 2 ? 3.8 : 2.8;
+        const x0 = cx + f * k;
+        ctx.strokeStyle = colLight;
+        ctx.lineWidth = w + 1.4;
+        ctx.globalAlpha *= 0.4;
         ctx.beginPath();
-        ctx.moveTo(cx + k, cy - 20);
-        ctx.bezierCurveTo(cx + k - 4, cy - 8, cx + k + 4, cy + 8, cx + k, cy + 20);
-        ctx.lineWidth = 4.5;
+        ctx.moveTo(x0 + f * 2, cy - 18);
+        ctx.quadraticCurveTo(x0 - f * 4, cy, x0 + f * 2, cy + 18);
+        ctx.stroke();
+        ctx.globalAlpha /= 0.4;
+
+        ctx.strokeStyle = colDark;
+        ctx.lineWidth = w;
+        ctx.beginPath();
+        ctx.moveTo(x0 + f * 2, cy - 18);
+        ctx.quadraticCurveTo(x0 - f * 4, cy, x0 + f * 2, cy + 18);
         ctx.stroke();
       });
     }
@@ -936,33 +1710,85 @@ export class GagambakbakanScene extends Phaser.Scene {
     ctx.stroke();
     ctx.globalAlpha /= .28;
 
-    // Cephalothorax (head/chest)
-    const hx2 = bx + f * 11;
-    const hy2 = by;
+    if (s.hitFlash > 0) {
+      ctx.fillStyle = `rgba(255,255,255,${(s.hitFlash / 0.2 * 0.7).toFixed(2)})`;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, 22, 17, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+
+    // Cephalothorax (head/chest) with attack lunge & pitch
+    const hx2 = bx + f * 11 + headOffsetX;
+    const hy2 = by + headOffsetY;
     const g2 = ctx.createRadialGradient(hx2 - f * 4, hy2 - 6, 1, hx2, hy2, 17);
     g2.addColorStop(0, colMain);
     g2.addColorStop(1, colDark);
     ctx.fillStyle = g2;
+    ctx.strokeStyle = COLORS.outline;
+    ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.ellipse(hx2, hy2, 15, 14, 0, 0, Math.PI * 2);
+    ctx.ellipse(hx2, hy2, 15 + pose.strike * 1.2, 14 - pose.strike * 0.6, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
 
     if (s.hitFlash > 0) {
       ctx.fillStyle = `rgba(255,255,255,${(s.hitFlash / 0.2 * 0.7).toFixed(2)})`;
       ctx.beginPath();
-      ctx.ellipse(cx, cy, 22, 17, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
       ctx.ellipse(hx2, hy2, 15, 14, 0, 0, Math.PI * 2);
       ctx.fill();
     }
 
+    // Carapace Skill Overlay: Crystalline metallic chitin armor plates & hexagon flash
+    if (carapaceBurst.active) {
+      ctx.save();
+      const cp = carapaceBurst.pulse;
+      ctx.globalAlpha = cp * 0.85;
+      ctx.strokeStyle = '#d4ecff';
+      ctx.fillStyle = 'rgba(143, 183, 214, 0.35)';
+      ctx.lineWidth = 2.4;
+
+      // Armored shell plates over abdomen and cephalothorax
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, 24.5, 19, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(hx2, hy2, 17, 15.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Interlocking chevron armor ribs on abdomen
+      [-10, 0, 10].forEach((ox) => {
+        ctx.beginPath();
+        ctx.moveTo(cx + ox - f * 5, cy - 14);
+        ctx.lineTo(cx + ox + f * 4, cy);
+        ctx.lineTo(cx + ox - f * 5, cy + 14);
+        ctx.stroke();
+      });
+
+      // Expanding hexagonal bulwark ring
+      const hexR = 26 + carapaceBurst.progress * 34;
+      ctx.globalAlpha = (1 - carapaceBurst.progress) * 0.9;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      for (let h = 0; h <= 6; h++) {
+        const ang = (h * Math.PI) / 3;
+        const px = bx - f * 4 + Math.cos(ang) * hexR;
+        const py = by + Math.sin(ang) * (hexR * 0.75);
+        if (h === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
     // Near legs
-    this.drawLegs(ctx, s, bx, by, false, colMain, colDark);
+    this.drawLegs(ctx, s, bx, by, false, colMain, colDark, colLight);
 
     // Eyes
-    const dazed = (s.stun > 0 && !s.hang) || s.ko;
+    const dazed = isRealStun || s.ko;
     const eyes: Array<[number, number, number]> = [
       [0, -3, 2.5], [9, -2.5, 2.3], [-7, -2, 1.35], [14, 1, 1.3],
       [-6, -10, 1.05], [0, -12, 1.1], [7, -11, 1.05], [13, -7, 1]
@@ -981,7 +1807,7 @@ export class GagambakbakanScene extends Phaser.Scene {
         ctx.stroke();
       } else {
         ctx.fillStyle = '#07100f';
-        ctx.strokeStyle = colLight;
+        ctx.strokeStyle = empoweredPower ? '#ffd34d' : (empoweredLeech ? '#ff6b81' : colLight);
         ctx.lineWidth = .7;
         ctx.beginPath();
         ctx.arc(ex, ey, er, 0, Math.PI * 2);
@@ -996,38 +1822,84 @@ export class GagambakbakanScene extends Phaser.Scene {
 
     // Accessories
     if (acc === 'band') {
+      // Martial Headband with fluttering tails & metallic brow plate
+      const tailLag = pose.strike * 6 - pose.wind * 3 + (s.hasteT > 0 ? 5 : 0);
       ctx.lineCap = 'round';
-      ctx.strokeStyle = '#e8593f';
-      ctx.lineWidth = 5;
+      ctx.lineJoin = 'round';
+
+      // Ribbon tails
+      ctx.strokeStyle = COLORS.outline;
+      ctx.lineWidth = 4.6;
       ctx.beginPath();
-      ctx.moveTo(hx2 - f * 8, hy2 - 10);
-      ctx.quadraticCurveTo(hx2 + f * 4, hy2 - 14, hx2 + f * 14, hy2 - 8);
+      ctx.moveTo(hx2 - f * 9, hy2 - 10);
+      ctx.lineTo(hx2 - f * (23 + tailLag), hy2 - 13 + Math.sin(t * 8) * 3);
+      ctx.moveTo(hx2 - f * 9, hy2 - 9);
+      ctx.lineTo(hx2 - f * (22 + tailLag), hy2 - 3 + Math.sin(t * 8 + 1.2) * 3);
       ctx.stroke();
-      ctx.lineWidth = 3;
+
+      ctx.strokeStyle = '#e84118';
+      ctx.lineWidth = 2.8;
+      ctx.stroke();
+
+      // Main headband wrap
+      ctx.strokeStyle = COLORS.outline;
+      ctx.lineWidth = 6.8;
       ctx.beginPath();
-      ctx.moveTo(hx2 - f * 8, hy2 - 10);
-      ctx.lineTo(hx2 - f * 22, hy2 - 12 + Math.sin(t * 8) * 3);
-      ctx.moveTo(hx2 - f * 8, hy2 - 10);
-      ctx.lineTo(hx2 - f * 21, hy2 - 3 + Math.sin(t * 8 + 1) * 3);
+      ctx.moveTo(hx2 - f * 10, hy2 - 10);
+      ctx.quadraticCurveTo(hx2 + f * 3, hy2 - 15, hx2 + f * 14, hy2 - 9);
+      ctx.stroke();
+
+      ctx.strokeStyle = '#e84118';
+      ctx.lineWidth = 4.6;
+      ctx.stroke();
+
+      // Metallic forehead plate
+      ctx.fillStyle = '#dfe6e9';
+      ctx.strokeStyle = COLORS.outline;
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.roundRect(hx2 + f * 2 - 5, hy2 - 14.5, 10, 4.5, 1.5);
+      ctx.fill();
       ctx.stroke();
     } else if (acc === 'crown') {
+      // Royal Jewelled Crown with crimson velvet base, spires, pearls & gems
       const cb = hy2 - 11;
       ctx.fillStyle = '#ffd34d';
       ctx.strokeStyle = COLORS.outline;
       ctx.lineWidth = 1.6;
       ctx.lineJoin = 'round';
       ctx.beginPath();
-      ctx.moveTo(hx2 - 9, cb);
-      ctx.lineTo(hx2 - 9, cb - 10);
-      ctx.lineTo(hx2 - 4.5, cb - 5);
-      ctx.lineTo(hx2, cb - 13);
-      ctx.lineTo(hx2 + 4.5, cb - 5);
-      ctx.lineTo(hx2 + 9, cb - 10);
-      ctx.lineTo(hx2 + 9, cb);
+      ctx.moveTo(hx2 - 10, cb);
+      ctx.lineTo(hx2 - 11, cb - 11);
+      ctx.lineTo(hx2 - 5, cb - 5);
+      ctx.lineTo(hx2, cb - 14);
+      ctx.lineTo(hx2 + 5, cb - 5);
+      ctx.lineTo(hx2 + 11, cb - 11);
+      ctx.lineTo(hx2 + 10, cb);
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
+
+      // Velvet base band
+      ctx.fillStyle = '#c23616';
+      ctx.beginPath();
+      ctx.roundRect(hx2 - 10.5, cb - 2.5, 21, 3.2, 1.2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Spire pearls & center ruby
+      ctx.fillStyle = '#fff9d2';
+      [[-11, -11.5, 1.5], [0, -14.8, 1.8], [11, -11.5, 1.5]].forEach(([ox, oy, r]) => {
+        ctx.beginPath();
+        ctx.arc(hx2 + ox, cb + oy, r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.fillStyle = '#e84118';
+      ctx.beginPath();
+      ctx.arc(hx2, cb - 5.5, 1.6, 0, Math.PI * 2);
+      ctx.fill();
     } else if (acc === 'horns') {
+      // Curved segmented demon/oni horns with brow sockets
       const hb0 = hy2 - 10;
       ctx.fillStyle = '#f4efe0';
       ctx.strokeStyle = COLORS.outline;
@@ -1035,86 +1907,115 @@ export class GagambakbakanScene extends Phaser.Scene {
       ctx.lineJoin = 'round';
       [-1, 1].forEach((sg) => {
         ctx.beginPath();
-        ctx.moveTo(hx2 + sg * 11, hb0 + 3);
-        ctx.lineTo(hx2 + sg * 8, hb0 - 14);
-        ctx.lineTo(hx2 + sg * 2, hb0);
+        ctx.moveTo(hx2 + sg * 12, hb0 + 2);
+        ctx.quadraticCurveTo(hx2 + sg * 15, hb0 - 8, hx2 + sg * 8, hb0 - 15);
+        ctx.quadraticCurveTo(hx2 + sg * 7, hb0 - 6, hx2 + sg * 3, hb0);
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
+
+        // Horn ridge rings
+        ctx.strokeStyle = '#b8ad94';
+        ctx.lineWidth = 1.1;
+        ctx.beginPath();
+        ctx.moveTo(hx2 + sg * 11, hb0 - 3);
+        ctx.lineTo(hx2 + sg * 6, hb0 - 4);
+        ctx.moveTo(hx2 + sg * 11, hb0 - 7);
+        ctx.lineTo(hx2 + sg * 7, hb0 - 8);
+        ctx.stroke();
+        ctx.strokeStyle = COLORS.outline;
+        ctx.lineWidth = 1.5;
       });
     } else if (acc === 'goggles') {
+      // Steampunk Aviator Goggles with leather strap, brass rims & lens glints
       const gb = hy2 - 6;
-      ctx.strokeStyle = '#5d4037';
-      ctx.lineWidth = 2.8;
+      ctx.strokeStyle = COLORS.outline;
+      ctx.lineWidth = 4.2;
       ctx.beginPath();
-      ctx.moveTo(hx2 - f * 12, gb);
-      ctx.quadraticCurveTo(hx2, gb - 4, hx2 + f * 14, gb);
+      ctx.moveTo(hx2 - f * 13, gb);
+      ctx.quadraticCurveTo(hx2, gb - 5, hx2 + f * 15, gb);
       ctx.stroke();
+      ctx.strokeStyle = '#6d4c41';
+      ctx.lineWidth = 2.6;
+      ctx.stroke();
+
+      const drawLens = (lx: number, ly: number, r: number) => {
+        ctx.fillStyle = '#d4af37';
+        ctx.strokeStyle = COLORS.outline;
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.arc(lx, ly, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#00cec9';
+        ctx.beginPath();
+        ctx.arc(lx, ly, r * 0.72, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.3;
+        ctx.beginPath();
+        ctx.moveTo(lx - 2, ly - 1.5);
+        ctx.lineTo(lx + 1, ly - 2.5);
+        ctx.stroke();
+      };
 
       const gx1 = hx2 - f * 2;
       const gy1 = gb - 1;
-      ctx.fillStyle = '#c0a060';
-      ctx.strokeStyle = COLORS.outline;
-      ctx.lineWidth = 1.4;
-      ctx.beginPath();
-      ctx.arc(gx1, gy1, 5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-      ctx.fillStyle = '#00cec9';
-      ctx.beginPath();
-      ctx.arc(gx1, gy1, 3.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(gx1 - 1, gy1 - 1, 1.2, 0, Math.PI * 2);
-      ctx.fill();
-
-      const gx2 = hx2 + f * 7;
+      const gx2 = hx2 + f * 7.5;
       const gy2 = gb + 1;
-      ctx.fillStyle = '#c0a060';
-      ctx.beginPath();
-      ctx.arc(gx2, gy2, 5.2, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-      ctx.fillStyle = '#00cec9';
-      ctx.beginPath();
-      ctx.arc(gx2, gy2, 3.6, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(gx2 - 1, gy2 - 1, 1.3, 0, Math.PI * 2);
-      ctx.fill();
+      drawLens(gx1, gy1, 5.2);
+      drawLens(gx2, gy2, 5.4);
 
-      ctx.strokeStyle = '#c0a060';
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#d4af37';
+      ctx.lineWidth = 2.2;
       ctx.beginPath();
       ctx.moveTo(gx1 + f * 4, gy1);
       ctx.lineTo(gx2 - f * 4, gy2);
       ctx.stroke();
     } else if (acc === 'halo') {
+      // Radiant Celestial Halo with outer glow & star-sparks
       const hly = hy2 - 19 + Math.sin(t * 3.5) * 1.5;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(243, 156, 18, 0.4)';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.ellipse(hx2, hly, 14, 4.5, 0, 0, Math.PI * 2);
+      ctx.stroke();
+
       ctx.strokeStyle = '#ffeaa7';
       ctx.lineWidth = 2.8;
       ctx.beginPath();
       ctx.ellipse(hx2, hly, 13, 4, 0, 0, Math.PI * 2);
       ctx.stroke();
+
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 1.2;
       ctx.beginPath();
       ctx.ellipse(hx2, hly, 11.5, 3, 0, 0, Math.PI * 2);
       ctx.stroke();
+      ctx.restore();
     } else if (acc === 'mohawk') {
+      // Punk-Rock Mohawk with dark scalp strip & vibrant spikes
       const mb = hy2 - 10;
+      ctx.strokeStyle = '#2d3436';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(hx2 - f * 10, mb + 1);
+      ctx.quadraticCurveTo(hx2, mb - 3, hx2 + f * 11, mb + 2);
+      ctx.stroke();
+
       ctx.strokeStyle = COLORS.outline;
       ctx.lineWidth = 1.4;
       ctx.lineJoin = 'round';
+      const colors = ['#ff2d55', '#ff793f', '#ffd34d', '#ff2d55', '#ff793f'];
       [
-        { dx: -7, dy: -9, w: 4 },
-        { dx: -2, dy: -14, w: 5 },
-        { dx: 4, dy: -11, w: 4.5 },
-        { dx: 9, dy: -6, w: 3.5 }
+        { dx: -9, dy: -10, w: 4 },
+        { dx: -4, dy: -15, w: 4.8 },
+        { dx: 1.5, dy: -14, w: 4.8 },
+        { dx: 6.5, dy: -10, w: 4.2 },
+        { dx: 10.5, dy: -6, w: 3.4 }
       ].forEach((spike, idx) => {
-        ctx.fillStyle = idx % 2 === 0 ? '#ff2d55' : '#ff793f';
+        ctx.fillStyle = colors[idx];
         ctx.beginPath();
         ctx.moveTo(hx2 + f * (spike.dx - spike.w / 2), mb);
         ctx.lineTo(hx2 + f * spike.dx, mb + spike.dy);
@@ -1124,187 +2025,657 @@ export class GagambakbakanScene extends Phaser.Scene {
         ctx.stroke();
       });
     } else if (acc === 'mask') {
-      ctx.fillStyle = '#2c3e50';
+      // Shinobi Ninja Faceplate with metallic bridge & crimson clan stripes
+      ctx.fillStyle = '#1e272e';
       ctx.strokeStyle = COLORS.outline;
       ctx.lineWidth = 1.5;
       ctx.lineJoin = 'round';
       ctx.beginPath();
-      ctx.moveTo(hx2 - f * 4, hy2);
-      ctx.lineTo(hx2 + f * 14, hy2 - 1);
-      ctx.lineTo(hx2 + f * 17, hy2 + 9);
-      ctx.lineTo(hx2 + f * 2, hy2 + 9);
+      ctx.moveTo(hx2 - f * 5, hy2 - 1);
+      ctx.lineTo(hx2 + f * 15, hy2 - 1);
+      ctx.lineTo(hx2 + f * 17, hy2 + 9.5);
+      ctx.lineTo(hx2 + f * 1, hy2 + 9.5);
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
 
-      ctx.strokeStyle = '#e74c3c';
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = '#57606f';
+      ctx.lineWidth = 1.3;
       ctx.beginPath();
-      ctx.moveTo(hx2 + f * 3, hy2 + 4);
-      ctx.lineTo(hx2 + f * 14, hy2 + 4);
+      ctx.moveTo(hx2 - f * 3, hy2 + 0.5);
+      ctx.lineTo(hx2 + f * 14, hy2 + 0.5);
+      ctx.stroke();
+
+      ctx.strokeStyle = '#ff4757';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(hx2 + f * 2, hy2 + 4);
+      ctx.lineTo(hx2 + f * 14, hy2 + 4.5);
+      ctx.moveTo(hx2 + f * 1, hy2 + 7);
+      ctx.lineTo(hx2 + f * 13, hy2 + 7.5);
       ctx.stroke();
     } else if (acc === 'tophat') {
+      // Gentleman's Stovepipe Top Hat with crimson ribbon & gold buckle
       const ty = hy2 - 11;
       ctx.fillStyle = '#1e272e';
       ctx.strokeStyle = COLORS.outline;
       ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.ellipse(hx2, ty, 13, 3.5, 0, 0, Math.PI * 2);
+      ctx.ellipse(hx2, ty, 13.5, 3.5, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
       ctx.fillStyle = '#2f3542';
-      ctx.fillRect(hx2 - 7, ty - 14, 14, 14);
-      ctx.strokeRect(hx2 - 7, ty - 14, 14, 14);
+      ctx.fillRect(hx2 - 7.5, ty - 15, 15, 15);
+      ctx.strokeRect(hx2 - 7.5, ty - 15, 15, 15);
 
       ctx.fillStyle = '#e84118';
-      ctx.fillRect(hx2 - 7, ty - 4, 14, 3);
+      ctx.fillRect(hx2 - 7.5, ty - 4.5, 15, 3.5);
+
+      ctx.strokeStyle = '#ffd34d';
+      ctx.lineWidth = 1.2;
+      ctx.strokeRect(hx2 - 2, ty - 4.8, 4, 4);
 
       ctx.fillStyle = '#1e272e';
+      ctx.strokeStyle = COLORS.outline;
       ctx.beginPath();
-      ctx.ellipse(hx2, ty - 14, 7, 2, 0, 0, Math.PI * 2);
+      ctx.ellipse(hx2, ty - 15, 7.5, 2, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
+    } else if (acc === 'samurai') {
+      // Japanese Samurai Kabuto Helm with golden crescent Maedate crest
+      const ky = hy2 - 9;
+      ctx.fillStyle = '#c23616';
+      ctx.strokeStyle = COLORS.outline;
+      ctx.lineWidth = 1.4;
+      ctx.lineJoin = 'round';
+      [-1, 1].forEach((sg) => {
+        ctx.beginPath();
+        ctx.moveTo(hx2 + sg * 12, ky);
+        ctx.lineTo(hx2 + sg * 16, ky + 6);
+        ctx.lineTo(hx2 + sg * 9, ky + 4);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      });
+
+      ctx.fillStyle = '#2f3542';
+      ctx.beginPath();
+      ctx.arc(hx2, ky, 13.5, Math.PI, 0);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.strokeStyle = '#ffd34d';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.moveTo(hx2 - 14.5, ky);
+      ctx.quadraticCurveTo(hx2, ky - 3.5, hx2 + 14.5, ky);
+      ctx.stroke();
+
+      // Golden crescent crest
+      ctx.fillStyle = '#ffd34d';
+      ctx.strokeStyle = COLORS.outline;
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.arc(hx2 + f * 2, ky - 11, 7.5, 0.15 * Math.PI, 0.85 * Math.PI, true);
+      ctx.quadraticCurveTo(hx2 + f * 2, ky - 9, hx2 + f * 2 - 7, ky - 14);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    } else if (acc === 'wizard') {
+      // Arcane Wizard Hat with wide brim, bent cone & golden starband
+      const wy = hy2 - 10;
+      ctx.fillStyle = '#341f97';
+      ctx.strokeStyle = COLORS.outline;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.ellipse(hx2, wy, 15.5, 3.8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#5f27cd';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(hx2 - 10, wy - 1);
+      ctx.quadraticCurveTo(hx2 - 6, wy - 14, hx2 - f * 8, wy - 20);
+      ctx.quadraticCurveTo(hx2 + 3, wy - 12, hx2 + 10, wy - 1);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.strokeStyle = '#ffd34d';
+      ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      ctx.moveTo(hx2 - 9.5, wy - 2.5);
+      ctx.quadraticCurveTo(hx2, wy - 5, hx2 + 9.5, wy - 2.5);
+      ctx.stroke();
+
+      ctx.fillStyle = '#ffeaa7';
+      ctx.beginPath();
+      ctx.arc(hx2 - f * 1.5, wy - 9, 1.5, 0, Math.PI * 2);
+      ctx.arc(hx2 + f * 2.5, wy - 13, 1.1, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (acc === 'pirate') {
+      // Swashbuckling Pirate Tricorne with crimson bandana & skull emblem
+      const py = hy2 - 10;
+      ctx.strokeStyle = '#e84118';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.moveTo(hx2 - 12, py + 1.5);
+      ctx.quadraticCurveTo(hx2, py - 2, hx2 + 12, py + 1.5);
+      ctx.stroke();
+
+      ctx.fillStyle = '#1e272e';
+      ctx.strokeStyle = COLORS.outline;
+      ctx.lineWidth = 1.5;
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(hx2 - 16, py);
+      ctx.quadraticCurveTo(hx2 - 8, py - 13, hx2, py - 14);
+      ctx.quadraticCurveTo(hx2 + 8, py - 13, hx2 + 16, py);
+      ctx.quadraticCurveTo(hx2, py - 4, hx2 - 16, py);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.strokeStyle = '#ffd34d';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(hx2 - 15, py - 0.5);
+      ctx.quadraticCurveTo(hx2 - 8, py - 12, hx2, py - 13);
+      ctx.quadraticCurveTo(hx2 + 8, py - 12, hx2 + 15, py - 0.5);
+      ctx.stroke();
+
+      ctx.fillStyle = '#f5f6fa';
+      ctx.beginPath();
+      ctx.arc(hx2, py - 6.5, 2.4, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (acc === 'visor') {
+      // Cyberpunk Neon Wraparound Visor with HUD scanline glint
+      const vy = hy2 - 3;
+      ctx.fillStyle = '#00cec9';
+      ctx.strokeStyle = COLORS.outline;
+      ctx.lineWidth = 1.5;
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(hx2 - f * 10, vy - 2);
+      ctx.quadraticCurveTo(hx2 + f * 3, vy - 7, hx2 + f * 15, vy - 1);
+      ctx.lineTo(hx2 + f * 13.5, vy + 4.5);
+      ctx.quadraticCurveTo(hx2 + f * 2, vy, hx2 - f * 9, vy + 3);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.strokeStyle = '#dfe6e9';
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.moveTo(hx2 - f * 11, vy - 2.5);
+      ctx.quadraticCurveTo(hx2 + f * 3, vy - 7.5, hx2 + f * 15.5, vy - 1.5);
+      ctx.stroke();
+
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.3;
+      ctx.beginPath();
+      ctx.moveTo(hx2 - f * 3, vy - 1);
+      ctx.lineTo(hx2 + f * 9, vy - 1.5);
+      ctx.stroke();
+    } else if (acc === 'strawhat') {
+      // Ronin Woven Conical Bamboo Hat (Salakot) with red top-knot
+      const sy = hy2 - 10;
+      ctx.fillStyle = '#e1b12c';
+      ctx.strokeStyle = COLORS.outline;
+      ctx.lineWidth = 1.5;
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(hx2 - 18, sy);
+      ctx.lineTo(hx2, sy - 15);
+      ctx.lineTo(hx2 + 18, sy);
+      ctx.quadraticCurveTo(hx2, sy - 3.5, hx2 - 18, sy);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.strokeStyle = '#b5830a';
+      ctx.lineWidth = 1.1;
+      [-9, 0, 9].forEach((ox) => {
+        ctx.beginPath();
+        ctx.moveTo(hx2, sy - 14.5);
+        ctx.lineTo(hx2 + ox, sy - 1);
+        ctx.stroke();
+      });
+
+      ctx.fillStyle = '#c23616';
+      ctx.strokeStyle = COLORS.outline;
+      ctx.beginPath();
+      ctx.ellipse(hx2, sy - 15, 2.6, 1.3, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    } else if (acc === 'headphones') {
+      // Pro Gaming Headset with cushioned arch & neon earcups
+      ctx.strokeStyle = COLORS.outline;
+      ctx.lineWidth = 4.4;
+      ctx.beginPath();
+      ctx.arc(hx2, hy2 - 1, 13.5, Math.PI * 1.05, Math.PI * 1.95);
+      ctx.stroke();
+
+      ctx.strokeStyle = '#2f3542';
+      ctx.lineWidth = 2.6;
+      ctx.stroke();
+
+      ctx.strokeStyle = '#00cec9';
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.arc(hx2, hy2 - 1, 13.5, Math.PI * 1.35, Math.PI * 1.65);
+      ctx.stroke();
+
+      [-13, 13].forEach((ox) => {
+        ctx.fillStyle = '#1e272e';
+        ctx.strokeStyle = COLORS.outline;
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.ellipse(hx2 + ox, hy2, 3.4, 5.4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#00cec9';
+        ctx.beginPath();
+        ctx.ellipse(hx2 + ox, hy2, 1.8, 3.4, 0, 0, Math.PI * 2);
+        ctx.fill();
+      });
     }
 
-    // Fangs (chelicerae)
-    ctx.fillStyle = '#10201f';
+    // Articulated Pedipalps & Dual Curved Fangs (Chelicerae)
+    const fangOpen = pose.wind * 5 - pose.strike * 2.5 + cast * 3.5 + (powerBurst.active ? powerBurst.pulse * 4 : 0) + (leechBurst.active ? leechBurst.pulse * 4.5 : 0);
+    const fangReach = pose.strike * 7 - pose.wind * 2 + cast * 4 + (s.power > 0 ? 2 : 0) + (s.leech > 0 ? 2 : 0);
+    const fangTipCol = empoweredPower ? '#ffd34d' : (empoweredLeech ? '#ff4d6d' : '#e9efd8');
+
+    // Far fang (slightly behind)
+    ctx.fillStyle = '#0b1716';
+    ctx.strokeStyle = COLORS.outline;
+    ctx.lineWidth = 1.1;
     ctx.beginPath();
-    ctx.moveTo(bx + f * 24, by + 3);
-    let fangY = 6;
-    let fangX = 30;
-    if (s.atkT > 0) {
-      if (atkType === 0) {
-        fangY = u > 0 ? 10 : 5;
-        fangX = 30;
-      } else if (atkType === 1) {
-        fangY = 5;
-        fangX = u > 0 ? 34 : 29;
-      } else {
-        fangY = u > 0 ? 2 : 7;
-        fangX = 31;
-      }
-    }
-    ctx.lineTo(bx + f * fangX, by + fangY);
-    ctx.lineTo(bx + f * 25, by + 8);
+    ctx.moveTo(hx2 + f * 12, hy2 - 1);
+    ctx.quadraticCurveTo(
+      hx2 + f * (19 + fangReach * 0.7),
+      hy2 - 4 - fangOpen * 0.8,
+      hx2 + f * (23 + fangReach * 0.9),
+      hy2 + 2 - fangOpen * 0.5
+    );
+    ctx.lineTo(hx2 + f * 14, hy2 + 4);
     ctx.closePath();
     ctx.fill();
+    ctx.stroke();
 
-    // Attack visual effects for each randomized animation
-    if (s.atkT > 0.16 && s.atkT < 0.35) {
-      const sw = (s.atkT - 0.16) / (0.35 - 0.16);
+    // Near primary curved fang
+    let nearFangTipY = hy2 + 7 + fangOpen * 0.4;
+    if (s.atkT > 0) {
+      if (atkType === 0) nearFangTipY = hy2 + 9 - pose.wind * 7 + pose.strike * 4;
+      else if (atkType === 1) nearFangTipY = hy2 + 4 - pose.wind * 3;
+      else nearFangTipY = hy2 + 8 + pose.wind * 3 - pose.strike * 9;
+    }
+    const nearFangTipX = hx2 + f * (21 + fangReach);
+
+    ctx.fillStyle = '#152826';
+    ctx.strokeStyle = COLORS.outline;
+    ctx.lineWidth = 1.3;
+    ctx.beginPath();
+    ctx.moveTo(hx2 + f * 11, hy2 + 2);
+    ctx.quadraticCurveTo(
+      hx2 + f * (18 + fangReach * 0.6),
+      hy2 + 1 - fangOpen * 0.5,
+      nearFangTipX,
+      nearFangTipY
+    );
+    ctx.quadraticCurveTo(
+      hx2 + f * (15 + fangReach * 0.3),
+      hy2 + 9,
+      hx2 + f * 11,
+      hy2 + 7
+    );
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Razor fang tip highlight
+    ctx.strokeStyle = fangTipCol;
+    ctx.lineCap = 'round';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(hx2 + f * (16 + fangReach * 0.5), (hy2 + 3 + nearFangTipY) * 0.5);
+    ctx.lineTo(nearFangTipX, nearFangTipY);
+    ctx.stroke();
+
+    // Projectile Launch Muzzle Bursts (Venom Spit spray, Web burst, Hook flash)
+    if (cast > 0.1) {
+      ctx.save();
+      const mx = hx2 + f * 22;
+      const my = hy2 + 2;
+      ctx.globalAlpha = cast * 0.85;
+      if (proj.kind === 'spit') {
+        // Toxic green fang-spray cone & droplets
+        ctx.fillStyle = 'rgba(156, 240, 106, 0.45)';
+        ctx.beginPath();
+        ctx.moveTo(mx, my);
+        ctx.lineTo(mx + f * 26, my - 12);
+        ctx.lineTo(mx + f * 26, my + 12);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#d8ff9c';
+        [-6, 0, 6].forEach((oy, idx) => {
+          ctx.beginPath();
+          ctx.arc(mx + f * (12 + idx * 5), my + oy, 2.2, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      } else if (proj.kind === 'web') {
+        // Silk net launch cone
+        ctx.strokeStyle = '#f3f7ee';
+        ctx.lineWidth = 1.6;
+        [-10, 0, 10].forEach((oy) => {
+          ctx.beginPath();
+          ctx.moveTo(mx, my);
+          ctx.lineTo(mx + f * 24, my + oy);
+          ctx.stroke();
+        });
+      } else if (proj.kind === 'hook') {
+        // Harpoon launch ring flash
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.ellipse(mx + f * 8, my, 4, 12 * cast, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // Progressive Attack Slash Ribbons & Impact VFX
+    if (pose.swing > 0) {
+      const sw = pose.swing;
       const alpha = Math.sin(sw * Math.PI);
+      const colAccent = empoweredPower ? '#ffb347' : (empoweredLeech ? '#ff4d6d' : colLight);
+      const colCore = empoweredPower ? '#fff6cc' : '#ffffff';
+      const powerBoost = empoweredPower ? 1.32 : 1;
+
       ctx.save();
       ctx.lineCap = 'round';
 
       if (atkType === 0) {
-        // Animation 0: Overhead Claw Cleave (Downward Curved Slash)
-        ctx.globalAlpha = alpha * 0.85;
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
-        ctx.lineWidth = 5;
-        ctx.beginPath();
-        ctx.moveTo(bx + f * 20, by - 36);
-        ctx.quadraticCurveTo(bx + f * 72, by - 40, bx + f * (REACH + 8), by + 3);
-        ctx.stroke();
+        // Animation 0: Overhead Claw Cleave
+        const t0 = Math.max(0, sw * 1.35 - 0.58);
+        const t1 = Math.min(1, sw * 1.35 + 0.12);
 
-        ctx.globalAlpha = alpha * 0.95;
-        ctx.strokeStyle = colLight;
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        ctx.moveTo(bx + f * 24, by - 32);
-        ctx.quadraticCurveTo(bx + f * 70, by - 36, bx + f * (REACH + 4), by);
-        ctx.stroke();
+        this.drawCrescentSlash(
+          ctx,
+          bx + f * 16, by - 46,
+          bx + f * 78, by - 44,
+          bx + f * (REACH + 12), by + 10,
+          t0, t1,
+          7.5 * powerBoost,
+          colAccent,
+          colCore,
+          alpha * 0.92
+        );
 
-        ctx.globalAlpha = alpha * 0.35;
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(bx + f * 16, by - 26);
-        ctx.quadraticCurveTo(bx + f * 58, by - 30, bx + f * (REACH - 4), by + 6);
-        ctx.stroke();
+        const st0 = Math.max(0, (sw - 0.08) * 1.35 - 0.52);
+        const st1 = Math.min(1, (sw - 0.08) * 1.35 + 0.1);
+        if (st1 > st0 + 0.04) {
+          this.drawCrescentSlash(
+            ctx,
+            bx + f * 12, by - 34,
+            bx + f * 64, by - 32,
+            bx + f * (REACH + 2), by + 14,
+            st0, st1,
+            4.5 * powerBoost,
+            colMain,
+            colAccent,
+            alpha * 0.68
+          );
+        }
 
+        if (sw > 0.32 && sw < 0.88) {
+          const imp = Math.sin(((sw - 0.32) / 0.56) * Math.PI);
+          const impX = bx + f * (REACH + 6);
+          const impY = by + 8;
+          ctx.globalAlpha = imp * 0.8;
+          ctx.strokeStyle = colCore;
+          ctx.lineWidth = 2.4 * powerBoost;
+          ctx.beginPath();
+          ctx.ellipse(impX, impY, (10 + (sw - 0.32) * 26) * powerBoost, 5 + (sw - 0.32) * 8, f * 0.25, 0, Math.PI * 2);
+          ctx.stroke();
+        }
       } else if (atkType === 1) {
-        // Animation 1: Piercing Spear Thrust (Horizontal Dual Puncture + Impact Star)
-        const reachX = bx + f * (REACH + 10);
+        // Animation 1: Piercing Viper Thrust
+        const extend = Math.min(1, sw * 1.55);
+        const tail = Math.max(0, (sw - 0.28) * 1.35);
+        const startX = bx + f * lerp(18, 56, tail);
+        const reachX = bx + f * lerp(32, REACH + 16, extend);
 
-        ctx.globalAlpha = alpha * 0.95;
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 4;
+        ctx.globalAlpha = alpha * 0.92;
+        ctx.fillStyle = colAccent;
         ctx.beginPath();
-        ctx.moveTo(bx + f * 24, by - 11);
-        ctx.lineTo(reachX, by - 11);
-        ctx.stroke();
-
-        ctx.strokeStyle = colLight;
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(bx + f * 34, by - 11);
-        ctx.lineTo(reachX + f * 2, by - 11);
-        ctx.stroke();
-
-        ctx.globalAlpha = alpha * 0.85;
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
-        ctx.lineWidth = 3.5;
-        ctx.beginPath();
-        ctx.moveTo(bx + f * 22, by - 3);
-        ctx.lineTo(reachX - f * 4, by - 3);
-        ctx.stroke();
-
-        ctx.globalAlpha = alpha * 0.9;
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(reachX - 8, by - 11); ctx.lineTo(reachX + 8, by - 11);
-        ctx.moveTo(reachX, by - 19); ctx.lineTo(reachX, by - 3);
-        ctx.stroke();
-        ctx.fillStyle = colLight;
-        ctx.beginPath();
-        ctx.arc(reachX, by - 11, 3, 0, Math.PI * 2);
+        ctx.moveTo(startX, by - 11 - 4.5 * powerBoost * (1 - tail * 0.6));
+        ctx.lineTo(reachX + f * 6, by - 11);
+        ctx.lineTo(startX, by - 11 + 4.5 * powerBoost * (1 - tail * 0.6));
+        ctx.closePath();
         ctx.fill();
 
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = colCore;
+        ctx.lineWidth = 3.2 * powerBoost;
+        ctx.beginPath();
+        ctx.moveTo(startX + f * 6, by - 11);
+        ctx.lineTo(reachX + f * 4, by - 11);
+        ctx.stroke();
+
+        const reachX2 = bx + f * lerp(26, REACH + 6, Math.max(0, extend - 0.08));
+        ctx.globalAlpha = alpha * 0.78;
+        ctx.fillStyle = colMain;
+        ctx.beginPath();
+        ctx.moveTo(startX - f * 4, by - 2 - 3.2 * powerBoost);
+        ctx.lineTo(reachX2, by - 2);
+        ctx.lineTo(startX - f * 4, by - 2 + 3.2 * powerBoost);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.strokeStyle = colCore;
+        ctx.lineWidth = 2.2 * powerBoost;
+        ctx.beginPath();
+        ctx.moveTo(startX, by - 2);
+        ctx.lineTo(reachX2 - f * 2, by - 2);
+        ctx.stroke();
+
+        [0.35, 0.65].forEach((pos, idx) => {
+          const rx = lerp(bx + f * 30, reachX - f * 10, pos);
+          const ry = by - 7;
+          const ringR = (8 + idx * 4 + sw * 9) * powerBoost;
+          ctx.globalAlpha = alpha * (0.65 - idx * 0.18);
+          ctx.strokeStyle = idx === 0 ? colCore : colAccent;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.ellipse(rx, ry, 4.5, ringR, 0, 0, Math.PI * 2);
+          ctx.stroke();
+        });
+
+        if (sw > 0.18 && sw < 0.85) {
+          const starA = Math.sin(((sw - 0.18) / 0.67) * Math.PI);
+          const tipX = reachX + f * 4;
+          const tipY = by - 11;
+          const sr = (11 + starA * 6) * powerBoost;
+          ctx.globalAlpha = starA * 0.95;
+          ctx.strokeStyle = colCore;
+          ctx.lineWidth = 2.4;
+          ctx.beginPath();
+          ctx.moveTo(tipX - sr, tipY); ctx.lineTo(tipX + sr, tipY);
+          ctx.moveTo(tipX, tipY - sr * 0.85); ctx.lineTo(tipX, tipY + sr * 0.85);
+          ctx.moveTo(tipX - sr * 0.5, tipY - sr * 0.5); ctx.lineTo(tipX + sr * 0.5, tipY + sr * 0.5);
+          ctx.moveTo(tipX - sr * 0.5, tipY + sr * 0.5); ctx.lineTo(tipX + sr * 0.5, tipY - sr * 0.5);
+          ctx.stroke();
+
+          ctx.fillStyle = colAccent;
+          ctx.beginPath();
+          ctx.arc(tipX, tipY, 3.6 * powerBoost, 0, Math.PI * 2);
+          ctx.fill();
+        }
       } else {
-        // Animation 2: Rising Uppercut (Low-to-High Crescent Scoop)
-        ctx.globalAlpha = alpha * 0.85;
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
-        ctx.lineWidth = 5;
-        ctx.beginPath();
-        ctx.moveTo(bx + f * 22, by + 8);
-        ctx.quadraticCurveTo(bx + f * 64, by + 12, bx + f * (REACH + 6), by - 42);
-        ctx.stroke();
+        // Animation 2: Rising Scythe Uppercut
+        const t0 = Math.max(0, sw * 1.35 - 0.58);
+        const t1 = Math.min(1, sw * 1.35 + 0.12);
 
-        ctx.globalAlpha = alpha * 0.95;
-        ctx.strokeStyle = colLight;
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        ctx.moveTo(bx + f * 26, by + 6);
-        ctx.quadraticCurveTo(bx + f * 62, by + 8, bx + f * (REACH + 2), by - 38);
-        ctx.stroke();
+        this.drawCrescentSlash(
+          ctx,
+          bx + f * 18, STICK.y + 4,
+          bx + f * 74, by + 12,
+          bx + f * (REACH + 10), by - 50,
+          t0, t1,
+          7.8 * powerBoost,
+          colAccent,
+          colCore,
+          alpha * 0.92
+        );
 
-        ctx.globalAlpha = alpha * 0.4;
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(bx + f * 34, by + 4);
-        ctx.quadraticCurveTo(bx + f * 70, by - 2, bx + f * (REACH - 4), by - 48);
-        ctx.stroke();
+        const st0 = Math.max(0, (sw - 0.08) * 1.35 - 0.52);
+        const st1 = Math.min(1, (sw - 0.08) * 1.35 + 0.1);
+        if (st1 > st0 + 0.04) {
+          this.drawCrescentSlash(
+            ctx,
+            bx + f * 26, STICK.y + 2,
+            bx + f * 66, by + 4,
+            bx + f * (REACH - 2), by - 40,
+            st0, st1,
+            4.5 * powerBoost,
+            colMain,
+            colAccent,
+            alpha * 0.68
+          );
+        }
+
+        for (let k = 0; k < 3; k++) {
+          const streakSw = clamp((sw - k * 0.08) * 1.4, 0, 1);
+          if (streakSw > 0 && streakSw < 1) {
+            const sx0 = bx + f * (30 + k * 18 + streakSw * 24);
+            const sy0 = STICK.y + 2 - streakSw * (22 + k * 10);
+            ctx.globalAlpha = Math.sin(streakSw * Math.PI) * 0.7;
+            ctx.strokeStyle = k === 0 ? colCore : colAccent;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(sx0, sy0);
+            ctx.lineTo(sx0 + f * 14, sy0 - 12);
+            ctx.stroke();
+          }
+        }
       }
 
       ctx.restore();
     }
 
+    // Spinning Low Sweep Skill Crescent & Bark-Dust Wave
+    if (sweep > 0) {
+      const alpha = Math.sin(sweep * Math.PI);
+      const t0 = Math.max(0, sweep * 1.3 - 0.5);
+      const t1 = Math.min(1, sweep * 1.3 + 0.15);
+      this.drawCrescentSlash(
+        ctx,
+        bx - f * 22, STICK.y + 3,
+        bx + f * 52, by + 20,
+        bx + f * (REACH + 28), STICK.y - 6,
+        t0, t1,
+        9,
+        colLight,
+        '#ffffff',
+        alpha * 0.94
+      );
+      this.drawCrescentSlash(
+        ctx,
+        bx - f * 10, STICK.y - 1,
+        bx + f * 44, by + 8,
+        bx + f * (REACH + 14), STICK.y - 14,
+        Math.max(0, t0 - 0.08), Math.min(1, t1 - 0.05),
+        5,
+        colMain,
+        colLight,
+        alpha * 0.65
+      );
+      // Bark-dust rotational ring
+      ctx.save();
+      ctx.globalAlpha = alpha * 0.55;
+      ctx.strokeStyle = '#e8d9b0';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.ellipse(bx + f * (24 + sweep * 46), STICK.y - 1, 22 + sweep * 32, 6, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Dash & Pounce Air-Streaks and Leap Arcs
     if (s.dashT > 0) {
       const burst = Math.min(1, s.dashT / .16);
+      const dashDir = s.dashDir || f;
       ctx.save();
-      ctx.globalAlpha = .18 + burst * .3;
-      ctx.strokeStyle = colLight;
+      if (s.pounce) {
+        // Predatory Pounce: curved golden-white claw trajectories & kickoff shock-ring
+        this.drawCrescentSlash(
+          ctx,
+          bx - dashDir * 64, STICK.y - 2,
+          bx - dashDir * 16, by - 36,
+          bx + dashDir * 36, by - 12,
+          0.1, 0.95,
+          5.5,
+          '#ffb347',
+          '#ffffff',
+          0.55 + burst * 0.35
+        );
+      }
+      ctx.globalAlpha = .26 + burst * .4;
+      ctx.strokeStyle = s.pounce ? '#ffd694' : colLight;
       ctx.lineCap = 'round';
       for (let line = 0; line < 3; line++) {
-        ctx.lineWidth = 1.5 + line * .5;
+        ctx.lineWidth = (s.pounce ? 2.4 : 1.7) + line * .5;
         ctx.beginPath();
-        ctx.moveTo(bx - f * (30 + line * 8), by - 12 + line * 11);
-        ctx.lineTo(bx - f * (65 + line * 12), by - 12 + line * 11);
+        ctx.moveTo(bx - dashDir * (26 + line * 8), by - 12 + line * 11);
+        ctx.lineTo(bx - dashDir * (72 + line * 15), by - 12 + line * 11);
         ctx.stroke();
       }
+      ctx.restore();
+    }
+
+    // Mend Skill VFX: Emerald silk-stitching anchor lines to the twig & rising vitality motes
+    if (mendBurst.active) {
+      ctx.save();
+      const mp = mendBurst.pulse;
+      const prog = mendBurst.progress;
+
+      // Glowing silk anchor stitches binding the spider to the twig
+      ctx.strokeStyle = '#9cf0a8';
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = mp * 0.85;
+      [-28, -10, 10, 28].forEach((ox, idx) => {
+        ctx.beginPath();
+        ctx.moveTo(bx + ox, STICK.y + 2);
+        ctx.quadraticCurveTo(bx + ox * 0.6, by - 14 - Math.sin(prog * Math.PI + idx) * 8, bx + ox * 0.4, by);
+        ctx.stroke();
+      });
+
+      // Expanding emerald vitality wave
+      ctx.strokeStyle = '#d4ffda';
+      ctx.lineWidth = 2.6;
+      ctx.globalAlpha = (1 - prog) * 0.85;
+      ctx.beginPath();
+      ctx.ellipse(bx - f * 4, by - prog * 18, 28 + prog * 24, 10 + prog * 8, 0, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Rising healing cross-sparks
+      ctx.strokeStyle = '#9cf0a8';
+      ctx.lineWidth = 2;
+      [-20, 0, 18].forEach((ox, idx) => {
+        const hy = by + 8 - prog * (34 + idx * 8);
+        const hx = bx - f * 4 + ox;
+        const r = 4;
+        ctx.globalAlpha = mp * 0.95;
+        ctx.beginPath();
+        ctx.moveTo(hx - r, hy); ctx.lineTo(hx + r, hy);
+        ctx.moveTo(hx, hy - r); ctx.lineTo(hx, hy + r);
+        ctx.stroke();
+      });
       ctx.restore();
     }
 
@@ -1312,34 +2683,48 @@ export class GagambakbakanScene extends Phaser.Scene {
     if (s.blocking) {
       const sx = bx + f * 16;
       const sy = by - 4;
-      ctx.globalAlpha = 0.28 + 0.08 * Math.sin(t * 12);
+      ctx.save();
+      ctx.globalAlpha = 0.32 + 0.1 * Math.sin(t * 12);
       ctx.strokeStyle = colLight;
       ctx.lineWidth = 4;
       ctx.beginPath();
       if (f > 0) ctx.arc(sx, sy, 46, -1, 1);
       else ctx.arc(sx, sy, 46, Math.PI - 1, Math.PI + 1);
       ctx.stroke();
+      ctx.restore();
     }
 
     // Parry shockwave
     if (s.parryT > 0) {
       const k = 1 - s.parryT / 0.25;
+      ctx.save();
       ctx.globalAlpha = 1 - k;
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 5;
       ctx.beginPath();
       ctx.arc(bx + f * 20, by - 4, 30 + k * 50, 0, Math.PI * 2);
       ctx.stroke();
+      ctx.restore();
     }
 
-    // Web tangle
+    // Web tangle (Snare) with sticky twig-anchor strands
     if (s.snare > 0) {
-      ctx.globalAlpha = Math.min(1, s.snare * 2) * 0.8;
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, s.snare * 2) * 0.85;
       ctx.strokeStyle = '#f3f7ee';
-      ctx.lineWidth = 1.4;
+      ctx.lineWidth = 1.5;
       const wx = bx - f * 4, wy = by;
+
+      // Sticky silk tethers pinning the spider directly to the twig bark
+      [-32, -14, 8, 28].forEach((ox) => {
+        ctx.beginPath();
+        ctx.moveTo(wx + ox * 0.7, wy + 4);
+        ctx.lineTo(wx + ox, STICK.y + 2);
+        ctx.stroke();
+      });
+
       for (let q = 0; q < 6; q++) {
-        const an = q * Math.PI / 3 + 0.3;
+        const an = q * Math.PI / 3 + 0.3 + Math.sin(t * 14) * 0.04;
         ctx.beginPath();
         ctx.moveTo(wx, wy);
         ctx.lineTo(wx + Math.cos(an) * 38, wy + Math.sin(an) * 32);
@@ -1351,64 +2736,220 @@ export class GagambakbakanScene extends Phaser.Scene {
       ctx.beginPath();
       ctx.ellipse(wx, wy, 36, 30, 0, 0, Math.PI * 2);
       ctx.stroke();
+      ctx.restore();
     }
 
-    // Iron Silk (Shield) bubble
+    // Iron Silk (Shield) Geodesic Web-Lattice Dome
     if (s.shield > 0) {
-      ctx.globalAlpha = Math.min(1, s.shield) * (0.6 + 0.15 * Math.sin(t * 12));
+      ctx.save();
+      const shx = bx - f * 6;
+      const shy = by;
+      const baseAlpha = Math.min(1, s.shield * 1.5) * (0.65 + 0.15 * Math.sin(t * 10));
+      const weaveScale = shieldBurst.active ? 0.75 + 0.25 * smoothMotion(shieldBurst.progress) : 1;
+      const rx = 46 * weaveScale;
+      const ry = 38 * weaveScale;
+
+      ctx.globalAlpha = baseAlpha;
+      ctx.fillStyle = 'rgba(160, 215, 255, 0.16)';
       ctx.strokeStyle = '#cfe9ff';
-      ctx.fillStyle = 'rgba(160,210,255,.16)';
       ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.ellipse(bx - f * 6, by, 46, 38, 0, 0, Math.PI * 2);
+      ctx.ellipse(shx, shy, rx, ry, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
+
+      // Internal silk-lattice meridians & equators
+      ctx.globalAlpha = baseAlpha * 0.55;
+      ctx.lineWidth = 1.3;
+      const spin = t * 1.4;
+      for (let m = 0; m < 3; m++) {
+        const ang = spin + (m * Math.PI) / 3;
+        ctx.beginPath();
+        ctx.ellipse(shx, shy, Math.abs(Math.cos(ang)) * rx, ry, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.ellipse(shx, shy, rx * 0.7, ry * 0.65, 0, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Pearlescent specular highlight arc
+      ctx.globalAlpha = Math.min(1, baseAlpha * 1.2);
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.ellipse(shx, shy, rx - 4, ry - 4, 0, Math.PI * 1.15, Math.PI * 1.65);
+      ctx.stroke();
+      ctx.restore();
     }
 
-    // Power Strike glowing aura
+    // Power Strike Blazing Golden Aura & Ignited Mandibles
     if (s.power > 0) {
-      ctx.globalAlpha = 0.6 + 0.3 * Math.sin(t * 14);
+      ctx.save();
+      const pulse = 0.65 + 0.3 * Math.sin(t * 15);
+      const px = bx - f * 4;
+      const py = by;
+
+      // Activation shockwave burst
+      if (powerBurst.active) {
+        ctx.globalAlpha = (1 - powerBurst.progress) * 0.9;
+        ctx.strokeStyle = '#ffeaa7';
+        ctx.lineWidth = 3.5;
+        ctx.beginPath();
+        ctx.ellipse(px, py, 24 + powerBurst.progress * 38, 18 + powerBurst.progress * 28, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // Outer golden energy corona
+      ctx.globalAlpha = pulse;
       ctx.strokeStyle = '#ffb347';
       ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.ellipse(bx - f * 4, by, 40, 32, 0, 0, Math.PI * 2);
+      ctx.ellipse(px, py, 41, 33, 0, 0, Math.PI * 2);
       ctx.stroke();
-    }
 
-    // Riposte counter stance
-    if (s.riposte > 0) {
-      ctx.globalAlpha = Math.min(1, s.riposte * 2) * 0.9;
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(bx + f * 4, by - 30);
-      ctx.lineTo(bx + f * 48, by + 8);
-      ctx.moveTo(bx + f * 48, by - 30);
-      ctx.lineTo(bx + f * 4, by + 8);
-      ctx.stroke();
-    }
-
-    // Leech Fang aura
-    if (s.leech > 0) {
-      ctx.globalAlpha = 0.5 + 0.2 * Math.sin(t * 10);
-      ctx.strokeStyle = '#d24a5a';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.ellipse(bx - f * 4, by, 36, 28, 0, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-
-    // Haste speed lines
-    if (s.hasteT > 0) {
-      ctx.globalAlpha = 0.5;
-      ctx.strokeStyle = colLight;
-      ctx.lineWidth = 2;
-      for (let hk = 0; hk < 3; hk++) {
+      // Rising flame/lightning tongues around the body & foreclaws
+      ctx.strokeStyle = '#ffeaa7';
+      ctx.lineWidth = 2.2;
+      ctx.lineCap = 'round';
+      for (let fl = 0; fl < 5; fl++) {
+        const phase = (t * 3.2 + fl * 0.2) % 1;
+        const fx0 = px + (fl - 2) * 14 + f * 6;
+        const fy0 = py + 12 - phase * 36;
+        ctx.globalAlpha = Math.sin(phase * Math.PI) * 0.85;
         ctx.beginPath();
-        ctx.moveTo(bx - f * (40 + hk * 10), by - 14 + hk * 14);
-        ctx.lineTo(bx - f * (70 + hk * 14 + (t * 60) % 12), by - 14 + hk * 14);
+        ctx.moveTo(fx0, fy0 + 9);
+        ctx.quadraticCurveTo(fx0 + f * 5, fy0 + 4, fx0, fy0);
         ctx.stroke();
       }
+      ctx.restore();
+    }
+
+    // Riposte Counter Stance: Curved Silver Cross-Blades & Rotating Lens Star
+    if (s.riposte > 0) {
+      ctx.save();
+      const rpAlpha = Math.min(1, s.riposte * 2.5) * 0.95;
+      const rx = bx + f * 26;
+      const ry = by - 11;
+
+      this.drawCrescentSlash(
+        ctx,
+        rx - f * 22, ry - 22,
+        rx + f * 4, ry,
+        rx + f * 24, ry + 22,
+        0, 1,
+        4.2,
+        '#cfe9ff',
+        '#ffffff',
+        rpAlpha
+      );
+      this.drawCrescentSlash(
+        ctx,
+        rx + f * 24, ry - 22,
+        rx + f * 4, ry,
+        rx - f * 22, ry + 22,
+        0, 1,
+        4.2,
+        '#cfe9ff',
+        '#ffffff',
+        rpAlpha
+      );
+
+      // Central rotating counter-star glint
+      const starR = 10 + Math.sin(t * 24) * 3;
+      ctx.globalAlpha = rpAlpha;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.moveTo(rx - starR, ry); ctx.lineTo(rx + starR, ry);
+      ctx.moveTo(rx, ry - starR); ctx.lineTo(rx, ry + starR);
+      ctx.stroke();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(rx, ry, 3.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Leech Fang Vampiric Siphon Aura & Orbiting Crimson Motes
+    if (s.leech > 0) {
+      ctx.save();
+      const lx = bx - f * 4;
+      const ly = by;
+      const lAlpha = 0.55 + 0.25 * Math.sin(t * 11);
+
+      if (leechBurst.active) {
+        // Vampiric fang-bite sigil flash on cast
+        const bp = leechBurst.pulse;
+        ctx.globalAlpha = bp * 0.95;
+        ctx.fillStyle = '#ff4d6d';
+        [-8, 8].forEach((ox) => {
+          ctx.beginPath();
+          ctx.moveTo(hx2 + f * 18 + ox * 0.4, hy2 - 18);
+          ctx.lineTo(hx2 + f * 22 + ox, hy2 - 4);
+          ctx.lineTo(hx2 + f * 15 + ox * 0.4, hy2 - 14);
+          ctx.closePath();
+          ctx.fill();
+        });
+      }
+
+      ctx.globalAlpha = lAlpha;
+      ctx.strokeStyle = '#d24a5a';
+      ctx.lineWidth = 2.8;
+      ctx.beginPath();
+      ctx.ellipse(lx, ly, 37, 29, 0, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Swirling crimson siphon orbs spiraling inward toward the fangs
+      for (let m = 0; m < 4; m++) {
+        const cyc = (t * 1.8 + m * 0.25) % 1;
+        const ang = t * 5 + m * (Math.PI / 2);
+        const rad = (1 - cyc) * 34 + 6;
+        const ox = hx2 + f * 14 + Math.cos(ang) * rad;
+        const oy = hy2 + 2 + Math.sin(ang) * (rad * 0.7);
+        ctx.globalAlpha = Math.sin(cyc * Math.PI) * 0.9;
+        ctx.fillStyle = m % 2 === 0 ? '#ff4d6d' : '#ffb3c1';
+        ctx.beginPath();
+        ctx.arc(ox, oy, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    // Haste Slipstream Chevrons & Wind Trails
+    if (s.hasteT > 0) {
+      ctx.save();
+      if (hasteBurst.active) {
+        ctx.globalAlpha = (1 - hasteBurst.progress) * 0.85;
+        ctx.strokeStyle = '#70d6ff';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.ellipse(bx, by, 24 + hasteBurst.progress * 38, 16 + hasteBurst.progress * 20, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // Aerodynamic wind chevrons & speed lines behind the spider
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      for (let hk = 0; hk < 3; hk++) {
+        const flow = ((t * 4.5 + hk * 0.33) % 1);
+        const cx0 = bx - f * (32 + flow * 42);
+        const cy0 = by - 13 + hk * 13;
+        ctx.globalAlpha = Math.sin(flow * Math.PI) * 0.75;
+        ctx.strokeStyle = hk === 1 ? '#ffffff' : '#70d6ff';
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.moveTo(cx0, cy0 - 5);
+        ctx.lineTo(cx0 + f * 7, cy0);
+        ctx.lineTo(cx0, cy0 + 5);
+        ctx.stroke();
+
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.moveTo(cx0 - f * 4, cy0);
+        ctx.lineTo(cx0 - f * 22, cy0);
+        ctx.stroke();
+      }
+      ctx.restore();
     }
 
     ctx.restore();
@@ -1475,8 +3016,32 @@ export class GagambakbakanScene extends Phaser.Scene {
   }
 
   private drawParticles(ctx: CanvasRenderingContext2D) {
+    // Expanding impact shock-rings
+    this.impactRings.forEach((ring) => {
+      const p = 1 - Math.max(0, ring.life / ring.max);
+      const radius = lerp(ring.r, ring.maxR, 1 - Math.pow(1 - p, 2));
+      ctx.save();
+      ctx.globalAlpha = (1 - p) * 0.75;
+      ctx.strokeStyle = ring.col;
+      ctx.lineWidth = 3 * (1 - p * 0.6);
+      ctx.beginPath();
+      ctx.arc(ring.x, ring.y, radius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    });
+
+    ctx.lineCap = 'round';
     this.particles.forEach((p) => {
-      ctx.globalAlpha = Math.max(0, p.life / p.max);
+      const alpha = Math.max(0, p.life / p.max);
+      ctx.globalAlpha = alpha;
+      if (p.streak) {
+        ctx.strokeStyle = p.col;
+        ctx.lineWidth = p.sz * 1.1;
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x - p.vx * 0.028, p.y - p.vy * 0.028);
+        ctx.stroke();
+      }
       ctx.fillStyle = p.col;
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.sz, 0, Math.PI * 2);

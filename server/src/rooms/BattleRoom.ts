@@ -137,7 +137,7 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
     if (typeof options.colorLight === 'string' && HEX_COLOR.test(options.colorLight)) player.colorLight = options.colorLight;
     if (['stripes', 'dots', 'chevron', 'rings', 'cross', 'split', 'webmark', 'diamonds', 'plain', 'custom'].includes(options.pattern)) player.pattern = options.pattern;
     if (isValidCustomPattern(options.customPattern)) player.customPattern = options.customPattern;
-    if (['none', 'band', 'crown', 'horns', 'goggles', 'halo', 'mohawk', 'mask', 'tophat'].includes(options.acc)) player.acc = options.acc;
+    if (['none', 'band', 'crown', 'horns', 'goggles', 'halo', 'mohawk', 'mask', 'tophat', 'samurai', 'wizard', 'pirate', 'visor', 'strawhat', 'headphones'].includes(options.acc)) player.acc = options.acc;
     
     const lvl = Math.max(1, Math.min(100, parseInt(options.level, 10) || 1));
     player.level = lvl;

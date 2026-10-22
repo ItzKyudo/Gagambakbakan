@@ -135,6 +135,7 @@
   color: var(--amber);
   background: linear-gradient(180deg, #ffd899 0%, #f2a33a 65%, #c87612 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
   filter: drop-shadow(0 2px 8px rgba(242, 163, 58, 0.4));
 }
@@ -143,6 +144,7 @@
   color: var(--jade);
   background: linear-gradient(180deg, #c2faef 0%, #4cc7b2 65%, #248b79 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
   filter: drop-shadow(0 2px 8px rgba(76, 199, 178, 0.4));
 }

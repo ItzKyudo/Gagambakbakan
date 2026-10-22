@@ -209,6 +209,7 @@ export class LocalGameEngine {
     this.combat.resetRound();
 
     sound.play('start');
+    sound.music.play('duel');
   }
 
   private resetSpiderRound(s: LocalPlayerState, x: number, face: number) {

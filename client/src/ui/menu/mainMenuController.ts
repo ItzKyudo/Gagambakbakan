@@ -1,7 +1,9 @@
 import { sound } from '../../audio';
+import { getAuthUser } from '../../auth';
 import { getColor, getLevel, getLooks, getProgress, getSettings, getUnlockedIds, setMode } from '../../gb';
 import { network } from '../../network';
 import type { MenuStartOptions, MenuTab } from './menuTypes';
+import { mountDemoFightArena } from './demoArena';
 
 interface MainMenuActions {
   navigate: (tab: Exclude<MenuTab, 'main'>) => void;
@@ -198,6 +200,11 @@ export function bindMainMenuEvents(container: HTMLElement, actions: MainMenuActi
 
   container.querySelector('#btnGoPlay')?.addEventListener('click', () => {
     cancelQueue();
+    if (!getAuthUser()) {
+      sound.playTone(520, 0.08, 'triangle', 0.05, 200);
+      actions.navigate('account');
+      return;
+    }
     sound.playTone(520, 0.08, 'triangle', 0.05, 200);
     pMain.hidden = true;
     pPlay.hidden = false;
@@ -214,6 +221,13 @@ export function bindMainMenuEvents(container: HTMLElement, actions: MainMenuActi
     cancelQueue();
     sound.playTone(520, 0.08, 'triangle', 0.05, 200);
     actions.navigate('about');
+  });
+
+  container.querySelector('#btnGoAccount')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    cancelQueue();
+    sound.playTone(520, 0.08, 'triangle', 0.05, 200);
+    actions.navigate('account');
   });
 
   container.querySelector('#btnGoAbilities')?.addEventListener('click', () => {
@@ -270,6 +284,10 @@ export function bindMainMenuEvents(container: HTMLElement, actions: MainMenuActi
   // Play Modes
   container.querySelector('#btnModeCpu')?.addEventListener('click', () => {
     cancelQueue();
+    if (!getAuthUser()) {
+      actions.navigate('account');
+      return;
+    }
     const st = getSettings();
     const lks = getLooks();
     const col = getColor(lks.p1.color);
@@ -288,6 +306,10 @@ export function bindMainMenuEvents(container: HTMLElement, actions: MainMenuActi
 
   container.querySelector('#btnMode2p')?.addEventListener('click', () => {
     cancelQueue();
+    if (!getAuthUser()) {
+      actions.navigate('account');
+      return;
+    }
     const st = getSettings();
     const lks = getLooks();
     const col = getColor(lks.p1.color);
@@ -306,6 +328,10 @@ export function bindMainMenuEvents(container: HTMLElement, actions: MainMenuActi
 
   // Online Multiplayer Button
   container.querySelector('#btnModeOnline')?.addEventListener('click', () => {
+    if (!getAuthUser()) {
+      actions.navigate('account');
+      return;
+    }
     if (isQueueing) {
       // Clicking button while queueing cancels the queue
       sound.playTone(440, 0.08, 'triangle', 0.04, -100);
@@ -322,5 +348,14 @@ export function bindMainMenuEvents(container: HTMLElement, actions: MainMenuActi
       cancelQueue();
     }
   });
+
+  // Mount Smooth Live AI Sparring Arena on the right side if logged out
+  const previewEl = container.querySelector<HTMLElement>('#menuBattlePreview');
+  const cleanupArena = previewEl ? mountDemoFightArena(previewEl) : null;
+
+  return () => {
+    cancelQueue();
+    cleanupArena?.();
+  };
 }
 

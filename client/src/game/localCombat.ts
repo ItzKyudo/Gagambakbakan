@@ -19,7 +19,17 @@ export class LocalCombat {
   private cool: [number, number] = [0, 0];
   private timeElapsed = 0;
   private diff: 'easy' | 'normal' | 'hard' = 'normal';
-  private ai = {
+  public isMuted = false;
+  private aiP1 = {
+    reelT: 0,
+    clock: 0,
+    blockAt: 1e9,
+    blockUntil: 0,
+    seen: -1,
+    nextAtk: 0.8,
+    retreatT: 0
+  };
+  private aiP2 = {
     reelT: 0,
     clock: 0,
     blockAt: 1e9,
@@ -41,30 +51,41 @@ export class LocalCombat {
     this.reelCd = [0, 0];
     this.kb = [0, 0];
     this.cool = [0, 0];
-    this.ai.nextAtk = 0.8;
-    this.ai.clock = 0;
-    this.ai.seen = -1;
+    this.aiP1.nextAtk = 0.8;
+    this.aiP1.clock = 0;
+    this.aiP1.seen = -1;
+    this.aiP2.nextAtk = 0.8;
+    this.aiP2.clock = 0;
+    this.aiP2.seen = -1;
   }
 
   public update(
     dt: number,
     humanInpP1: InputState,
     humanInpP2: InputState | undefined,
-    mode: 'cpu' | '2p',
+    mode: 'cpu' | '2p' | 'demo',
     diff: 'easy' | 'normal' | 'hard'
   ) {
     this.timeElapsed += dt;
     this.diff = diff;
     if (this.state.status !== 'fight') return;
 
-    const p2Input = mode === 'cpu'
-      ? this.getAiInput(this.state.p2, this.state.p1, dt)
+    const p1Input = (mode as any) === 'demo'
+      ? this.getAiInput(this.state.p1, this.state.p2, dt, this.aiP1)
+      : humanInpP1;
+
+    const p2Input = (mode === 'cpu' || (mode as any) === 'demo')
+      ? this.getAiInput(this.state.p2, this.state.p1, dt, this.aiP2)
       : (humanInpP2 || { left: false, right: false, strike: false, block: false, reel: 0, ab1: 0, ab2: 0 });
 
-    this.stepSpider(this.state.p1, this.state.p2, humanInpP1, dt);
+    this.stepSpider(this.state.p1, this.state.p2, p1Input, dt);
     this.stepSpider(this.state.p2, this.state.p1, p2Input, dt);
     this.separate(dt);
     this.stepWebs(dt);
+  }
+
+  private sfx(name: string) {
+    if (!this.isMuted) sound.play(name);
   }
 
 private emitFx(fx: any) {
@@ -111,7 +132,7 @@ private fall(s: LocalPlayerState) {
   this.emitFx({ type: 'txt', x: s.x, y: LBL_Y, text: s.falls > 1 ? `FALL Ã—${s.falls}` : 'FALL!', col: '#e8593f' });
   this.emitFx({ type: 'dust', x: s.x, y: STICK.y + STICK.th, count: 6 });
   this.emitShake(6);
-  sound.play('fall');
+  this.sfx('fall');
 }
 
 private recover(s: LocalPlayerState) {
@@ -129,7 +150,7 @@ private recover(s: LocalPlayerState) {
 
   this.emitFx({ type: 'txt', x: s.x, y: LBL_Y, text: 'BACK UP!', col: s.colorLight });
   this.emitFx({ type: 'dust', x: s.x, y: STICK.y + STICK.th, count: 8 });
-  sound.play('recover');
+  this.sfx('recover');
 }
 
 private guardBreak(s: LocalPlayerState) {
@@ -142,7 +163,7 @@ private guardBreak(s: LocalPlayerState) {
   this.emitFx({ type: 'txt', x: s.x, y: LBL_Y, text: 'GUARD BREAK', col: '#e8593f' });
   this.emitFx({ type: 'spark', x: s.x, y: BODY_Y, col: '#bfe0f4', count: 12, sp: 200 });
   this.emitShake(6);
-  sound.play('guardbreak');
+  this.sfx('guardbreak');
 }
 
 private knockOut(s: LocalPlayerState) {
@@ -159,7 +180,7 @@ private knockOut(s: LocalPlayerState) {
 
   this.emitFx({ type: 'splash', x: s.x, y: POND_Y });
   this.emitShake(14);
-  sound.play('ko');
+  this.sfx('ko');
 
   if (this.onRoundWon) {
     this.onRoundWon({ winner: winner.id, round: this.state.round, p1Wins: this.state.p1.wins, p2Wins: this.state.p2.wins });
@@ -171,7 +192,7 @@ private absorb(b: LocalPlayerState) {
   this.emitFx({ type: 'txt', x: b.x, y: LBL_Y, text: 'ABSORBED', col: '#cfe9ff' });
   this.emitFx({ type: 'spark', x: b.x, y: BODY_Y, col: '#cfe9ff', count: 12, sp: 220 });
   this.emitShake(3);
-  sound.play('absorb');
+  this.sfx('absorb');
 }
 
 private counter(b: LocalPlayerState, a: LocalPlayerState) {
@@ -183,7 +204,7 @@ private counter(b: LocalPlayerState, a: LocalPlayerState) {
   this.emitFx({ type: 'txt', x: b.x, y: LBL_Y + 4, text: 'RIPOSTE!', col: '#ffffff' });
   this.emitFx({ type: 'spark', x: (a.x + b.x) / 2, y: BODY_Y - 6, col: '#ffffff', count: 16, sp: 280 });
   this.emitShake(8);
-  sound.play('parry');
+  this.sfx('parry');
 }
 
 private doStrike(a: LocalPlayerState, b: LocalPlayerState) {
@@ -214,7 +235,7 @@ private doStrike(a: LocalPlayerState, b: LocalPlayerState) {
       this.emitFx({ type: 'txt', x: b.x, y: LBL_Y + 4, text: 'PARRY!', col: '#ffffff' });
       this.emitFx({ type: 'spark', x: hx, y: hy, col: '#ffffff', count: 16, sp: 280 });
       this.emitShake(8);
-      sound.play('parry');
+      this.sfx('parry');
     } else {
       // Normal block
       b.guard -= pw ? 38 : 22;
@@ -225,7 +246,7 @@ private doStrike(a: LocalPlayerState, b: LocalPlayerState) {
       this.emitFx({ type: 'txt', x: b.x, y: LBL_Y, text: 'BLOCK', col: b.colorLight });
       this.emitFx({ type: 'spark', x: hx, y: hy, col: b.colorLight, count: 8, sp: 180 });
       this.emitShake(3);
-      sound.play('block');
+      this.sfx('block');
       if (b.guard <= 0) this.guardBreak(b);
     }
   } else if (b.shield > 0) {
@@ -243,7 +264,7 @@ private doStrike(a: LocalPlayerState, b: LocalPlayerState) {
     this.emitFx({ type: 'spark', x: hx, y: hy, col: '#ffffff', count: 10, sp: 260 });
     this.emitFx({ type: 'spark', x: hx, y: hy, col: a.color, count: 8, sp: 220 });
     this.emitShake(pw ? 12 : 7);
-    sound.play(pw ? 'power_strike' : 'strike');
+    this.sfx(pw ? 'power_strike' : 'strike');
 
     if (pw) this.emitFx({ type: 'txt', x: b.x, y: LBL_Y, text: 'POWER HIT!', col: a.colorLight });
     if (a.leech > 0) {
@@ -278,7 +299,7 @@ private useSkill(s: LocalPlayerState, o: LocalPlayerState, slotIndex: number, in
       s.inv = Math.max(s.inv, 0.2);
       s.blocking = false;
       s.atkT = 0;
-      sound.play('dash');
+      this.sfx('dash');
       return true;
 
     case 'pounce':
@@ -288,7 +309,7 @@ private useSkill(s: LocalPlayerState, o: LocalPlayerState, slotIndex: number, in
       s.inv = Math.max(s.inv, 0.14);
       s.blocking = false;
       s.atkT = 0;
-      sound.play('pounce');
+      this.sfx('pounce');
       return true;
 
     case 'web':
@@ -301,7 +322,7 @@ private useSkill(s: LocalPlayerState, o: LocalPlayerState, slotIndex: number, in
         life: 1.6,
         k: 'web'
       });
-      sound.play('web');
+      this.sfx('web');
       return false;
 
     case 'spit':
@@ -314,41 +335,41 @@ private useSkill(s: LocalPlayerState, o: LocalPlayerState, slotIndex: number, in
         life: 1.2,
         k: 'spit'
       });
-      sound.play('spit');
+      this.sfx('spit');
       return false;
 
     case 'power':
       s.power = 5;
       this.emitFx({ type: 'txt', x: s.x, y: LBL_Y, text: 'POWER UP', col: '#ffb347' });
       this.emitFx({ type: 'spark', x: s.x, y: BODY_Y, col: '#ffb347', count: 10, sp: 180 });
-      sound.play('power_up');
+      this.sfx('power_up');
       return false;
 
     case 'shield':
       s.shield = 4;
       this.emitFx({ type: 'txt', x: s.x, y: LBL_Y, text: 'IRON SILK', col: '#cfe9ff' });
       this.emitFx({ type: 'spark', x: s.x, y: BODY_Y, col: '#cfe9ff', count: 10, sp: 160 });
-      sound.play('shield');
+      this.sfx('shield');
       return false;
 
     case 'mend':
       s.grip = Math.min(100, s.grip + 35);
       this.emitFx({ type: 'txt', x: s.x, y: LBL_Y, text: '+35 GRIP', col: '#9cf0a8' });
       this.emitFx({ type: 'spark', x: s.x, y: BODY_Y, col: '#9cf0a8', count: 12, sp: 150 });
-      sound.play('mend');
+      this.sfx('mend');
       return false;
 
     case 'riposte':
       s.riposte = 1;
       s.blocking = false;
       this.emitFx({ type: 'txt', x: s.x, y: LBL_Y, text: 'RIPOSTE', col: '#ffffff' });
-      sound.play('riposte');
+      this.sfx('riposte');
       return false;
 
     case 'leech':
       s.leech = 5;
       this.emitFx({ type: 'txt', x: s.x, y: LBL_Y, text: 'LEECH FANG', col: '#d24a5a' });
-      sound.play('leech');
+      this.sfx('leech');
       return false;
 
     case 'carapace':
@@ -356,7 +377,7 @@ private useSkill(s: LocalPlayerState, o: LocalPlayerState, slotIndex: number, in
       s.gLock = false;
       this.emitFx({ type: 'txt', x: s.x, y: LBL_Y, text: 'CARAPACE', col: '#8fb7d6' });
       this.emitFx({ type: 'spark', x: s.x, y: BODY_Y, col: '#8fb7d6', count: 12, sp: 170 });
-      sound.play('carapace');
+      this.sfx('carapace');
       return false;
 
     case 'hook':
@@ -369,7 +390,7 @@ private useSkill(s: LocalPlayerState, o: LocalPlayerState, slotIndex: number, in
         life: 1.0,
         k: 'hook'
       });
-      sound.play('hook');
+      this.sfx('hook');
       return false;
 
     case 'sweep': {
@@ -377,7 +398,7 @@ private useSkill(s: LocalPlayerState, o: LocalPlayerState, slotIndex: number, in
       s.stun = 0.25;
       s.atkT = 0;
       s.blocking = false;
-      sound.play('sweep');
+      this.sfx('sweep');
       if (!o.hang && !o.ko && dd >= 0 && dd < REACH + 20 && o.inv <= 0) {
         if (o.riposte > 0) {
           this.counter(o, s);
@@ -406,13 +427,13 @@ private useSkill(s: LocalPlayerState, o: LocalPlayerState, slotIndex: number, in
     case 'haste':
       s.hasteT = 3.5;
       this.emitFx({ type: 'txt', x: s.x, y: LBL_Y, text: 'HASTE', col: s.colorLight });
-      sound.play('haste');
+      this.sfx('haste');
       return false;
 
     case 'tremor':
       s.quake = 0.5;
       this.emitShake(9);
-      sound.play('tremor');
+      this.sfx('tremor');
       if (!o.hang && !o.ko && Math.abs(o.x - s.x) < 260 && o.inv <= 0) {
         if (o.shield > 0) {
           this.absorb(o);
@@ -431,14 +452,14 @@ private useSkill(s: LocalPlayerState, o: LocalPlayerState, slotIndex: number, in
       s.drop = Math.max(0, s.drop - SURGE_LIFT);
       this.emitFx({ type: 'txt', x: s.x, y: BODY_Y + s.drop + 20, text: 'SURGE!', col: s.colorLight });
       this.emitFx({ type: 'spark', x: s.x, y: BODY_Y + s.drop + 20, col: s.colorLight, count: 8, sp: 180 });
-      sound.play('surge');
+      this.sfx('surge');
       return false;
 
     case 'anchor':
       s.anchorT = 2.5;
       this.emitFx({ type: 'txt', x: s.x, y: BODY_Y + s.drop + 20, text: 'ANCHORED', col: s.colorLight });
       this.emitFx({ type: 'spark', x: s.x, y: BODY_Y + s.drop + 14, col: s.colorLight, count: 8, sp: 140 });
-      sound.play('anchor');
+      this.sfx('anchor');
       return false;
   }
   return false;
@@ -469,11 +490,11 @@ private stepWebs(dt: number) {
         });
         t.parryT = 0.25;
         this.emitFx({ type: 'txt', x: t.x, y: LBL_Y + 4, text: 'REFLECT!', col: '#ffffff' });
-        sound.play('parry');
+        this.sfx('parry');
       } else if (t.blocking) {
         t.guard -= w.k === 'spit' ? 10 : 12;
         this.emitFx({ type: 'txt', x: t.x, y: LBL_Y, text: 'BLOCK', col: t.colorLight });
-        sound.play('block');
+        this.sfx('block');
         if (t.guard <= 0) this.guardBreak(t);
       } else if (t.shield > 0) {
         this.absorb(t);
@@ -486,7 +507,7 @@ private stepWebs(dt: number) {
         t.hitFlash = 0.15;
         this.emitFx({ type: 'txt', x: t.x, y: LBL_Y, text: 'HOOKED!', col: me.colorLight });
         this.emitFx({ type: 'spark', x: t.x, y: BODY_Y, col: '#f3f7ee', count: 8, sp: 180 });
-        sound.play('hook');
+        this.sfx('hook');
       } else if (w.k === 'spit') {
         t.stun = Math.max(t.stun, 0.9);
         t.atkT = 0;
@@ -494,14 +515,14 @@ private stepWebs(dt: number) {
         t.hitFlash = 0.15;
         this.emitFx({ type: 'txt', x: t.x, y: LBL_Y, text: 'VENOM!', col: '#9cf06a' });
         this.emitFx({ type: 'spark', x: t.x, y: BODY_Y, col: '#9cf06a', count: 10, sp: 180 });
-        sound.play('spit');
+        this.sfx('spit');
       } else {
         t.snare = 1.6;
         t.grip = Math.max(1, t.grip - 4);
         t.hitFlash = 0.15;
         this.emitFx({ type: 'txt', x: t.x, y: LBL_Y, text: 'TANGLED!', col: me.colorLight });
         this.emitFx({ type: 'spark', x: t.x, y: BODY_Y, col: '#f3f7ee', count: 10, sp: 180 });
-        sound.play('web');
+        this.sfx('web');
       }
     }
 
@@ -509,9 +530,13 @@ private stepWebs(dt: number) {
   }
 }
 
-private getAiInput(me: LocalPlayerState, o: LocalPlayerState, dt: number): InputState {
+private getAiInput(
+  me: LocalPlayerState,
+  o: LocalPlayerState,
+  dt: number,
+  a = this.aiP2
+): InputState {
   const D = DIFF_SETTINGS[this.diff];
-  const a = this.ai;
   const inp: InputState = { left: false, right: false, strike: false, block: false, reel: 0, ab1: 0, ab2: 0 };
 
   const slot = (id: string) => {
@@ -673,7 +698,7 @@ private stepSpider(s: LocalPlayerState, o: LocalPlayerState, inp: InputState, dt
         s.drop -= s.tapLift;
         this.reelCd[id] = REEL_CD;
         times.push(this.timeElapsed);
-        sound.play('reel');
+        this.sfx('reel');
       }
 
       // Hang abilities (surge, anchor)
@@ -726,7 +751,7 @@ private stepSpider(s: LocalPlayerState, o: LocalPlayerState, inp: InputState, dt
         next = (prev + 1 + Math.floor(Math.random() * 2)) % 3;
       }
       s.atkType = next;
-      sound.play('swing');
+      this.sfx('swing');
     }
     return;
   }
@@ -820,7 +845,7 @@ private stepSpider(s: LocalPlayerState, o: LocalPlayerState, inp: InputState, dt
       next = (prev + 1 + Math.floor(Math.random() * 2)) % 3;
     }
     s.atkType = next;
-    sound.play('swing');
+    this.sfx('swing');
   }
 }
 

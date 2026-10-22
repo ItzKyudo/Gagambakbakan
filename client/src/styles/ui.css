@@ -69,6 +69,14 @@
   flex: 1;
 }
 
+.menu-split-body:not(:has(.menu-right-col)) {
+  justify-content: center;
+}
+
+.menu-split-body:not(:has(.menu-right-col)) .menu-left-col {
+  margin: 0 auto;
+}
+
 .menu-left-col {
   width: clamp(450px, 28vw, 540px);
   flex-shrink: 0;

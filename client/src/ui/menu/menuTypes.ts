@@ -1,4 +1,4 @@
-export type MenuTab = 'main' | 'customize' | 'abilities' | 'settings' | 'about' | 'learn';
+export type MenuTab = 'main' | 'customize' | 'abilities' | 'settings' | 'about' | 'learn' | 'account';
 
 export interface MenuStartOptions {
   mode: 'online' | 'cpu' | '2p';

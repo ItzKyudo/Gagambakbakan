@@ -14,6 +14,7 @@ import { LocalGameEngine, type InputState } from './game/localGame';
 import { network } from './network';
 import { sound } from './audio';
 import { getKeys, getLooks, getColor, getProgress, getLevel, getUnlockedIds, recordOnlineMatch, type PlayerKeys } from './gb';
+import { getAuthUser } from './auth';
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
 
@@ -181,6 +182,10 @@ function showMainMenu() {
 }
 
 async function startGame(opts: MenuStartOptions) {
+  if (!getAuthUser()) {
+    showMainMenu();
+    return;
+  }
   app.innerHTML = '';
 
   gamePage = new GamePage(app, {

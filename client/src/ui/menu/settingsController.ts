@@ -1,5 +1,5 @@
 import { sound } from '../../audio';
-import { defaultKeys, getProgress, getSettings, saveKeys, saveProgress, saveSettings } from '../../gb';
+import { defaultKeys, getSettings, saveKeys, saveSettings } from '../../gb';
 import type { ListeningKey } from './settingsView';
 
 export interface SettingsState {
@@ -93,23 +93,6 @@ export function bindSettingsEvents(container: HTMLElement, state: SettingsState,
     saveKeys(defaultKeys());
     sound.playTone(400, 0.1, 'triangle', 0.04, -100);
     render();
-  });
-
-  // Progress unlock all & reset
-  const chkUnlockAll = container.querySelector('#chkUnlockAll') as HTMLInputElement;
-  chkUnlockAll?.addEventListener('change', () => {
-    const p = getProgress();
-    p.unlockAll = chkUnlockAll.checked;
-    saveProgress(p);
-    sound.playTone(640, 0.1, 'square', 0.04, 200);
-  });
-
-  container.querySelector('#btnResetProg')?.addEventListener('click', () => {
-    if (confirm('Reset your match stats, online EXP, and unlock progress?')) {
-      saveProgress({ played: 0, wins: 0, unlockAll: false, onlineExp: 0, onlinePlayed: 0, onlineWins: 0, unlockedSkills: ['dash', 'web', 'surge'] });
-      sound.playTone(320, 0.15, 'sawtooth', 0.05, -120);
-      render();
-    }
   });
 }
 

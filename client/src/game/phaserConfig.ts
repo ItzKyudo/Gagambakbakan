@@ -2,15 +2,26 @@ import Phaser from 'phaser';
 import { GagambakbakanScene } from './GagambakbakanScene';
 import { CANVAS_WIDTH, CANVAS_HEIGHT } from './constants';
 
-export function createPhaserGame(parentElement: HTMLElement): { game: Phaser.Game; scene: GagambakbakanScene } {
+export interface PhaserGameOptions {
+  transparent?: boolean;
+}
+
+export function createPhaserGame(
+  parentElement: HTMLElement,
+  options?: PhaserGameOptions
+): { game: Phaser.Game; scene: GagambakbakanScene } {
   const scene = new GagambakbakanScene();
+  if (options?.transparent) {
+    scene.transparentBg = true;
+  }
 
   const config: Phaser.Types.Core.GameConfig = {
     type: Phaser.AUTO,
     parent: parentElement,
     width: CANVAS_WIDTH,
     height: CANVAS_HEIGHT,
-    backgroundColor: '#12201f',
+    transparent: options?.transparent ?? false,
+    backgroundColor: options?.transparent ? undefined : '#12201f',
     scale: {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH,

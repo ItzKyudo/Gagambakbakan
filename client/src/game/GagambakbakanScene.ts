@@ -43,6 +43,7 @@ export class GagambakbakanScene extends Phaser.Scene {
   public myPlayerId: number = 0; // 0 = Amber, 1 = Jade
   public isOnline: boolean = false;
   public shakeAmount: number = 0;
+  public transparentBg: boolean = false;
 
   private bgCanvas!: HTMLCanvasElement;
   private flies: Array<{ x: number; y: number; ph: number; sp: number }> = [];
@@ -328,10 +329,11 @@ export class GagambakbakanScene extends Phaser.Scene {
     ctx.translate(sx, sy);
 
     // Draw background
-    ctx.drawImage(this.bgCanvas, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    if (!this.transparentBg) {
+      ctx.drawImage(this.bgCanvas, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-    // Fireflies
-    this.flies.forEach((fl) => {
+      // Fireflies
+      this.flies.forEach((fl) => {
       const x = fl.x + Math.sin(t * fl.sp + fl.ph) * 40;
       const y = fl.y + Math.cos(t * fl.sp * 1.3 + fl.ph) * 24;
       const a = 0.4 + 0.6 * Math.max(0, Math.sin(t * 1.6 + fl.ph * 3));
@@ -345,6 +347,7 @@ export class GagambakbakanScene extends Phaser.Scene {
       ctx.arc(x, y, 1.6, 0, Math.PI * 2);
       ctx.fill();
     });
+    }
 
     // Twig
     this.drawStick(ctx);
@@ -363,6 +366,7 @@ export class GagambakbakanScene extends Phaser.Scene {
           ? [p1, p2]
           : (p1.atkT > 0 && p2.atkT <= 0 ? [p2, p1] : [p1, p2]));
       order.forEach((s) => this.drawSpider(ctx, s, t));
+      order.forEach((s) => this.drawSpiderName(ctx, s));
 
       // Draw Webs & Projectiles
       const webs = this.gameState.webs || [];
@@ -2952,10 +2956,39 @@ export class GagambakbakanScene extends Phaser.Scene {
       ctx.restore();
     }
 
+
+    ctx.restore();
+  }
+
+  private drawSpiderName(ctx: CanvasRenderingContext2D, s: any) {
+    if (!s.name) return;
+    const isAmber = s.id === 0;
+    const colLight = s.colorLight || (isAmber ? COLORS.amberLight : COLORS.jadeLight);
+
+    const isHanging = s.hang && (s.drop || 0) > 12;
+    const x = s.x;
+    const y = isHanging ? (BODY_Y + (s.drop || 0) + 40) : (STICK.y - 48);
+
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '800 16px "Nunito", "Arial Black", system-ui, sans-serif';
+
+    // Thick dark shadow stroke so it is easily readable without a container box
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.95)';
+    ctx.lineWidth = 4.5;
+    ctx.lineJoin = 'round';
+    ctx.strokeText(s.name, x, y);
+
+    // Bright, crisp filled text matching the spider color
+    ctx.fillStyle = colLight;
+    ctx.fillText(s.name, x, y);
+
     ctx.restore();
   }
 
   private drawPond(ctx: CanvasRenderingContext2D, t: number) {
+    if (this.transparentBg) return;
     let dang = 0;
     if (this.gameState && this.gameState.p1 && this.gameState.p2) {
       const spiders = [this.gameState.p1, this.gameState.p2];

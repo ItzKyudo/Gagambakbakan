@@ -14,6 +14,9 @@ import { renderSettingsView } from './menu/settingsView';
 import { bindSettingsEvents, type SettingsState } from './menu/settingsController';
 import { renderAboutView } from './menu/aboutView';
 import { bindLearnDemo, renderLearnView } from './menu/learnView';
+import { renderAccountView } from './menu/accountView';
+import { bindAccountEvents, createAccountState } from './menu/accountController';
+import { getAuthUser, initAuth, subscribeAuth } from '../auth';
 
 export type { MenuStartOptions } from './menu/menuTypes';
 
@@ -23,12 +26,29 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
   const customizeState: CustomizeState = { player: 'p1', drawColor: '#e8593f' };
   const settingsState: SettingsState = { listeningKey: null };
   let spiderLookFrame = 0;
+  let cleanupMainDemo: (() => void) | null = null;
   let cleanupLearnDemo: (() => void) | null = null;
+  let cleanupAccountDemo: (() => void) | null = null;
   const abilitiesState = createAbilitiesViewState();
+  const accountState = createAccountState();
+
+  initAuth();
+  subscribeAuth(() => {
+    if (activeTab === 'main' || activeTab === 'account') {
+      render();
+    }
+  });
 
   const onStart = (opts: MenuStartOptions) => {
-    document.body.classList.remove('main-menu-active', 'abilities-active');
-    document.documentElement.classList.remove('main-menu-active', 'abilities-active');
+    if (!getAuthUser()) {
+      activeTab = 'account';
+      render();
+      return;
+    }
+    cleanupMainDemo?.();
+    cleanupMainDemo = null;
+    document.body.classList.remove('main-menu-active', 'abilities-active', 'account-active');
+    document.documentElement.classList.remove('main-menu-active', 'abilities-active', 'account-active');
     clearAbilitiesKeyHandler(abilitiesState);
     rawOnStart(opts);
   };
@@ -37,8 +57,12 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
   sound.music.arm('ambient');
 
   function render() {
+    cleanupMainDemo?.();
+    cleanupMainDemo = null;
     cleanupLearnDemo?.();
     cleanupLearnDemo = null;
+    cleanupAccountDemo?.();
+    cleanupAccountDemo = null;
     container.innerHTML = `
       <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
         <defs>
@@ -159,6 +183,14 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
       document.documentElement.classList.remove('abilities-active');
     }
 
+    if (activeTab === 'account') {
+      document.body.classList.add('account-active');
+      document.documentElement.classList.add('account-active');
+    } else {
+      document.body.classList.remove('account-active');
+      document.documentElement.classList.remove('account-active');
+    }
+
     switch (activeTab) {
       case 'customize':
         return renderCustomizeView(customizeState.player, customizeState.drawColor);
@@ -177,6 +209,8 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
         return renderLearnView();
       case 'about':
         return renderAboutView();
+      case 'account':
+        return renderAccountView(accountState);
       default:
         return renderMainMenuView();
     }
@@ -248,7 +282,7 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
     });
 
     if (activeTab === 'main') {
-      bindMainMenuEvents(container, {
+      cleanupMainDemo = bindMainMenuEvents(container, {
         navigate: tab => {
           activeTab = tab;
           render();
@@ -264,6 +298,8 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
     if (activeTab === 'abilities') bindAbilitiesEvents(container, abilitiesState, render);
 
     if (activeTab === 'learn') cleanupLearnDemo = bindLearnDemo(container);
+
+    if (activeTab === 'account') cleanupAccountDemo = bindAccountEvents(container, accountState, render);
   }
 
   // Window key listener for interactive key remap

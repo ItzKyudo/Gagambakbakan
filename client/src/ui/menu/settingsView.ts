@@ -1,7 +1,6 @@
 import { createElement, ArrowLeft, Volume2, VolumeX, type IconNode } from 'lucide';
 import { sound } from '../../audio';
-import { ACTIONS, getExpProgress, getKeys, getProgress, getSettings, getUnlockedIds, keyLabel } from '../../gb';
-import { SKILLS_LIST } from '../../game/abilities';
+import { ACTIONS, getKeys, getSettings, keyLabel } from '../../gb';
 
 function icon(node: IconNode, attrs: Record<string, string | number> = {}): string {
   return createElement(node, attrs).outerHTML;
@@ -18,9 +17,6 @@ export interface ListeningKey {
 export function renderSettingsView(listeningKey: ListeningKey | null): string {
   const st = getSettings();
   const kb = getKeys();
-  const prog = getProgress();
-  const expInfo = getExpProgress(prog.onlineExp);
-  const unlockedCount = getUnlockedIds(prog).length;
 
   return `
     <div class="page settings-page" style="max-width:760px; margin-inline:auto;">
@@ -103,30 +99,6 @@ export function renderSettingsView(listeningKey: ListeningKey | null): string {
         <div class="msg" id="kmsg" aria-live="polite">${listeningKey ? 'Press any key for ' + listeningKey.action + ' (Esc cancels)' : ''}</div>
         <div class="btns"><button type="button" class="btn ghost" id="btnResetKeys">Reset keys</button></div>
       </section>
-
-      <!-- PROGRESS -->
-      <section class="sec" aria-label="Progress">
-        <h2>Progress & Levels</h2>
-        <div class="settings-prog-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-block:12px; background:var(--surface-2); padding:14px; border-radius:8px; border:1px solid var(--line);">
-          <div>
-            <div style="font-family:var(--label); font-size:12px; color:var(--muted); text-transform:uppercase;">Player Level</div>
-            <div style="font-family:var(--display); font-size:22px; color:var(--amber-light);">Level ${expInfo.level}</div>
-            <div style="font-size:12px; color:var(--fg);">${expInfo.totalExp} Total EXP</div>
-          </div>
-          <div>
-            <div style="font-family:var(--label); font-size:12px; color:var(--muted); text-transform:uppercase;">Abilities Unlocked</div>
-            <div style="font-family:var(--display); font-size:22px; color:var(--jade-light);">${unlockedCount} / ${SKILLS_LIST.length}</div>
-            <div style="font-size:12px; color:var(--muted);">Skills Active in Spider Web</div>
-          </div>
-        </div>
-        <p class="note" style="margin-bottom:12px;">EXP is earned only from Online matches. Each level unlocks new battle abilities.</p>
-        <label class="row" style="grid-template-columns:auto 1fr; gap:8px;">
-          <input type="checkbox" id="chkUnlockAll" ${prog.unlockAll ? 'checked' : ''} style="width:20px;height:20px;accent-color:var(--amber)">
-          <span>Unlock every ability (testing mode)</span>
-        </label>
-        <div class="btns"><button type="button" class="btn ghost" id="btnResetProg">Reset progress</button></div>
-      </section>
     </div>
   `;
 }
-

@@ -9,7 +9,7 @@ export type { InputState, LocalBattleState, LocalPlayerState, LocalWebState } fr
 
 export class LocalGameEngine {
   public state: LocalBattleState;
-  public mode: 'cpu' | '2p' = 'cpu';
+  public mode: 'cpu' | '2p' | 'demo' = 'cpu';
   public diff: 'easy' | 'normal' | 'hard' = 'normal';
   public onFx?: (fx: any) => void;
   public onShake?: (shake: { amount: number }) => void;
@@ -19,7 +19,7 @@ export class LocalGameEngine {
   private combat!: LocalCombat;
 
   constructor(
-    mode: 'cpu' | '2p' = 'cpu',
+    mode: 'cpu' | '2p' | 'demo' = 'cpu',
     diff: 'easy' | 'normal' | 'hard' = 'normal',
     customP1?: { name?: string; color?: string; colorDark?: string; colorLight?: string; pattern?: string; customPattern?: string; acc?: string },
     customP2?: { name?: string; color?: string; colorDark?: string; colorLight?: string; pattern?: string; customPattern?: string; acc?: string }
@@ -78,6 +78,9 @@ export class LocalGameEngine {
     };
 
     this.combat = new LocalCombat(this.state);
+    if (mode === 'demo') {
+      this.combat.isMuted = true;
+    }
     this.combat.onFx = fx => this.onFx?.(fx);
     this.combat.onShake = shake => this.onShake?.(shake);
     this.combat.onRoundWon = data => this.onRoundWon?.(data);
@@ -161,6 +164,17 @@ export class LocalGameEngine {
     this.state.p1.falls = 0;
     this.state.p2.falls = 0;
 
+    if (this.mode === 'demo') {
+      this.state.p1.skill1 = 'dash';
+      this.state.p1.skill2 = 'web';
+      this.state.p2.skill1 = 'dash';
+      this.state.p2.skill2 = 'web';
+      this.state.p1Drafted = true;
+      this.state.p2Drafted = true;
+      this.startRound();
+      return;
+    }
+
     // Offer all unlocked skills for drafting
     const unlocked = getUnlockedIds();
     const choices = unlocked && unlocked.length > 0 ? unlocked : (['dash', 'web', 'surge'] as AbilityId[]);
@@ -208,8 +222,10 @@ export class LocalGameEngine {
     this.state.stateT = 0;
     this.combat.resetRound();
 
-    sound.play('start');
-    sound.music.play('duel');
+    if (this.mode !== 'demo') {
+      sound.play('start');
+      sound.music.play('duel');
+    }
   }
 
   private resetSpiderRound(s: LocalPlayerState, x: number, face: number) {
@@ -268,7 +284,11 @@ export class LocalGameEngine {
     this.combat.update(dt, humanInpP1, humanInpP2, this.mode, this.diff);
 
     if (this.state.status === 'roundEnd' && this.state.stateT > 2.4) {
-      this.endRound();
+      if (this.mode === 'demo') {
+        this.startRound();
+      } else {
+        this.endRound();
+      }
     }
   }
 

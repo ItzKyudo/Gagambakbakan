@@ -1267,3 +1267,182 @@
   transform: scale(1.06);
 }
 
+/* ====================================================
+   ACCOUNT / AUTH PAGE
+   ==================================================== */
+.account-page input[type="text"],
+.account-page input[type="email"],
+.account-page input[type="password"] {
+  width: 100%;
+  min-height: 44px;
+  font: inherit;
+  font-size: 16px;
+  padding: 10px 14px;
+  color: var(--fg);
+  caret-color: var(--amber);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-sizing: border-box;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.account-page input[type="text"]:focus,
+.account-page input[type="email"]:focus,
+.account-page input[type="password"]:focus {
+  outline: none;
+  border-color: var(--jade);
+  box-shadow: 0 0 0 3px rgba(76, 199, 178, 0.2);
+}
+
+.account-page input::placeholder {
+  color: var(--muted);
+  opacity: 0.6;
+}
+
+.link-btn:hover {
+  filter: brightness(1.2);
+}
+
+.locked-play {
+  border-color: rgba(242, 163, 58, 0.45) !important;
+  background: rgba(242, 163, 58, 0.08) !important;
+}
+
+.locked-play .ico {
+  color: var(--amber) !important;
+}
+
+/* ====================================================
+   ACCOUNT PRESENTATION: DIRECT ON BACKGROUND
+   ==================================================== */
+html:has(.fullscreen-account),
+body:has(.fullscreen-account),
+html.account-active,
+body.account-active {
+  overflow-x: hidden !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  position: fixed !important;
+  inset: 0 !important;
+}
+
+body:has(.fullscreen-account) #app,
+body.account-active #app {
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+body:has(.fullscreen-account) .menu-view-container,
+body.account-active .menu-view-container {
+  height: 100vh !important;
+  max-height: 100vh !important;
+  padding: max(10px, env(safe-area-inset-top, 0px)) clamp(16px, 2.5vw, 40px) clamp(10px, 1.5vh, 20px) clamp(16px, 2.5vw, 40px) !important;
+  box-sizing: border-box !important;
+  overflow-y: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 !important;
+}
+
+.fullscreen-account {
+  max-width: 100% !important;
+  width: 100% !important;
+  min-height: 100% !important;
+  margin: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 !important;
+  gap: clamp(8px, 1.4vh, 14px) !important;
+}
+
+.account-direct-wrap {
+  position: relative;
+  z-index: 2;
+}
+
+.fullscreen-account .account-split-layout {
+  display: grid;
+  grid-template-columns: 40% 60%;
+  gap: clamp(16px, 2.5vw, 36px);
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  align-items: center;
+}
+
+.fullscreen-account .account-left-col {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.fullscreen-account .account-right-col {
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.account-preview-arena {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1200 / 640;
+  max-height: calc(100vh - 130px);
+  border-radius: 0;
+  overflow: visible;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.account-preview-arena canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+@media (max-width: 880px) {
+  .fullscreen-account .account-split-layout {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    overflow-y: auto;
+  }
+  .account-preview-arena {
+    min-height: 260px;
+  }
+}
+
+#turnstileWidget {
+  min-height: 65px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  margin: 6px 0;
+}
+
+
+
+
+

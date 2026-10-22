@@ -1,7 +1,8 @@
-import { createElement, BookOpen, GraduationCap, Settings, type IconNode } from 'lucide';
+import { createElement, BookOpen, GraduationCap, Settings, User, LogIn, type IconNode } from 'lucide';
 import { getColor, getExpProgress, getLooks, getProgress, getSettings, getUnlockedIds, spiderSVG } from '../../gb';
 import { SKILLS_LIST } from '../../game/abilities';
 import { getPlayerRankTitle } from './rankTitle';
+import { getAuthUser } from '../../auth';
 
 function icon(node: IconNode, attrs: Record<string, string | number> = {}): string {
   return createElement(node, attrs).outerHTML;
@@ -11,6 +12,7 @@ function icon(node: IconNode, attrs: Record<string, string | number> = {}): stri
    1. MAIN MENU VIEW (Matching menu.html)
    ==================================================== */
 export function renderMainMenuView(): string {
+  const user = getAuthUser();
   const looks = getLooks();
   const st = getSettings();
   const prog = getProgress();
@@ -51,14 +53,17 @@ export function renderMainMenuView(): string {
       <div class="menu-left-col">
         <nav class="panel" id="pMain" aria-label="Main menu">
           <button type="button" class="mb primary" id="btnGoPlay">
-            <span class="mi"><svg class="ico"><use href="#ic-play"/></svg></span>
-            <span class="ml">Play</span>
+            <span class="mi">${user ? '<svg class="ico"><use href="#ic-play"/></svg>' : icon(LogIn, { class: 'ico', width: 20, height: 20, 'stroke-width': 2.1 })}</span>
+            <span class="ml">${user ? 'Play' : 'Log In'}</span>
+            <small style="${user ? '' : 'color:var(--amber); font-weight:600;'}">${user ? 'vs AI, PvP, or Online' : 'Sign in or register to play'}</small>
           </button>
-          <button type="button" class="mb" id="btnGoAbilities">
-            <span class="mi"><svg class="ico"><use href="#ic-web"/></svg></span>
-            <span class="ml">Abilities</span>
-            <small id="abCount">Level ${expInfo.level} &middot; ${unlockedCount} of ${SKILLS_LIST.length} unlocked</small>
-          </button>
+          ${user ? `
+            <button type="button" class="mb" id="btnGoAbilities">
+              <span class="mi"><svg class="ico"><use href="#ic-web"/></svg></span>
+              <span class="ml">Abilities</span>
+              <small id="abCount">Level ${expInfo.level} &middot; ${unlockedCount} of ${SKILLS_LIST.length} unlocked</small>
+            </button>
+          ` : ''}
           <button type="button" class="mb" id="btnGoLearn">
             <span class="mi">${icon(GraduationCap, { class: 'ico', width: 20, height: 20, 'stroke-width': 2.1 })}</span>
             <span class="ml">Learn</span>
@@ -113,71 +118,81 @@ export function renderMainMenuView(): string {
         </div>
       </div>
 
-      <!-- FAR RIGHT: CHARACTER DISPLAY -->
-      <aside class="showcase menu-right-col" aria-label="Your spider">
-        <div class="showcase-card">
-          <!-- 1. SPIDER NAME & IDENTITY (MOVED ABOVE SPIDER DISPLAY) -->
-          <div class="showcase-id-badge" id="badgeQuickCustomize" role="button" tabindex="0" title="Click to customize your spider" style="--badge-c:${getColor(looks.p1.color).main};">
-            <div class="sib-header">
-              <i class="sib-dot" style="background:${getColor(looks.p1.color).main}; box-shadow: 0 0 10px ${getColor(looks.p1.color).main};"></i>
-              <span class="sib-name" id="showcaseName">${looks.p1.name}</span>
-              <span class="sib-lvl-badge">LVL ${expInfo.level}</span>
-            </div>
-            <div class="sib-sub">
-              <span class="sib-rank">${getPlayerRankTitle(expInfo.level)}</span>
-              <span class="sib-color-label" style="color:${getColor(looks.p1.color).light};">${getColor(looks.p1.color).label}</span>
-            </div>
-          </div>
-
-          <!-- 2. PODIUM & SPIDER DISPLAY -->
-          <div class="showcase-podium">
-            <div class="showcase-glow" style="--spider-glow:${getColor(looks.p1.color).main};"></div>
-            <div class="stage" id="showcaseStage" role="button" tabindex="0" title="Click to customize your spider">
-              ${spiderSVG(looks.p1, '-showcase')}
-            </div>
-            <div class="showcase-reflection"></div>
-            <button type="button" class="showcase-customize-hint" id="btnQuickCustomize" title="Customize Spider">
-              <svg class="ico" width="13" height="13" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              <span>Customize</span>
-            </button>
-          </div>
-
-          <!-- 3. WINS & LOST STATS (BELOW SPIDER CHARACTER DISPLAY) -->
-          <div class="showcase-stats-card" title="Total Matches: ${totalPlayed} (${onlinePlayed} Online, ${offlinePlayed} Offline)">
-            <div class="ssc-main">
-              <div class="ssc-stat ssc-wins">
-                <span class="ssc-label">Wins</span>
-                <span class="ssc-val wins-val">${totalWins}</span>
+      <!-- FAR RIGHT: CHARACTER DISPLAY (ONLY WHEN LOGGED IN) -->
+      ${user ? `
+        <aside class="showcase menu-right-col" aria-label="Your spider">
+          <div class="showcase-card">
+            <!-- 1. SPIDER NAME & IDENTITY (MOVED ABOVE SPIDER DISPLAY) -->
+            <div class="showcase-id-badge" id="badgeQuickCustomize" role="button" tabindex="0" title="Click to customize your spider" style="--badge-c:${getColor(looks.p1.color).main};">
+              <div class="sib-header">
+                <i class="sib-dot" style="background:${getColor(looks.p1.color).main}; box-shadow: 0 0 10px ${getColor(looks.p1.color).main};"></i>
+                <span class="sib-name" id="showcaseName">${looks.p1.name}</span>
+                <span class="sib-lvl-badge">LVL ${expInfo.level}</span>
+                <button type="button" class="btn ghost btn-account-pill" id="btnGoAccount" title="View Account & Stats" style="margin-left:auto; padding:2px 8px; font-size:11px; height:24px; border-radius:12px; gap:4px; border-color:rgba(76,199,178,0.3); color:var(--jade);">
+                  ${icon(User, { width: 12, height: 12, 'stroke-width': 2.5 })}
+                  <span>Account</span>
+                </button>
               </div>
-              <div class="ssc-divider"></div>
-              <div class="ssc-stat ssc-lost">
-                <span class="ssc-label">Lost</span>
-                <span class="ssc-val lost-val">${totalLosses}</span>
-              </div>
-              <div class="ssc-divider"></div>
-              <div class="ssc-stat ssc-winrate">
-                <span class="ssc-label">Win Rate</span>
-                <span class="ssc-val rate-val">${winRate}%</span>
+              <div class="sib-sub">
+                <span class="sib-rank">${getPlayerRankTitle(expInfo.level)}</span>
+                <span class="sib-color-label" style="color:${getColor(looks.p1.color).light};">${getColor(looks.p1.color).label}</span>
               </div>
             </div>
-          </div>
 
-          <!-- 4. LEVEL & ONLINE EXP PROGRESS CARD -->
-          <div class="menu-level-card" role="button" tabindex="0" title="View Abilities Tree">
-            <div class="mlc-top">
-              <span class="mlc-badge">LEVEL ${expInfo.level}</span>
-              <span class="mlc-exp">${expInfo.expIntoLevel} / ${expInfo.expForLevel} EXP</span>
+            <!-- 2. PODIUM & SPIDER DISPLAY -->
+            <div class="showcase-podium">
+              <div class="showcase-glow" style="--spider-glow:${getColor(looks.p1.color).main};"></div>
+              <div class="stage" id="showcaseStage" role="button" tabindex="0" title="Click to customize your spider">
+                ${spiderSVG(looks.p1, '-showcase')}
+              </div>
+              <div class="showcase-reflection"></div>
+              <button type="button" class="showcase-customize-hint" id="btnQuickCustomize" title="Customize Spider">
+                <svg class="ico" width="13" height="13" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span>Customize</span>
+              </button>
             </div>
-            <div class="mlc-track">
-              <div class="mlc-fill" style="width:${Math.max(5, expInfo.progressPct)}%;"></div>
+
+            <!-- 3. WINS & LOST STATS (BELOW SPIDER CHARACTER DISPLAY) -->
+            <div class="showcase-stats-card" title="Total Matches: ${totalPlayed} (${onlinePlayed} Online, ${offlinePlayed} Offline)">
+              <div class="ssc-main">
+                <div class="ssc-stat ssc-wins">
+                  <span class="ssc-label">Wins</span>
+                  <span class="ssc-val wins-val">${totalWins}</span>
+                </div>
+                <div class="ssc-divider"></div>
+                <div class="ssc-stat ssc-lost">
+                  <span class="ssc-label">Lost</span>
+                  <span class="ssc-val lost-val">${totalLosses}</span>
+                </div>
+                <div class="ssc-divider"></div>
+                <div class="ssc-stat ssc-winrate">
+                  <span class="ssc-label">Win Rate</span>
+                  <span class="ssc-val rate-val">${winRate}%</span>
+                </div>
+              </div>
             </div>
-            <div class="mlc-sub">
-              <span class="mlc-prog-label">Skill Mastery</span>
-              <span class="mlc-skills-count">${unlockedCount} / ${SKILLS_LIST.length} Unlocked &rsaquo;</span>
+
+            <!-- 4. LEVEL & ONLINE EXP PROGRESS CARD -->
+            <div class="menu-level-card" role="button" tabindex="0" title="View Abilities Tree">
+              <div class="mlc-top">
+                <span class="mlc-badge">LEVEL ${expInfo.level}</span>
+                <span class="mlc-exp">${expInfo.expIntoLevel} / ${expInfo.expForLevel} EXP</span>
+              </div>
+              <div class="mlc-track">
+                <div class="mlc-fill" style="width:${Math.max(5, expInfo.progressPct)}%;"></div>
+              </div>
+              <div class="mlc-sub">
+                <span class="mlc-prog-label">Skill Mastery</span>
+                <span class="mlc-skills-count">${unlockedCount} / ${SKILLS_LIST.length} Unlocked &rsaquo;</span>
+              </div>
             </div>
           </div>
+        </aside>
+      ` : `
+        <div class="menu-right-col" style="display:flex; align-items:center; justify-content:center; flex:1; min-width:0;">
+          <div class="account-preview-arena" id="menuBattlePreview" title="Live AI Sparring"></div>
         </div>
-      </aside>
+      `}
     </main>
   `;
 }

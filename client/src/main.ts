@@ -30,10 +30,46 @@ let abQueueP1 = [0, 0]; // [s1, s2]
 let abQueueP2 = [0, 0]; // [s1, s2]
 let reelP2 = 0;
 let onlineDraftSubmitted = false;
+let hasBooted = false;
+let isBlockedByDevice = false;
+
+function isMobileOrTablet(): boolean {
+  const ua = navigator.userAgent || '';
+  const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Tablet|Silk|Kindle|PlayBook/i.test(ua);
+  const isIPadOS = /Macintosh/i.test(ua) && navigator.maxTouchPoints > 1;
+  const isCoarseNoHover = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+  const isSmallScreen = window.matchMedia('(max-width: 1024px)').matches;
+
+  return isMobileUA || isIPadOS || isCoarseNoHover || isSmallScreen;
+}
+
+function syncDeviceAvailability() {
+  const blocked = isMobileOrTablet();
+  isBlockedByDevice = blocked;
+  document.documentElement.classList.toggle('is-mobile-or-tablet', blocked);
+
+  const blockerEl = document.getElementById('mobile-blocker');
+  if (blockerEl) {
+    blockerEl.setAttribute('aria-hidden', blocked ? 'false' : 'true');
+  }
+  app.setAttribute('aria-hidden', blocked ? 'true' : 'false');
+
+  if (blocked) {
+    keysDown.clear();
+    sound.music.stop();
+    if (gamePage && !gamePage.isPaused && localEngine) {
+      gamePage.togglePause();
+    }
+  } else if (!hasBooted) {
+    hasBooted = true;
+    showMainMenu();
+  }
+}
 
 function setupKeyboardListeners() {
   window.addEventListener('keydown', (e) => {
     // If draft modal is active, let draft handle 1/2/3/Enter
+    if (isBlockedByDevice) return;
     if (gamePage?.isDraftOpen) return;
 
     if (e.code === 'KeyP' || e.code === 'Escape') {
@@ -555,4 +591,6 @@ function startLocalGame(opts: MenuStartOptions) {
 }
 
 // Initial Boot
-showMainMenu();
+window.addEventListener('resize', syncDeviceAvailability);
+window.addEventListener('orientationchange', syncDeviceAvailability);
+syncDeviceAvailability();

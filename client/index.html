@@ -9,6 +9,64 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500&family=Bowlby+One&display=swap">
   </head>
   <body>
+    <!-- PC-ONLY / MOBILE & TABLET BLOCKER SCREEN -->
+    <div id="mobile-blocker" class="mobile-blocker" aria-live="polite">
+      <div class="mb-backdrop" aria-hidden="true">
+        <div class="mb-glow mb-glow-amber"></div>
+        <div class="mb-glow mb-glow-jade"></div>
+      </div>
+
+      <div class="mb-card">
+        <svg class="mb-twig" viewBox="0 0 300 78" aria-hidden="true">
+          <rect x="6" y="8" width="288" height="14" rx="7" fill="#7b5b3e"/>
+          <rect x="6" y="8" width="288" height="4" rx="2" fill="#a58059"/>
+          <g stroke-linecap="round" stroke-width="2.4" fill="none">
+            <g stroke="#f2a33a"><path d="M96 22v14"/><path d="M82 52l-14-12M84 58l-18 2M110 52l14-12M108 58l18 2"/></g>
+            <g stroke="#4cc7b2"><path d="M204 22v14"/><path d="M190 52l-14-12M192 58l-18 2M218 52l14-12M216 58l18 2"/></g>
+          </g>
+          <ellipse cx="96" cy="48" rx="15" ry="12" fill="#f2a33a"/><circle cx="96" cy="38" r="8" fill="#ffd694"/>
+          <ellipse cx="204" cy="48" rx="15" ry="12" fill="#4cc7b2"/><circle cx="204" cy="38" r="8" fill="#b0f2e3"/>
+        </svg>
+
+        <div class="mb-brand"><span class="a">Gagam</span><span class="j">bakbakan</span></div>
+
+        <div class="mb-badge">
+          <span class="mb-badge-dot"></span>
+          <span>PC Exclusive</span>
+        </div>
+
+        <div class="mb-icon-wrap" aria-hidden="true">
+          <!-- Desktop PC Icon -->
+          <svg class="mb-pc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2" />
+            <line x1="8" y1="21" x2="16" y2="21" />
+            <line x1="12" y1="17" x2="12" y2="21" />
+          </svg>
+        </div>
+
+        <h1 class="mb-title">Not Available on Mobile</h1>
+        <p class="mb-desc">
+          <strong>Gagambakbakan</strong> is not available on mobile devices or tablets.
+          Please visit on a <strong>PC or laptop</strong> with a keyboard to play.
+        </p>
+
+        <div class="mb-req-list">
+          <div class="mb-req-item">
+            <span class="mb-req-check">✓</span>
+            <span>Desktop / Laptop PC</span>
+          </div>
+          <div class="mb-req-item">
+            <span class="mb-req-check">✓</span>
+            <span>Keyboard Controls</span>
+          </div>
+          <div class="mb-req-item mb-req-no">
+            <span class="mb-req-cross">✕</span>
+            <span>No Mobile or Tablet</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>

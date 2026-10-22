@@ -158,7 +158,13 @@ export const ACCS: [string, string][] = [
   ['halo', 'Halo'],
   ['mohawk', 'Mohawk'],
   ['mask', 'Ninja Mask'],
-  ['tophat', 'Top Hat']
+  ['tophat', 'Top Hat'],
+  ['samurai', 'Kabuto Helm'],
+  ['wizard', 'Wizard Hat'],
+  ['pirate', 'Pirate Hat'],
+  ['visor', 'Cyber Visor'],
+  ['strawhat', 'Ronin Hat'],
+  ['headphones', 'Headset']
 ];
 
 export const DEF_LOOK: { p1: SpiderLook; p2: SpiderLook } = {
@@ -249,85 +255,197 @@ export function spiderSVGraw(look: SpiderLook): string {
   if (look.pattern === 'custom') {
     pat = customPatternSVG(look.customPattern);
   } else if (look.pattern === 'stripes') {
-    [72, 88, 104].forEach(x => {
-      pat += `<path d="M${x} 56 C${x - 6} 78 ${x + 6} 105 ${x} 132" fill="none" stroke="${c.dark}" stroke-width="8" opacity=".56"/>`;
+    // Tapered tiger-stripe bands with dorsal spine & light contour rim
+    pat += `<path d="M46 93 Q88 91 131 93" fill="none" stroke="${c.dark}" stroke-width="3.5" opacity=".45"/>`;
+    [66, 84, 102, 118].forEach((x, idx) => {
+      const w = idx === 1 || idx === 2 ? 7.5 : 5.5;
+      pat += `<path d="M${x + 3} 56 Q${x - 7} 93 ${x + 3} 130" fill="none" stroke="${c.light}" stroke-width="${w + 2.6}" stroke-linecap="round" opacity=".32"/>`;
+      pat += `<path d="M${x + 3} 56 Q${x - 7} 93 ${x + 3} 130" fill="none" stroke="${c.dark}" stroke-width="${w}" stroke-linecap="round"/>`;
     });
   } else if (look.pattern === 'dots') {
-    [[74, 88], [90, 106], [104, 90], [86, 76], [112, 108], [68, 108]].forEach(p => {
-      pat += `<circle cx="${p[0]}" cy="${p[1]}" r="5.5" fill="rgba(20,12,6,.36)"/>`;
+    // Leopard / Ladybug rosettes with light halo rings and varied sizes
+    [
+      [88, 92, 8.5],
+      [66, 80, 6.2], [66, 106, 6.2],
+      [108, 78, 6.5], [108, 107, 6.5],
+      [87, 68, 5.2], [87, 117, 5.2],
+      [51, 93, 4.8]
+    ].forEach(([cx, cy, r]) => {
+      pat += `<circle cx="${cx}" cy="${cy}" r="${r + 2.2}" fill="${c.light}" opacity=".45"/>` +
+        `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${c.dark}"/>` +
+        `<circle cx="${cx - r * 0.28}" cy="${cy - r * 0.28}" r="${Math.max(1.3, r * 0.26).toFixed(1)}" fill="${c.light}" opacity=".65"/>`;
     });
   } else if (look.pattern === 'chevron') {
-    [70, 86, 102].forEach(x => {
-      pat += `<polyline points="${x - 9},72 ${x + 3},98 ${x - 9},124" fill="none" stroke="rgba(20,12,6,.36)" stroke-width="7" stroke-linejoin="round"/>`;
+    // Interlocking armored viper chevrons with light edge piping
+    [62, 80, 98, 114].forEach((x, idx) => {
+      const span = idx === 3 ? 19 : 25;
+      pat += `<polyline points="${x - 11},${93 - span} ${x + 5},93 ${x - 11},${93 + span}" fill="none" stroke="${c.light}" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round" opacity=".32"/>` +
+        `<polyline points="${x - 11},${93 - span} ${x + 5},93 ${x - 11},${93 + span}" fill="none" stroke="${c.dark}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>`;
     });
   } else if (look.pattern === 'rings') {
-    pat += `<ellipse cx="90" cy="98" rx="12" ry="9" fill="none" stroke="rgba(20,12,6,.36)" stroke-width="5.5"/>` +
-      `<ellipse cx="90" cy="98" rx="24" ry="18" fill="none" stroke="rgba(20,12,6,.36)" stroke-width="5.5"/>` +
-      `<ellipse cx="90" cy="98" rx="36" ry="27" fill="none" stroke="rgba(20,12,6,.36)" stroke-width="5.5"/>` +
-      `<circle cx="90" cy="98" r="4.5" fill="rgba(20,12,6,.36)"/>`;
+    // Ocellus target bullseye with alternating dark & light rings
+    pat += `<ellipse cx="89" cy="93" rx="38" ry="28" fill="none" stroke="${c.dark}" stroke-width="5.5"/>` +
+      `<ellipse cx="89" cy="93" rx="28" ry="20.5" fill="none" stroke="${c.light}" stroke-width="3" opacity=".55"/>` +
+      `<ellipse cx="89" cy="93" rx="22" ry="16" fill="none" stroke="${c.dark}" stroke-width="5.5"/>` +
+      `<ellipse cx="89" cy="93" rx="11.5" ry="8.5" fill="${c.dark}" stroke="${c.light}" stroke-width="2.4"/>` +
+      `<circle cx="87" cy="91" r="3.2" fill="${c.light}"/>`;
   } else if (look.pattern === 'cross') {
-    pat += `<rect x="85" y="60" width="10" height="76" rx="3" fill="rgba(20,12,6,.36)"/>` +
-      `<rect x="60" y="93" width="60" height="10" rx="3" fill="rgba(20,12,6,.36)"/>` +
-      `<circle cx="90" cy="98" r="11" fill="rgba(20,12,6,.36)"/>`;
+    // Ornate Argiope St. Andrew's cross with flared arms and central diamond medallion
+    pat += `<path d="M82 54 L96 54 L93 86 L128 84 L128 100 L93 98 L96 130 L82 130 L85 98 L50 100 L50 84 L85 86 Z" fill="${c.dark}" stroke="${c.light}" stroke-width="2.2" stroke-linejoin="round"/>` +
+      `<polygon points="89,78 103,92 89,106 75,92" fill="${c.light}" opacity=".55"/>` +
+      `<polygon points="89,83 98,92 89,101 80,92" fill="${c.dark}"/>`;
   } else if (look.pattern === 'split') {
-    pat += `<rect x="40" y="60" width="100" height="38" fill="rgba(20,12,6,.36)"/>` +
-      `<line x1="44" y1="98" x2="136" y2="98" stroke="rgba(20,12,6,.5)" stroke-width="5"/>`;
+    // Harlequin dual-tone split with central crest & counter-dots
+    pat += `<rect x="40" y="52" width="100" height="41" fill="${c.dark}"/>` +
+      `<line x1="42" y1="93" x2="136" y2="93" stroke="${c.light}" stroke-width="3.5" opacity=".7"/>` +
+      `<line x1="42" y1="96" x2="136" y2="96" stroke="${c.dark}" stroke-width="3"/>` +
+      `<circle cx="70" cy="76" r="4.5" fill="${c.light}" opacity=".65"/>` +
+      `<circle cx="106" cy="76" r="4.5" fill="${c.light}" opacity=".65"/>` +
+      `<circle cx="70" cy="110" r="4.8" fill="${c.dark}"/>` +
+      `<circle cx="106" cy="110" r="4.8" fill="${c.dark}"/>`;
   } else if (look.pattern === 'webmark') {
+    // Scalloped radial orb-web lattice with dew-drop center
     for (let a = 0; a < 8; a++) {
       const rad = a * Math.PI / 4;
-      const x2 = 90 + Math.cos(rad) * 46;
-      const y2 = 98 + Math.sin(rad) * 36;
-      pat += `<line x1="90" y1="98" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="rgba(20,12,6,.36)" stroke-width="3"/>`;
+      const x2 = 89 + Math.cos(rad) * 46;
+      const y2 = 93 + Math.sin(rad) * 36;
+      pat += `<line x1="89" y1="93" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${c.dark}" stroke-width="3"/>`;
     }
-    [14, 26, 38].forEach(r => {
-      let pts = '';
+    [13, 25, 37].forEach((r, idx) => {
+      let d = '';
       for (let a = 0; a <= 8; a++) {
         const rad = a * Math.PI / 4;
-        pts += `${(90 + Math.cos(rad) * r).toFixed(1)},${(98 + Math.sin(rad) * (r * 0.78)).toFixed(1)} `;
+        const px = (89 + Math.cos(rad) * r).toFixed(1);
+        const py = (93 + Math.sin(rad) * (r * 0.78)).toFixed(1);
+        if (a === 0) {
+          d += `M${px} ${py}`;
+        } else {
+          const midRad = (a - 0.5) * Math.PI / 4;
+          const cx = (89 + Math.cos(midRad) * (r * 0.86)).toFixed(1);
+          const cy = (93 + Math.sin(midRad) * (r * 0.78 * 0.86)).toFixed(1);
+          d += ` Q${cx} ${cy} ${px} ${py}`;
+        }
       }
-      pat += `<polygon points="${pts.trim()}" fill="none" stroke="rgba(20,12,6,.36)" stroke-width="2.8"/>`;
+      pat += `<path d="${d}" fill="none" stroke="${c.dark}" stroke-width="${idx === 2 ? 3 : 2.5}"/>`;
     });
+    pat += `<circle cx="89" cy="93" r="4.5" fill="${c.light}" stroke="${c.dark}" stroke-width="2"/>`;
   } else if (look.pattern === 'diamonds') {
-    [66, 90, 114].forEach(x => {
-      pat += `<polygon points="${x},76 ${x + 11},98 ${x},120 ${x - 11},98" fill="rgba(20,12,6,.36)"/>`;
+    // Royal Argyle diamond chain with inner light cores and flanking gems
+    [64, 89, 114].forEach((x, idx) => {
+      const h = idx === 1 ? 23 : 19;
+      const w = idx === 1 ? 13 : 10.5;
+      pat += `<polygon points="${x},${93 - h} ${x + w},93 ${x},${93 + h} ${x - w},93" fill="${c.dark}" stroke="${c.light}" stroke-width="2" stroke-linejoin="round"/>` +
+        `<polygon points="${x},${93 - h * 0.42} ${x + w * 0.42},93 ${x},${93 + h * 0.42} ${x - w * 0.42},93" fill="${c.light}" opacity=".6"/>`;
     });
-  }
-  if (look.pattern !== 'custom') {
-    pat = pat.replaceAll('rgba(20,12,6,.36)', c.dark).replaceAll('rgba(20,12,6,.5)', c.dark);
   }
 
   let acc = '';
   if (look.acc === 'band') {
-    acc = `<path d="M128 80 Q150 70 172 80" fill="none" stroke="#e8593f" stroke-width="7" stroke-linecap="round"/><path d="M128 80 L110 76 M128 80 L112 88" stroke="#e8593f" stroke-width="4" stroke-linecap="round"/>`;
+    // Martial Headband with fluttering dual tails & metallic brow plate
+    acc = `<path d="M126 74 L104 67 Q98 69 102 74 L126 79 Z" fill="#c23616" stroke="${OUT}" stroke-width="1.8" stroke-linejoin="round"/>` +
+      `<path d="M126 78 L106 83 Q101 87 107 90 L127 82 Z" fill="#e84118" stroke="${OUT}" stroke-width="1.8" stroke-linejoin="round"/>` +
+      `<path d="M124 80 Q150 67 176 79" fill="none" stroke="${OUT}" stroke-width="10.5" stroke-linecap="round"/>` +
+      `<path d="M124 80 Q150 67 176 79" fill="none" stroke="#e84118" stroke-width="7" stroke-linecap="round"/>` +
+      `<path d="M128 77 Q150 66 172 76" fill="none" stroke="#ff7979" stroke-width="2" stroke-linecap="round" opacity=".75"/>` +
+      `<rect x="143" y="69" width="18" height="8" rx="2.5" transform="rotate(-2 152 73)" fill="#dfe6e9" stroke="${OUT}" stroke-width="1.8"/>` +
+      `<circle cx="146.5" cy="73" r="1.1" fill="#636e72"/><circle cx="157.5" cy="72.6" r="1.1" fill="#636e72"/>`;
   } else if (look.acc === 'crown') {
-    acc = `<path d="M133 72 L133 54 L142 63 L150 49 L158 63 L167 54 L167 72 Z" fill="#ffd34d" stroke="${OUT}" stroke-width="2.4" stroke-linejoin="round"/>`;
+    // Royal Jewelled Crown with velvet cushion, 5 spires, pearls & gems
+    acc = `<path d="M131 71 L128 50 L140 61 L150 43 L160 61 L172 50 L169 71 Z" fill="#ffd34d" stroke="${OUT}" stroke-width="2.4" stroke-linejoin="round"/>` +
+      `<path d="M133 67 L167 67" stroke="#b5830a" stroke-width="2"/>` +
+      `<rect x="130" y="68" width="40" height="5.5" rx="2.5" fill="#c23616" stroke="${OUT}" stroke-width="1.8"/>` +
+      `<circle cx="128" cy="48.5" r="2.6" fill="#fff9d2" stroke="${OUT}" stroke-width="1.4"/>` +
+      `<circle cx="150" cy="41.5" r="3.2" fill="#fff9d2" stroke="${OUT}" stroke-width="1.5"/>` +
+      `<circle cx="172" cy="48.5" r="2.6" fill="#fff9d2" stroke="${OUT}" stroke-width="1.4"/>` +
+      `<polygon points="150,55 153.5,60 150,65 146.5,60" fill="#e84118" stroke="${OUT}" stroke-width="1.2"/>` +
+      `<circle cx="139" cy="63" r="2.2" fill="#00cec9" stroke="${OUT}" stroke-width="1"/>` +
+      `<circle cx="161" cy="63" r="2.2" fill="#00cec9" stroke="${OUT}" stroke-width="1"/>`;
   } else if (look.acc === 'horns') {
-    acc = `<path d="M130 78 L134 54 L146 72 Z M170 78 L166 54 L154 72 Z" fill="#f4efe0" stroke="${OUT}" stroke-width="2.2" stroke-linejoin="round"/>`;
+    // Curved segmented demon/oni horns with dark tips and brow sockets
+    acc = `<ellipse cx="135" cy="73" rx="6.5" ry="3.5" transform="rotate(-18 135 73)" fill="#5c4b3b" stroke="${OUT}" stroke-width="1.6"/>` +
+      `<ellipse cx="165" cy="73" rx="6.5" ry="3.5" transform="rotate(18 165 73)" fill="#5c4b3b" stroke="${OUT}" stroke-width="1.6"/>` +
+      `<path d="M129 74 C121 60 124 46 135 41 C134 52 138 61 142 70 Z" fill="#f4efe0" stroke="${OUT}" stroke-width="2.2" stroke-linejoin="round"/>` +
+      `<path d="M171 74 C179 60 176 46 165 41 C166 52 162 61 158 70 Z" fill="#f4efe0" stroke="${OUT}" stroke-width="2.2" stroke-linejoin="round"/>` +
+      `<path d="M127 54 Q132 52 136 55 M128 62 Q134 60 139 63 M173 54 Q168 52 164 55 M172 62 Q166 60 161 63" fill="none" stroke="#b8ad94" stroke-width="1.8" stroke-linecap="round"/>`;
   } else if (look.acc === 'goggles') {
-    acc = `<path d="M126 86 Q150 77 174 86" fill="none" stroke="#5d4037" stroke-width="4.5" stroke-linecap="round"/>` +
-      `<ellipse cx="145" cy="80" rx="9" ry="8" fill="#c0a060" stroke="${OUT}" stroke-width="2"/>` +
-      `<ellipse cx="145" cy="80" rx="6.5" ry="5.5" fill="#00cec9"/>` +
-      `<circle cx="143" cy="78" r="1.8" fill="#ffffff"/>` +
-      `<ellipse cx="163" cy="84" rx="9.5" ry="8" fill="#c0a060" stroke="${OUT}" stroke-width="2"/>` +
-      `<ellipse cx="163" cy="84" rx="7" ry="5.5" fill="#00cec9"/>` +
-      `<circle cx="161" cy="82" r="1.8" fill="#ffffff"/>` +
-      `<path d="M153 81 Q155 78 157 82" fill="none" stroke="#c0a060" stroke-width="3" stroke-linecap="round"/>`;
+    // Steampunk Aviator Goggles with leather strap, brass bevels & reflective lenses
+    acc = `<path d="M123 84 Q150 74 177 84" fill="none" stroke="${OUT}" stroke-width="7" stroke-linecap="round"/>` +
+      `<path d="M123 84 Q150 74 177 84" fill="none" stroke="#6d4c41" stroke-width="4.2" stroke-linecap="round"/>` +
+      `<ellipse cx="143" cy="79" rx="10" ry="8.8" fill="#d4af37" stroke="${OUT}" stroke-width="2.2"/>` +
+      `<ellipse cx="143" cy="79" rx="7.2" ry="6.2" fill="#00cec9" stroke="#0984e3" stroke-width="1.2"/>` +
+      `<path d="M139 76 L144 74 M140 81 L147 77" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>` +
+      `<ellipse cx="163" cy="82" rx="10.2" ry="8.8" fill="#d4af37" stroke="${OUT}" stroke-width="2.2"/>` +
+      `<ellipse cx="163" cy="82" rx="7.4" ry="6.2" fill="#00cec9" stroke="#0984e3" stroke-width="1.2"/>` +
+      `<path d="M159 79 L164 77 M160 84 L167 80" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>` +
+      `<path d="M151 79 Q153 75 155 80" fill="none" stroke="#d4af37" stroke-width="3.5" stroke-linecap="round"/>`;
   } else if (look.acc === 'halo') {
-    acc = `<ellipse cx="150" cy="56" rx="22" ry="7" fill="none" stroke="#ffeaa7" stroke-width="4.5" stroke-linecap="round"/>` +
-      `<ellipse cx="150" cy="56" rx="19" ry="5" fill="none" stroke="#fff9d2" stroke-width="2"/>`;
+    // Radiant Celestial Halo with outer glow & 4 star-sparks
+    acc = `<ellipse cx="150" cy="54" rx="24" ry="7.5" fill="none" stroke="#f39c12" stroke-width="7" opacity=".35"/>` +
+      `<ellipse cx="150" cy="54" rx="22" ry="6.8" fill="none" stroke="#ffeaa7" stroke-width="4.5" stroke-linecap="round"/>` +
+      `<ellipse cx="150" cy="54" rx="19.5" ry="5" fill="none" stroke="#ffffff" stroke-width="1.8"/>` +
+      `<path d="M122 54 L126 54 M124 52 L124 56 M174 54 L178 54 M176 52 L176 56 M150 42 L150 46 M148 44 L152 44" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round"/>`;
   } else if (look.acc === 'mohawk') {
-    acc = `<polygon points="132,74 135,50 142,70" fill="#ff2d55" stroke="${OUT}" stroke-width="1.8" stroke-linejoin="round"/>` +
-      `<polygon points="140,70 146,42 153,68" fill="#ff793f" stroke="${OUT}" stroke-width="1.8" stroke-linejoin="round"/>` +
-      `<polygon points="151,68 158,45 164,72" fill="#ff2d55" stroke="${OUT}" stroke-width="1.8" stroke-linejoin="round"/>` +
-      `<polygon points="162,72 168,55 172,78" fill="#ff793f" stroke="${OUT}" stroke-width="1.8" stroke-linejoin="round"/>`;
+    // Vibrant Punk-Rock Mohawk with studded scalp band & dual-tone spikes
+    acc = `<path d="M130 75 Q150 67 171 76" fill="none" stroke="#2d3436" stroke-width="5" stroke-linecap="round"/>` +
+      `<polygon points="129,74 128,48 140,69" fill="#ff2d55" stroke="${OUT}" stroke-width="2" stroke-linejoin="round"/>` +
+      `<polygon points="137,69 142,38 151,66" fill="#ff793f" stroke="${OUT}" stroke-width="2" stroke-linejoin="round"/>` +
+      `<polygon points="148,66 156,39 162,69" fill="#ffd34d" stroke="${OUT}" stroke-width="2" stroke-linejoin="round"/>` +
+      `<polygon points="159,69 168,46 171,73" fill="#ff2d55" stroke="${OUT}" stroke-width="2" stroke-linejoin="round"/>` +
+      `<polygon points="167,73 176,56 175,78" fill="#ff793f" stroke="${OUT}" stroke-width="1.8" stroke-linejoin="round"/>`;
   } else if (look.acc === 'mask') {
-    acc = `<path d="M140 88 Q160 84 176 93 L180 108 Q160 112 142 100 Z" fill="#2c3e50" stroke="${OUT}" stroke-width="2" stroke-linejoin="round"/>` +
-      `<path d="M147 94 L173 97 M145 100 L170 103" stroke="#e74c3c" stroke-width="2" stroke-linecap="round"/>`;
+    // Shinobi Ninja Faceplate with armored nose bridge & clan markings
+    acc = `<path d="M136 88 Q158 82 178 92 L181 109 Q159 115 138 102 Z" fill="#1e272e" stroke="${OUT}" stroke-width="2.2" stroke-linejoin="round"/>` +
+      `<path d="M138 90 Q158 85 176 93" fill="none" stroke="#57606f" stroke-width="2" stroke-linecap="round"/>` +
+      `<path d="M145 94 L174 97 M143 100 L171 103" stroke="#ff4757" stroke-width="2.2" stroke-linecap="round"/>` +
+      `<circle cx="141" cy="95" r="1.3" fill="#dfe4ea"/><circle cx="141" cy="100" r="1.3" fill="#dfe4ea"/>`;
   } else if (look.acc === 'tophat') {
-    acc = `<ellipse cx="148" cy="71" rx="23" ry="5.5" fill="#1e272e" stroke="${OUT}" stroke-width="2"/>` +
-      `<path d="M135 69 L138 41 L158 41 L161 69 Z" fill="#2f3542" stroke="${OUT}" stroke-width="2" stroke-linejoin="round"/>` +
-      `<path d="M135.5 64 L160.5 64" stroke="#e84118" stroke-width="4.5"/>` +
-      `<ellipse cx="148" cy="41" rx="10" ry="3" fill="#1e272e"/>`;
+    // Gentleman's Stovepipe Top Hat with curved brim, crimson band & gold buckle
+    acc = `<path d="M123 71 Q148 65 173 71 Q148 77 123 71 Z" fill="#1e272e" stroke="${OUT}" stroke-width="2.2"/>` +
+      `<path d="M134 69 L136 39 Q148 36 160 39 L162 69 Z" fill="#2f3542" stroke="${OUT}" stroke-width="2.2" stroke-linejoin="round"/>` +
+      `<path d="M140 42 L139 62" stroke="#57606f" stroke-width="2.5" stroke-linecap="round"/>` +
+      `<rect x="134.5" y="61" width="27" height="6" rx="1.5" fill="#e84118" stroke="${OUT}" stroke-width="1.5"/>` +
+      `<rect x="145" y="60.5" width="7" height="7" rx="1" fill="none" stroke="#ffd34d" stroke-width="2"/>`;
+  } else if (look.acc === 'samurai') {
+    // Japanese Samurai Kabuto Helm with golden crescent Maedate crest
+    acc = `<path d="M122 76 L116 86 L128 83 Z M178 76 L184 86 L172 83 Z" fill="#c23616" stroke="${OUT}" stroke-width="2" stroke-linejoin="round"/>` +
+      `<path d="M124 76 C125 53 175 53 176 76 Z" fill="#2f3542" stroke="${OUT}" stroke-width="2.3" stroke-linejoin="round"/>` +
+      `<path d="M120 76 Q150 70 180 76" fill="none" stroke="#ffd34d" stroke-width="3.5" stroke-linecap="round"/>` +
+      `<path d="M150 56 L150 73 M138 59 L135 74 M162 59 L165 74" stroke="#57606f" stroke-width="1.8"/>` +
+      `<path d="M150 64 C138 64 132 52 137 43 C139 51 144 56 150 56 C156 56 161 51 163 43 C168 52 162 64 150 64 Z" fill="#ffd34d" stroke="${OUT}" stroke-width="1.8" stroke-linejoin="round"/>`;
+  } else if (look.acc === 'wizard') {
+    // Arcane Wizard Hat with bent tip, wide brim & golden stars
+    acc = `<ellipse cx="150" cy="72" rx="28" ry="6.5" fill="#341f97" stroke="${OUT}" stroke-width="2.2"/>` +
+      `<path d="M131 70 C134 54 142 42 164 36 C158 46 159 56 169 70 Z" fill="#5f27cd" stroke="${OUT}" stroke-width="2.2" stroke-linejoin="round"/>` +
+      `<path d="M131 66 Q150 62 169 66" fill="none" stroke="#ffd34d" stroke-width="4" stroke-linecap="round"/>` +
+      `<circle cx="147" cy="54" r="2.2" fill="#ffeaa7"/><circle cx="155" cy="46" r="1.6" fill="#ffeaa7"/>`;
+  } else if (look.acc === 'pirate') {
+    // Swashbuckling Pirate Tricorne Hat with crimson bandana & skull emblem
+    acc = `<path d="M127 75 Q150 68 173 75" fill="none" stroke="#e84118" stroke-width="6" stroke-linecap="round"/>` +
+      `<path d="M119 72 Q134 50 150 48 Q166 50 181 72 Q150 64 119 72 Z" fill="#1e272e" stroke="${OUT}" stroke-width="2.2" stroke-linejoin="round"/>` +
+      `<path d="M119 72 Q134 50 150 48 Q166 50 181 72" fill="none" stroke="#ffd34d" stroke-width="2.2" stroke-linecap="round"/>` +
+      `<circle cx="150" cy="60" r="4.2" fill="#f5f6fa" stroke="${OUT}" stroke-width="1.2"/>` +
+      `<path d="M143 64 L157 57 M143 57 L157 64" stroke="#f5f6fa" stroke-width="1.8" stroke-linecap="round"/>`;
+  } else if (look.acc === 'visor') {
+    // Cyberpunk Neon Wraparound Visor with HUD glint
+    acc = `<path d="M128 82 Q154 74 179 84 L176 94 Q153 86 130 91 Z" fill="#0984e3" stroke="${OUT}" stroke-width="2.2" stroke-linejoin="round"/>` +
+      `<path d="M131 84 Q154 77 176 85 L174 92 Q153 85 132 89 Z" fill="#00cec9"/>` +
+      `<path d="M126 81 Q154 72 180 82" fill="none" stroke="#dfe6e9" stroke-width="3" stroke-linecap="round"/>` +
+      `<path d="M136 85 L154 81 M160 83 L171 86" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/>`;
+  } else if (look.acc === 'strawhat') {
+    // Traditional Ronin Bamboo/Straw Conical Hat (Salakot) with woven ribs & red cord
+    acc = `<path d="M115 73 L150 46 L185 73 Q150 67 115 73 Z" fill="#e1b12c" stroke="${OUT}" stroke-width="2.2" stroke-linejoin="round"/>` +
+      `<path d="M150 46 L132 71 M150 46 L150 70 M150 46 L168 71" stroke="#b5830a" stroke-width="1.6"/>` +
+      `<path d="M126 65 Q150 60 174 65 M136 57 Q150 53 164 57" fill="none" stroke="#f5cd79" stroke-width="1.6" stroke-linecap="round"/>` +
+      `<ellipse cx="150" cy="46" rx="4.5" ry="2" fill="#c23616" stroke="${OUT}" stroke-width="1.4"/>`;
+  } else if (look.acc === 'headphones') {
+    // Pro Gaming Headset with cushioned arch & glowing neon earcups
+    acc = `<path d="M128 88 C126 54 174 54 172 88" fill="none" stroke="${OUT}" stroke-width="7.5" stroke-linecap="round"/>` +
+      `<path d="M128 88 C126 54 174 54 172 88" fill="none" stroke="#2f3542" stroke-width="4.5" stroke-linecap="round"/>` +
+      `<path d="M140 61 Q150 58 160 61" fill="none" stroke="#00cec9" stroke-width="3" stroke-linecap="round"/>` +
+      `<ellipse cx="127" cy="89" rx="6" ry="9.5" transform="rotate(-10 127 89)" fill="#1e272e" stroke="${OUT}" stroke-width="2"/>` +
+      `<ellipse cx="127" cy="89" rx="3.2" ry="6" transform="rotate(-10 127 89)" fill="#00cec9"/>` +
+      `<ellipse cx="173" cy="90" rx="6" ry="9.5" transform="rotate(10 173 90)" fill="#1e272e" stroke="${OUT}" stroke-width="2"/>` +
+      `<ellipse cx="173" cy="90" rx="3.2" ry="6" transform="rotate(10 173 90)" fill="#00cec9"/>`;
   }
 
   return `<svg xmlns="http://www.w3.org/2000/svg" class="spider-art" width="240" height="180" viewBox="0 0 240 180" data-codeart="inline-vector" data-anchor="120 145" data-facing="right" aria-hidden="true"><defs><radialGradient id="pb" cx=".35" cy=".25" r=".8"><stop offset="0" stop-color="${c.light}"/><stop offset=".48" stop-color="${c.main}"/><stop offset="1" stop-color="${c.dark}"/></radialGradient>` +
@@ -337,7 +455,7 @@ export function spiderSVGraw(look: SpiderLook): string {
     `<path d="M26 156 Q62 153 98 156 M136 156 Q176 158 212 155 M76 161 Q116 163 156 161" stroke="#4a331e" stroke-width="1.4" fill="none" stroke-linecap="round"/>` +
     `<path d="M216 144 C220 137 228 139 227 146 C223 147 218 145 216 144 Z" fill="#2ed573" stroke="${OUT}" stroke-width="1.2"/></g>` +
     `<g class="spider-rig"><g class="spider-legs spider-legs-far" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity=".72"><g stroke="${OUT}" stroke-width="6.4">${far}</g><g stroke="${c.dark}" stroke-width="3.5">${far}</g></g>` +
-    `<g class="spider-abdomen"><path d="${body}" fill="url(#pb)"/><g class="custom-pattern" clip-path="url(#pc)" opacity="${look.pattern === 'custom' ? 1 : .55}">${pat}</g><path d="${body}" fill="none" stroke="${OUT}" stroke-width="2.3"/>` +
+    `<g class="spider-abdomen"><path d="${body}" fill="url(#pb)"/><g class="custom-pattern" clip-path="url(#pc)" opacity="${look.pattern === 'custom' ? 1 : .68}">${pat}</g><path d="${body}" fill="none" stroke="${OUT}" stroke-width="2.3"/>` +
     `<path d="M54 77 C68 59 96 57 117 68" fill="none" stroke="${c.light}" stroke-width="2.6" stroke-linecap="round" opacity=".26"/>` +
     `<g fill="none" stroke="${c.dark}" stroke-width="1.1" stroke-linecap="round" opacity=".7"><path d="M50 70 l-5 -5 M60 62 l-3 -6 M73 57 l-1 -7 M101 57 l2 -7 M115 63 l4 -6 M128 74 l6 -4 M45 105 l-6 3 M56 120 l-4 6 M72 127 l-1 7 M105 126 l3 7 M122 117 l6 5"/></g></g>` +
     `<g class="spider-legs spider-legs-near" fill="none" stroke-linecap="round" stroke-linejoin="round"><g stroke="${OUT}" stroke-width="6.6">${legs}</g><g stroke="${c.main}" stroke-width="3.7">${legs}</g></g>` +
@@ -357,6 +475,12 @@ export function spiderSVG(look: SpiderLook, u: string = ''): string {
 }
 
 export function accessorySVG(acc: string): string {
+  if (acc === 'none') {
+    return `<svg xmlns="http://www.w3.org/2000/svg" class="accessory-art" viewBox="105 34 90 88" aria-hidden="true">` +
+      `<circle cx="150" cy="76" r="18" fill="none" stroke="rgba(176,242,227,.35)" stroke-width="2.4" stroke-dasharray="5 4"/>` +
+      `<line x1="138" y1="88" x2="162" y2="64" stroke="rgba(176,242,227,.45)" stroke-width="2.4" stroke-linecap="round"/>` +
+      `</svg>`;
+  }
   const look = { ...DEF_LOOK.p1, pattern: 'plain', acc };
   const full = spiderSVGraw(look);
   const match = full.match(/<g class="spider-palps"[\s\S]*?<\/g>([\s\S]*?)<\/g><\/g><\/g><\/svg>$/);
@@ -534,11 +658,8 @@ export function saveProgress(p: ProgressData): void {
 export function getAbilityPoints(p?: ProgressData): { total: number; spent: number; available: number } {
   p = p || getProgress();
   const currentLvl = getLevel(p.onlineExp);
-  // Level 1 starts with 2 points so player starts with 3 skills total ('dash' + 2 picks).
-  // Each subsequent level (+1) awards +1 Ability Point.
   const total = currentLvl + 1;
   const unlocked = p.unlockedSkills && p.unlockedSkills.length > 0 ? p.unlockedSkills : ['dash'];
-  // 'dash' is the core origin node and is free. Every other unlocked skill costs 1 point.
   const spent = Math.max(0, unlocked.filter(id => id !== 'dash').length);
   const available = Math.max(0, total - spent);
   return { total, spent, available };

@@ -39,7 +39,7 @@ export function mountDemoFightArena(previewEl: HTMLElement): () => void {
 
   let lastTime = performance.now();
   let animId = 0;
-  const emptyInput = { left: false, right: false, strike: false, block: false, reel: 0, ab1: 0, ab2: 0 };
+  const emptyInput = { left: false, right: false, strike: false, heavy: false, block: false, reel: 0, ab1: 0, ab2: 0 };
 
   const loop = (now: number) => {
     const dt = Math.min(0.033, (now - lastTime) / 1000);

@@ -254,49 +254,6 @@ private clash(a: LocalPlayerState, b: LocalPlayerState) {
   this.emitFx({ type: 'txt', x: hx, y: LBL_Y + 4, text: clashText, col: '#ffd694' });
 }
 
-private clash(a: LocalPlayerState, b: LocalPlayerState) {
-  const hx = (a.x + b.x) / 2;
-  const hy = BODY_Y - 6;
-
-  const isHeavy = !!a.isHeavy;
-  const pw = a.power > 0 || b.power > 0;
-  if (a.power > 0) a.power = 0;
-  if (b.power > 0) b.power = 0;
-
-  // Deflect both attacks
-  a.atkT = 0;
-  a.isHeavy = false;
-  b.atkT = 0;
-  b.isHeavy = false;
-
-  // Recovery cooldown & parry stance for both
-  this.cool[a.id] = isHeavy ? 0.16 : 0.10;
-  this.cool[b.id] = isHeavy ? 0.16 : 0.10;
-  a.parryT = 0.22;
-  b.parryT = 0.22;
-
-  // Mutual micro-recoil
-  a.stun = isHeavy ? 0.18 : 0.14;
-  b.stun = isHeavy ? 0.18 : 0.14;
-
-  // Pushback recoil separating both fighters back
-  const kbForce = isHeavy ? 260 : 200;
-  this.kb[a.id] = -a.face * (pw ? kbForce * 1.3 : kbForce);
-  this.kb[b.id] = -b.face * (pw ? kbForce * 1.3 : kbForce);
-
-  // Spark burst & shake
-  const sparkCount = isHeavy ? 26 : 16;
-  const sparkSpeed = isHeavy ? 340 : 260;
-  this.emitFx({ type: 'spark', x: hx, y: hy, col: '#ffffff', count: sparkCount, sp: sparkSpeed });
-  this.emitFx({ type: 'spark', x: hx, y: hy, col: a.color, count: 8, sp: 220 });
-  this.emitFx({ type: 'spark', x: hx, y: hy, col: b.color, count: 8, sp: 220 });
-  this.emitShake(isHeavy ? 9 : 6);
-  sound.play('parry');
-
-  const clashText = isHeavy ? 'HEAVY CLASH!' : 'CLASH!';
-  this.emitFx({ type: 'txt', x: hx, y: LBL_Y + 4, text: clashText, col: '#ffd694' });
-}
-
 private doStrike(a: LocalPlayerState, b: LocalPlayerState) {
   if (b.ko || b.hang) return;
 
@@ -671,7 +628,6 @@ private getAiInput(
   a = this.aiP2
 ): InputState {
   const D = DIFF_SETTINGS[this.diff];
-  const a = this.ai;
   const inp: InputState = { left: false, right: false, strike: false, heavy: false, block: false, reel: 0, ab1: 0, ab2: 0 };
 
   const slot = (id: string) => {

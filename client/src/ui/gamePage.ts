@@ -1,13 +1,13 @@
 import { sound } from '../audio';
 import { ABILITIES, type AbilityId } from '../game/abilities';
-import { getKeys, keyLabel, getColor, getLooks } from '../gb';
+import { getKeys, keyLabel, getColor, getLooks, getSettings, saveSettings } from '../gb';
 
 export interface GamePageCallbacks {
   onBackToMenu: () => void;
   onPauseToggle: (isPaused: boolean) => void;
   onRematch: () => void;
   onAbilityTrigger: (slot: number) => void; // 0 = Slot 1, 1 = Slot 2
-  onTouchInput: (key: 'left' | 'right' | 'strike' | 'block' | 'reel', active: boolean) => void;
+  onTouchInput: (key: 'left' | 'right' | 'strike' | 'heavy' | 'block' | 'reel', active: boolean) => void;
 }
 
 export class GamePage {
@@ -31,10 +31,21 @@ export class GamePage {
   private w2!: HTMLElement;
 
   private roundLbl!: HTMLElement;
+  private hudTimer!: HTMLElement;
+  private btnHudMenu!: HTMLButtonElement;
   private overlay!: HTMLElement;
   private ovTitle!: HTMLElement;
   private ovSub!: HTMLElement;
   private ovBtns!: HTMLElement;
+
+  // In-Game Menu / Settings modal
+  private inGameMenuModal!: HTMLElement;
+  private igmTitle!: HTMLElement;
+  private igmSubtitle!: HTMLElement;
+  private igmSfxToggle!: HTMLButtonElement;
+  private igmMusicToggle!: HTMLButtonElement;
+  private igmBtnResume!: HTMLButtonElement;
+  private igmBtnQuit!: HTMLButtonElement;
 
   // Draft modal
   private pickModal!: HTMLElement;
@@ -46,7 +57,6 @@ export class GamePage {
   private pkTimer!: HTMLElement;
   private pkTimeVal!: HTMLElement;
   private pkGo!: HTMLButtonElement;
-  private pkMenuBtn!: HTMLButtonElement;
   private selectedDraftSlots: number[] = [];
   private currentDraftOffer: AbilityId[] = [];
   private draftConfirmCallback: ((skills: string[]) => void) | null = null;
@@ -77,6 +87,9 @@ export class GamePage {
   private gemSeen: Record<string, string> = {};
   public isPaused: boolean = false;
   private gameMode: string = 'cpu';
+
+  // Zoom prevention cleanup
+  private zoomCleanupFns: Array<() => void> = [];
 
   constructor(container: HTMLElement, callbacks: GamePageCallbacks) {
     this.callbacks = callbacks;
@@ -113,36 +126,57 @@ export class GamePage {
         <div class="arena" id="arena">
           <div id="phaserContainer" style="width:100%; height:100%;"></div>
 
-          <!-- IN-GAME HUD & STATS (INSIDE & ABOVE THE GAME SCREEN) -->
+          <!-- IN-GAME TOP FIGHTER STATUS & HUD -->
           <div class="in-game-hud-overlay">
-            <header class="in-game-top-bar">
-              <div class="in-game-top-left">
-                <h1 class="in-game-logo"><span class="a">Gagam</span><span class="j">bakbakan</span></h1>
-              </div>
-              <div class="in-game-top-right">
-                <button class="btn ghost sound-toggle-btn ${sound.enabled ? 'sound-on' : 'sound-off'}" id="btnSoundToggle" type="button">${sound.enabled ? '🔊 Sound On' : '🔇 Sound Off'}</button>
-                <button class="btn ghost" id="bPause" type="button">Pause</button>
-                <button class="btn ghost" id="btnBackMenu" type="button">Menu</button>
-              </div>
-            </header>
-
-            <!-- FIGHTER STATS (GRIP & GUARD BARS, NAMES, ROUND) -->
             <section class="hud in-game-hud" id="hud" aria-label="Match status">
+              <!-- PLAYER 1 (AMBER) -->
               <div class="fighter p1">
-                <div class="fhead"><i class="swatch"></i><span id="n1">Amber</span><span class="who" id="w1">You</span><span class="pips" id="pips1"><i class="pip"></i><i class="pip"></i></span></div>
-                <div class="meter"><span>Grip</span><div class="bar" id="gb1"><i id="grip1"></i></div></div>
-                <div class="meter"><span>Guard</span><div class="bar guard"><i id="guard1"></i></div></div>
+                <div class="fhead">
+                  <i class="swatch"></i>
+                  <span class="fname" id="n1">Amber</span>
+                  <span class="who" id="w1">You</span>
+                  <span class="pips" id="pips1"><i class="pip"></i><i class="pip"></i></span>
+                </div>
+                <div class="meter grip-meter">
+                  <span>Grip</span>
+                  <div class="bar" id="gb1"><i id="grip1"></i></div>
+                </div>
+                <div class="meter guard-meter">
+                  <span>Guard</span>
+                  <div class="bar guard"><i id="guard1"></i></div>
+                </div>
               </div>
 
+              <!-- CENTER: MENU ICON BUTTON & ROUND BANNER -->
               <div class="center">
+                <button class="btn-hud-menu" id="btnHudMenu" type="button" aria-label="Game Menu" title="Menu (Esc)">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                    <line x1="3" y1="18" x2="21" y2="18"></line>
+                  </svg>
+                </button>
+                <div class="hud-match-timer" id="hudTimer" aria-label="Round Timer">60</div>
                 <div id="roundLbl">Round 1</div>
-                <div class="best">First to 2 rounds</div>
+                <div class="best">First to 2</div>
               </div>
 
+              <!-- PLAYER 2 (JADE) -->
               <div class="fighter p2">
-                <div class="fhead"><i class="swatch"></i><span id="n2">Jade</span><span class="who" id="w2">CPU</span><span class="pips" id="pips2"><i class="pip"></i><i class="pip"></i></span></div>
-                <div class="meter"><span>Grip</span><div class="bar" id="gb2"><i id="grip2"></i></div></div>
-                <div class="meter"><span>Guard</span><div class="bar guard"><i id="guard2"></i></div></div>
+                <div class="fhead">
+                  <span class="pips" id="pips2"><i class="pip"></i><i class="pip"></i></span>
+                  <span class="who" id="w2">CPU</span>
+                  <span class="fname" id="n2">Jade</span>
+                  <i class="swatch"></i>
+                </div>
+                <div class="meter grip-meter">
+                  <span>Grip</span>
+                  <div class="bar" id="gb2"><i id="grip2"></i></div>
+                </div>
+                <div class="meter guard-meter">
+                  <span>Guard</span>
+                  <div class="bar guard"><i id="guard2"></i></div>
+                </div>
               </div>
             </section>
           </div>
@@ -191,11 +225,56 @@ export class GamePage {
             </div>
           </div>
 
-          <!-- OVERLAY (PAUSED / ROUND END / MATCH END) -->
+          <!-- OVERLAY (ROUND END / MATCH END / SYSTEM) -->
           <div class="overlay" id="ov" hidden>
             <h2 id="ovTitle">Paused</h2>
             <p id="ovSub"></p>
             <div class="btns" id="ovBtns"></div>
+          </div>
+
+          <!-- IN-GAME MENU / SETTINGS MODAL -->
+          <div class="in-game-menu-modal" id="inGameMenuModal" hidden role="dialog" aria-modal="true" aria-labelledby="igmTitle">
+            <div class="igm-card">
+              <div class="igm-header">
+                <h2 id="igmTitle">Game Paused</h2>
+                <p id="igmSubtitle">Take a breath.</p>
+              </div>
+
+              <!-- SIMPLE SETTINGS -->
+              <div class="igm-settings">
+                <div class="igm-setting-row">
+                  <div class="igm-setting-info">
+                    <span class="igm-setting-label">Sound Effects</span>
+                    <span class="igm-setting-desc">Strikes, clashes, and skills</span>
+                  </div>
+                  <button type="button" class="btn igm-toggle-btn" id="igmSfxToggle">ON</button>
+                </div>
+
+                <div class="igm-setting-row">
+                  <div class="igm-setting-info">
+                    <span class="igm-setting-label">Music</span>
+                    <span class="igm-setting-desc">Background battle tracks</span>
+                  </div>
+                  <button type="button" class="btn igm-toggle-btn" id="igmMusicToggle">ON</button>
+                </div>
+              </div>
+
+              <!-- QUICK CONTROLS GUIDE -->
+              <div class="igm-controls-guide">
+                <div class="igm-ctrl-row"><span>Move</span><b>A / D &nbsp;or&nbsp; ← / →</b></div>
+                <div class="igm-ctrl-row"><span>Light Attack</span><b>J &nbsp;or&nbsp; Z</b></div>
+                <div class="igm-ctrl-row"><span>Heavy Attack</span><b>K &nbsp;or&nbsp; X</b></div>
+                <div class="igm-ctrl-row"><span>Guard / Block</span><b>L &nbsp;or&nbsp; C</b></div>
+                <div class="igm-ctrl-row"><span>Climb / Reel</span><b>W &nbsp;or&nbsp; Space</b></div>
+                <div class="igm-ctrl-row"><span>Skills</span><b>Q &nbsp;/&nbsp; E</b></div>
+              </div>
+
+              <!-- ACTIONS -->
+              <div class="igm-actions">
+                <button type="button" class="btn primary igm-btn-resume" id="igmBtnResume">Resume Match</button>
+                <button type="button" class="btn danger ghost igm-btn-quit" id="igmBtnQuit">Quit to Menu</button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -206,27 +285,18 @@ export class GamePage {
       <div class="pick" id="pick" hidden role="dialog" aria-modal="true" aria-labelledby="pkTitle">
         <div class="pick-in">
           <div class="pk-head">
-            <div class="pk-badge"><span class="pk-dot"></span><span class="pk-who" id="pkWho"></span></div>
-            <h2 id="pkTitle" class="pk-title">Pick 2 skills</h2>
+            <p class="pk-who" id="pkWho"></p>
+            <h2 id="pkTitle">Pick 2 skills</h2>
             <p class="pk-sub" id="pkSub">Choose 2 of these 3 cards. You keep them for the whole match. Press 1, 2 or 3 to choose.</p>
           </div>
-          <div class="cards" id="pkCards"></div>
-          <div class="pk-foot">
-            <div class="pk-status-bar">
-              <div class="pk-count-badge">
-                <span class="pk-status-dot"></span>
-                <span id="pkCount" aria-live="polite">0 of 2 picked</span>
-              </div>
-              <div class="pk-timer" id="pkTimer" aria-label="Time remaining">
-                <span class="pk-timer-clock">⏱</span>
-                <span class="pk-timer-num" id="pkTimeVal">15</span><span class="pk-timer-sec">s</span>
-              </div>
-            </div>
-            <div class="pk-actions">
-              <button type="button" class="btn pk-action-btn primary" id="pkGo" disabled>Confirm</button>
-              <button type="button" class="btn pk-action-btn ghost" id="pkMenu">Menu</button>
+          <div class="pk-center">
+            <div class="pk-timer" id="pkTimer" aria-label="Time remaining"><span class="pk-timer-num" id="pkTimeVal">15</span>s</div>
+            <div class="pk-foot">
+              <span id="pkCount" aria-live="polite">0 of 2 picked</span>
+              <button type="button" class="btn primary" id="pkGo" disabled>Done</button>
             </div>
           </div>
+          <div class="cards" id="pkCards"></div>
         </div>
       </div>
     `;
@@ -250,10 +320,21 @@ export class GamePage {
     this.w2 = container.querySelector('#w2') as HTMLElement;
 
     this.roundLbl = container.querySelector('#roundLbl') as HTMLElement;
+    this.hudTimer = container.querySelector('#hudTimer') as HTMLElement;
+    this.btnHudMenu = container.querySelector('#btnHudMenu') as HTMLButtonElement;
     this.overlay = container.querySelector('#ov') as HTMLElement;
     this.ovTitle = container.querySelector('#ovTitle') as HTMLElement;
     this.ovSub = container.querySelector('#ovSub') as HTMLElement;
     this.ovBtns = container.querySelector('#ovBtns') as HTMLElement;
+
+    // In-game menu modal elements
+    this.inGameMenuModal = container.querySelector('#inGameMenuModal') as HTMLElement;
+    this.igmTitle = container.querySelector('#igmTitle') as HTMLElement;
+    this.igmSubtitle = container.querySelector('#igmSubtitle') as HTMLElement;
+    this.igmSfxToggle = container.querySelector('#igmSfxToggle') as HTMLButtonElement;
+    this.igmMusicToggle = container.querySelector('#igmMusicToggle') as HTMLButtonElement;
+    this.igmBtnResume = container.querySelector('#igmBtnResume') as HTMLButtonElement;
+    this.igmBtnQuit = container.querySelector('#igmBtnQuit') as HTMLButtonElement;
 
     // Pick modal elements
     this.pickModal = container.querySelector('#pick') as HTMLElement;
@@ -265,7 +346,6 @@ export class GamePage {
     this.pkTimer = container.querySelector('#pkTimer') as HTMLElement;
     this.pkTimeVal = container.querySelector('#pkTimeVal') as HTMLElement;
     this.pkGo = container.querySelector('#pkGo') as HTMLButtonElement;
-    this.pkMenuBtn = container.querySelector('#pkMenu') as HTMLButtonElement;
 
     // Rails gems
     this.g1a = container.querySelector('#g1a') as HTMLElement;
@@ -299,40 +379,57 @@ export class GamePage {
       this.callbacks.onAbilityTrigger(1);
     });
 
-    // Sound toggle
-    const btnSoundToggle = this.rootElement.querySelector('#btnSoundToggle') as HTMLButtonElement;
-    btnSoundToggle.addEventListener('click', () => {
-      const isNowOn = sound.toggle();
-      btnSoundToggle.textContent = isNowOn ? '🔊 Sound On' : '🔇 Sound Off';
-      btnSoundToggle.classList.toggle('sound-on', isNowOn);
-      btnSoundToggle.classList.toggle('sound-off', !isNowOn);
-      if (isNowOn) {
-        sound.playTone(580, 0.08, 'triangle', 0.04, 150);
+    // Center HUD Menu icon button
+    this.btnHudMenu.addEventListener('click', () => {
+      this.openInGameMenu();
+    });
+
+    // In-game Menu: Resume button
+    this.igmBtnResume.addEventListener('click', () => {
+      this.closeInGameMenu();
+    });
+
+    // In-game Menu: Quit button
+    this.igmBtnQuit.addEventListener('click', () => {
+      this.closeInGameMenu();
+      this.callbacks.onBackToMenu();
+    });
+
+    // In-game Menu: SFX toggle
+    this.igmSfxToggle.addEventListener('click', () => {
+      const st = getSettings();
+      st.sfx = !st.sfx;
+      st.sound = st.sfx || st.music;
+      saveSettings(st);
+      this.updateIgmSettingsUi(st);
+      if (st.sfx) sound.play('click');
+    });
+
+    // In-game Menu: Music toggle
+    this.igmMusicToggle.addEventListener('click', () => {
+      const st = getSettings();
+      st.music = !st.music;
+      st.sound = st.sfx || st.music;
+      saveSettings(st);
+      this.updateIgmSettingsUi(st);
+      if (!st.music) {
+        sound.music.stop();
+      } else if (!this.isPaused) {
+        sound.music.play('duel');
       }
     });
 
-    // Back to Menu
-    const btnBackMenu = this.rootElement.querySelector('#btnBackMenu') as HTMLButtonElement;
-    btnBackMenu.addEventListener('click', () => {
-      this.callbacks.onBackToMenu();
+    // Escape key toggles in-game menu
+    window.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.code === 'Escape') {
+        if (this.isDraftOpen) return;
+        this.togglePause();
+      }
     });
-
-    this.pkMenuBtn.addEventListener('click', () => {
-      this.hideDraftModal();
-      this.callbacks.onBackToMenu();
-    });
-
-    // Pause button
-    const bPause = this.rootElement.querySelector('#bPause') as HTMLButtonElement;
-    bPause.addEventListener('click', () => {
-      this.togglePause();
-    });
-
-
 
     // Touch controls
     this.rootElement.querySelectorAll('.tb[data-t]').forEach((b) => {
-      const k = (b as HTMLElement).dataset.t as 'left' | 'right' | 'strike' | 'block' | 'reel';
+      const k = (b as HTMLElement).dataset.t as 'left' | 'right' | 'strike' | 'heavy' | 'block' | 'reel';
       const onDown = (e: Event) => {
         e.preventDefault();
         b.classList.add('down');
@@ -352,7 +449,12 @@ export class GamePage {
       this.confirmPick();
     });
 
-    // Mouse wheel horizontal scrolling for cards
+    // Mouse wheel horizontal scrolling for cards & lock vertical scrollTop to 0
+    this.pkCards.addEventListener('scroll', () => {
+      if (this.pkCards.scrollTop !== 0) {
+        this.pkCards.scrollTop = 0;
+      }
+    });
     this.pkCards.addEventListener('wheel', (e: WheelEvent) => {
       if (this.pkCards.classList.contains('has-scroll') && Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
         e.preventDefault();
@@ -379,11 +481,99 @@ export class GamePage {
       }
     };
     window.addEventListener('keydown', this.draftKeyHandler);
+
+    // Prevent browser zoom in/out while in the game screen
+    // Intercepts wheel (pinch-zoom / Ctrl+wheel), zoom hotkeys, and multi-touch gestures
+    // across window, document, documentElement, and body in the capture phase so edge/sidebar
+    // interactions cannot trigger browser-level zoom.
+    document.documentElement.classList.add('game-active');
+    document.body.classList.add('game-active');
+
+    const zoomWheelHandler = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+      }
+    };
+
+    const zoomKeyHandler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && (
+        e.key === '+' ||
+        e.key === '-' ||
+        e.key === '=' ||
+        e.key === '_' ||
+        e.key === '0' ||
+        e.code === 'Equal' ||
+        e.code === 'Minus' ||
+        e.code === 'Digit0' ||
+        e.code === 'NumpadAdd' ||
+        e.code === 'NumpadSubtract' ||
+        e.code === 'Numpad0' ||
+        e.keyCode === 187 ||
+        e.keyCode === 189 ||
+        e.keyCode === 107 ||
+        e.keyCode === 109 ||
+        e.keyCode === 48 ||
+        e.keyCode === 96
+      )) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+      }
+    };
+
+    const zoomTouchHandler = (e: TouchEvent) => {
+      if (e.touches && e.touches.length > 1) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
+    const zoomGestureHandler = (e: Event) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    const targets: (EventTarget | null)[] = [
+      window,
+      document,
+      document.documentElement,
+      document.body,
+    ];
+
+    targets.forEach((target) => {
+      if (!target) return;
+      target.addEventListener('wheel', zoomWheelHandler as EventListener, { capture: true, passive: false });
+      target.addEventListener('keydown', zoomKeyHandler as EventListener, { capture: true });
+      target.addEventListener('touchstart', zoomTouchHandler as EventListener, { capture: true, passive: false });
+      target.addEventListener('touchmove', zoomTouchHandler as EventListener, { capture: true, passive: false });
+      target.addEventListener('gesturestart', zoomGestureHandler, { capture: true, passive: false });
+      target.addEventListener('gesturechange', zoomGestureHandler, { capture: true, passive: false });
+      target.addEventListener('gestureend', zoomGestureHandler, { capture: true, passive: false });
+    });
+
+    this.zoomCleanupFns.push(() => {
+      document.documentElement.classList.remove('game-active');
+      document.body.classList.remove('game-active');
+      targets.forEach((target) => {
+        if (!target) return;
+        target.removeEventListener('wheel', zoomWheelHandler as EventListener, { capture: true });
+        target.removeEventListener('keydown', zoomKeyHandler as EventListener, { capture: true });
+        target.removeEventListener('touchstart', zoomTouchHandler as EventListener, { capture: true });
+        target.removeEventListener('touchmove', zoomTouchHandler as EventListener, { capture: true });
+        target.removeEventListener('gesturestart', zoomGestureHandler, { capture: true });
+        target.removeEventListener('gesturechange', zoomGestureHandler, { capture: true });
+        target.removeEventListener('gestureend', zoomGestureHandler, { capture: true });
+      });
+    });
   }
 
   public destroy() {
     this.clearDraftTimer();
     if (this.draftKeyHandler) window.removeEventListener('keydown', this.draftKeyHandler);
+    this.zoomCleanupFns.forEach((fn) => fn());
+    this.zoomCleanupFns = [];
   }
 
   public buildControlsGuide(_s1Skills?: [string, string], _s2Skills?: [string, string]) {
@@ -441,40 +631,41 @@ export class GamePage {
       btn.setAttribute('aria-pressed', this.selectedDraftSlots.includes(k) ? 'true' : 'false');
       btn.style.setProperty('--i', String(k));
 
-      const slotIdx = this.selectedDraftSlots.indexOf(k);
-      const slotText = slotIdx >= 0 ? (targetCount === 1 ? '✓ Selected' : `✓ Slot ${slotIdx + 1}`) : 'Tap to select';
-
-      const stanceLabel = s.use === 'hang' ? 'Dangling' : 'Clinging';
-      const sectorTag = s.sectorName || 'CORE';
-      const sectorColor = s.sectorColor || '#ffd694';
-
       btn.innerHTML = `
-        <div class="card-top-bar">
-          <span class="num card-key-badge" title="Press ${k + 1} to choose"><kbd>${k + 1}</kbd></span>
-          <span class="card-sector-tag" style="color:${sectorColor}; border-color:${sectorColor}66; background:${sectorColor}18;">${sectorTag}</span>
-        </div>
-        <div class="card-gem-frame pgem">
+        <svg class="card-bg-pattern" viewBox="0 0 260 420" preserveAspectRatio="xMidYMin slice" aria-hidden="true">
+          <g fill="none" stroke="currentColor" stroke-width="1">
+            <circle cx="54" cy="56" r="36" stroke-dasharray="3 4" opacity="0.35"/>
+            <circle cx="54" cy="56" r="58" opacity="0.18"/>
+            <circle cx="54" cy="56" r="88" stroke-dasharray="6 6" opacity="0.14"/>
+            <circle cx="54" cy="56" r="128" opacity="0.1"/>
+            <path d="M54 0v420M0 56h260M0 0l260 260M110 0L0 110" opacity="0.12"/>
+            <path d="M12 18V8h10M248 18V8h-10" stroke-width="1.5" opacity="0.45"/>
+          </g>
+        </svg>
+        <span class="num">${k + 1}</span>
+        <span class="pgem">
           <img src="/abilities/${s.id}.png" alt="${s.name}" class="card-icon-img" />
-        </div>
-        <div class="card-info">
-          <h3 class="card-name">${s.name}</h3>
-          <div class="card-chips">
-            <span class="card-chip cd">⏱ ${s.cd}s CD</span>
-            <span class="card-chip stance">${stanceLabel}</span>
-            <span class="card-chip lvl">Lv.${s.unlock.level}</span>
-          </div>
+        </span>
+        <div>
+          <h3>${s.name}</h3>
+          <div class="meta">${s.cd}s cooldown · ${s.use === 'hang' ? 'while dangling' : 'while clinging'}</div>
         </div>
         <p class="desc">${s.desc}</p>
-        <div class="card-pick-footer">
-          <span class="card-pick-indicator">${slotText}</span>
-        </div>
       `;
 
+      btn.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        btn.focus({ preventScroll: true });
+      });
+      btn.addEventListener('pointerdown', () => {
+        btn.focus({ preventScroll: true });
+      });
       btn.addEventListener('click', () => {
         this.toggleCard(k);
       });
       btn.addEventListener('pointerenter', (e) => {
         if ((e as PointerEvent).pointerType === 'mouse') {
+          btn.focus({ preventScroll: true });
           sound.playTone(900, 0.04, 'triangle', 0.02);
         }
       });
@@ -526,7 +717,16 @@ export class GamePage {
       card.classList.remove('pop');
       void card.offsetWidth;
       card.classList.add('pop');
-      card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+      card.focus({ preventScroll: true });
+      if (this.pkCards.classList.contains('has-scroll')) {
+        const containerRect = this.pkCards.getBoundingClientRect();
+        const cardRect = card.getBoundingClientRect();
+        if (cardRect.left < containerRect.left) {
+          this.pkCards.scrollBy({ left: cardRect.left - containerRect.left - 16, behavior: 'smooth' });
+        } else if (cardRect.right > containerRect.right) {
+          this.pkCards.scrollBy({ left: cardRect.right - containerRect.right + 16, behavior: 'smooth' });
+        }
+      }
     }
 
     this.syncPickUI();
@@ -592,17 +792,7 @@ export class GamePage {
   private syncPickUI() {
     const target = this.targetDraftCount;
     Array.from(this.pkCards.children).forEach((c, k) => {
-      const isSelected = this.selectedDraftSlots.includes(k);
-      c.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
-      const indicator = c.querySelector('.card-pick-indicator');
-      if (indicator) {
-        if (isSelected) {
-          const slotIndex = this.selectedDraftSlots.indexOf(k);
-          indicator.textContent = target === 1 ? '✓ Selected' : `✓ Slot ${slotIndex + 1}`;
-        } else {
-          indicator.textContent = 'Tap to select';
-        }
-      }
+      c.setAttribute('aria-pressed', this.selectedDraftSlots.includes(k) ? 'true' : 'false');
     });
     this.pkCount.textContent = `${this.selectedDraftSlots.length} of ${target} picked`;
     this.pkGo.disabled = this.selectedDraftSlots.length !== target;
@@ -615,33 +805,20 @@ export class GamePage {
     this.isDraftLeaving = true;
     sound.play('card_confirm');
 
-    // Picking animation: dismiss unpicked cards, lock in chosen cards
-    Array.from(this.pkCards.children).forEach((c, k) => {
-      const isPicked = this.selectedDraftSlots.includes(k);
-      if (isPicked) {
-        c.classList.add('picked-locked');
-        const indicator = c.querySelector('.card-pick-indicator');
-        if (indicator) indicator.textContent = 'Locked In ✓';
-      } else {
-        c.classList.add('dismissed');
-      }
-    });
-
+    this.pickModal.classList.add('leave');
     const chosen = this.selectedDraftSlots.map(k => this.currentDraftOffer[k]);
     const cb = this.draftConfirmCallback;
 
     setTimeout(() => {
       this.isDraftLeaving = false;
+      this.pickModal.classList.remove('leave');
       if (this.gameMode === 'online') {
         this.showDraftWaiting(chosen);
       } else {
-        this.pickModal.classList.add('leave');
-        setTimeout(() => {
-          this.hideDraftModal();
-        }, 300);
+        this.hideDraftModal();
       }
       if (cb) cb(chosen);
-    }, 450);
+    }, 400);
   }
 
   public showDraftWaiting(chosen: string[]) {
@@ -649,32 +826,17 @@ export class GamePage {
     this.isDraftOpen = true;
     this.isDraftLeaving = false;
     this.pickModal.hidden = false;
-    this.pickModal.classList.remove('leave');
     this.pkTitle.textContent = 'Waiting for Opponent...';
     const names = chosen.map(id => ABILITIES[id as AbilityId]?.name || id).join(' & ');
-    this.pkSub.textContent = `You locked in ${names}. Waiting for your opponent to choose their abilities...`;
+    this.pkSub.textContent = `You picked ${names}. Waiting for your opponent to choose their abilities...`;
     this.pkCount.textContent = 'Ready ✓';
     this.pkGo.disabled = true;
     this.pkGo.textContent = 'Locked In';
     if (this.pkTimer) this.pkTimer.style.display = 'none';
-
-    // Keep ONLY picked cards displayed full and centered
-    Array.from(this.pkCards.children).forEach((c, k) => {
-      const isPicked = this.selectedDraftSlots.includes(k);
-      const el = c as HTMLElement;
-      if (isPicked) {
-        el.classList.add('picked-locked');
-        el.classList.remove('dismissed');
-        el.style.display = 'flex';
-        el.style.pointerEvents = 'none';
-        el.style.opacity = '1';
-        const indicator = el.querySelector('.card-pick-indicator');
-        if (indicator) indicator.textContent = 'Locked In ✓';
-      } else {
-        el.style.display = 'none';
-      }
+    Array.from(this.pkCards.children).forEach(c => {
+      (c as HTMLElement).style.pointerEvents = 'none';
+      (c as HTMLElement).style.opacity = '0.5';
     });
-    this.pkCards.classList.remove('has-scroll');
   }
 
   public hideDraftModal() {
@@ -682,19 +844,15 @@ export class GamePage {
     this.isDraftOpen = false;
     this.isDraftLeaving = false;
     this.pickModal.hidden = true;
-    this.pickModal.classList.remove('leave');
     this.selectedDraftSlots = [];
     this.draftConfirmCallback = null;
     this.pkGo.disabled = false;
-    this.pkGo.textContent = 'Confirm';
+    this.pkGo.textContent = 'Done';
     if (this.pkTimer) this.pkTimer.style.display = '';
     this.pkCards.classList.remove('has-scroll');
     Array.from(this.pkCards.children).forEach(c => {
-      const el = c as HTMLElement;
-      el.classList.remove('picked-locked', 'dismissed', 'pop');
-      el.style.display = '';
-      el.style.pointerEvents = '';
-      el.style.opacity = '';
+      (c as HTMLElement).style.pointerEvents = '';
+      (c as HTMLElement).style.opacity = '';
     });
   }
 
@@ -871,10 +1029,23 @@ export class GamePage {
     if (this.roundLbl.textContent !== roundText) {
       this.roundLbl.textContent = roundText;
     }
+
+    // Round timer countdown (60s per round)
+    const timerVal = typeof state.roundTimer === 'number' ? state.roundTimer : state.matchTimer;
+    if (this.hudTimer && typeof timerVal === 'number') {
+      const t = Math.max(0, Math.ceil(timerVal));
+      const str = String(t);
+      if (this.hudTimer.textContent !== str) {
+        this.hudTimer.textContent = str;
+      }
+      this.hudTimer.classList.toggle('urgent', t <= 15);
+      this.hudTimer.classList.toggle('critical', t <= 5);
+    }
   }
 
   /* ---------- MODALS & OVERLAYS ---------- */
   public showModal(title: string, sub: string, buttons: Array<{ label: string; primary?: boolean; onClick: () => void }>, extraHtml?: string) {
+    if (this.inGameMenuModal) this.inGameMenuModal.hidden = true;
     this.ovTitle.textContent = title;
     this.ovSub.textContent = sub;
     if (extraHtml) {
@@ -901,18 +1072,49 @@ export class GamePage {
     this.overlay.hidden = true;
   }
 
-  public togglePause() {
-    this.isPaused = !this.isPaused;
-    this.callbacks.onPauseToggle(this.isPaused);
-    if (this.isPaused) {
+  public openInGameMenu() {
+    if (this.isDraftOpen) return;
+    const isOnline = this.gameMode === 'online';
+    if (!isOnline) {
+      this.isPaused = true;
+      this.callbacks.onPauseToggle(true);
       sound.music.stop();
-      this.showModal('Paused', 'Take a breath.', [
-        { label: 'Resume', primary: true, onClick: () => this.togglePause() },
-        { label: 'Menu', onClick: () => this.callbacks.onBackToMenu() }
-      ]);
+      this.igmTitle.textContent = 'Game Paused';
+      this.igmSubtitle.textContent = 'Match paused. Adjust settings or quit.';
     } else {
-      sound.music.play('duel');
-      this.hideModal();
+      this.igmTitle.textContent = 'Game Menu';
+      this.igmSubtitle.textContent = 'Match in progress (online matches cannot be paused).';
+    }
+
+    const st = getSettings();
+    this.updateIgmSettingsUi(st);
+    this.inGameMenuModal.hidden = false;
+  }
+
+  public closeInGameMenu() {
+    this.inGameMenuModal.hidden = true;
+    const isOnline = this.gameMode === 'online';
+    if (!isOnline && this.isPaused) {
+      this.isPaused = false;
+      this.callbacks.onPauseToggle(false);
+      const st = getSettings();
+      if (st.music) sound.music.play('duel');
+    }
+  }
+
+  private updateIgmSettingsUi(st: ReturnType<typeof getSettings>) {
+    this.igmSfxToggle.textContent = st.sfx ? 'ON' : 'OFF';
+    this.igmSfxToggle.classList.toggle('active', !!st.sfx);
+
+    this.igmMusicToggle.textContent = st.music ? 'ON' : 'OFF';
+    this.igmMusicToggle.classList.toggle('active', !!st.music);
+  }
+
+  public togglePause() {
+    if (!this.inGameMenuModal.hidden) {
+      this.closeInGameMenu();
+    } else {
+      this.openInGameMenu();
     }
   }
 }

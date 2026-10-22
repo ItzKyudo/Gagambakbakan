@@ -184,6 +184,7 @@ export class NetworkManager {
     left?: boolean;
     right?: boolean;
     strike?: boolean;
+    heavy?: boolean;
     block?: boolean;
     reel?: number;
     ab1?: number;

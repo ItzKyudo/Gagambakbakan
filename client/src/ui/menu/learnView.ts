@@ -59,7 +59,7 @@ export function renderLearnView(): string {
         </div>
         <div class="learn-p1-keys" aria-label="Player 1 controls">
           ${keycap(kb.p1.left, 'Left', 'move')}${keycap(kb.p1.right, 'Right', 'move')}
-          ${keycap(kb.p1.strike, 'Strike', 'strike')}${keycap(kb.p1.block, 'Hold', 'block')}
+          ${keycap(kb.p1.strike, 'Light', 'strike')}${keycap(kb.p1.heavy, 'Heavy', 'strike')}${keycap(kb.p1.block, 'Hold', 'block')}
           ${keycap(kb.p1.climb, 'Tap', 'climb')}
         </div>
       </section>
@@ -73,7 +73,7 @@ export function renderLearnView(): string {
       <details class="learn-controls">
         <summary>Player 2 keys</summary>
         <div class="learn-key-row">
-          ${keycap(kb.p2.left, 'Left')}${keycap(kb.p2.right, 'Right')}${keycap(kb.p2.strike, 'Strike')}
+          ${keycap(kb.p2.left, 'Left')}${keycap(kb.p2.right, 'Right')}${keycap(kb.p2.strike, 'Light')}${keycap(kb.p2.heavy, 'Heavy')}
           ${keycap(kb.p2.block, 'Block')}${keycap(kb.p2.climb, 'Climb')}${keycap(kb.p2.s1, 'Skill 1')}${keycap(kb.p2.s2, 'Skill 2')}
         </div>
       </details>
@@ -99,7 +99,7 @@ export function bindLearnDemo(container: HTMLElement): () => void {
   const icons = container.querySelectorAll<HTMLElement>('[data-learn-icon]');
   const copy = {
     move: ['Move', 'Close the gap and control the center.'],
-    strike: ['Strike', 'Wind up, lunge, and knock your rival back.'],
+    strike: ['Attack', 'Light strike (0.3s) for fast pokes; Heavy strike (0.6s) for high damage.'],
     block: ['Block', 'Raise your front legs before the hit lands.'],
     climb: ['Climb', 'Tap quickly before your silk reaches the pond.']
   } as const;

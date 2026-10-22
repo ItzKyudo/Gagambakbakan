@@ -349,13 +349,17 @@ export class GagambakbakanScene extends Phaser.Scene {
     });
     }
 
-    // Twig
-    this.drawStick(ctx);
+    const isDrafting = this.gameState && this.gameState.status === 'draft';
 
-    // Earthquake tremors
-    this.drawQuakes(ctx, t);
+    if (!isDrafting) {
+      // Twig
+      this.drawStick(ctx);
 
-    if (this.gameState && this.gameState.p1 && this.gameState.p2) {
+      // Earthquake tremors
+      this.drawQuakes(ctx, t);
+    }
+
+    if (!isDrafting && this.gameState && this.gameState.p1 && this.gameState.p2) {
       const p1 = this.gameState.p1;
       const p2 = this.gameState.p2;
 
@@ -514,6 +518,9 @@ export class GagambakbakanScene extends Phaser.Scene {
     // Particles & combat text
     this.drawParticles(ctx);
 
+    // Player tracker indicator (YOU label)
+    this.drawPlayerIndicator(ctx, t);
+
     // Dangling pace gauges & prompt overlays
     if (this.gameState && this.gameState.p1 && this.gameState.p2) {
       const spiders = [this.gameState.p1, this.gameState.p2];
@@ -540,22 +547,25 @@ export class GagambakbakanScene extends Phaser.Scene {
 
           // Pace gauge
           const bw = 120, bxl = lx - bw / 2, byl = ly + 8;
-          const maxR = 1 / 0.14; // ~7.1 taps/s max
-          const okPace = (s.rate || 0) >= (s.hold || 2.1);
+          const maxR = 10;
+          const needed = s.hold || 1;
+          const okPace = (s.rate || 0) >= needed;
           ctx.fillStyle = 'rgba(8,16,15,.85)';
           ctx.fillRect(bxl - 1, byl - 1, bw + 2, 10);
           ctx.fillStyle = okPace ? (s.color || (i === 0 ? COLORS.amber : COLORS.jade)) : COLORS.danger;
           ctx.fillRect(bxl, byl, bw * Math.min(1, (s.rate || 0) / maxR), 8);
           ctx.fillStyle = '#ffffff';
-          ctx.fillRect(bxl + bw * Math.min(1, (s.hold || 2.1) / maxR) - 1, byl - 3, 2, 14);
+          ctx.fillRect(bxl + bw * Math.min(1, needed / maxR) - 1, byl - 3, 2, 14);
 
           let ly2 = ly + 34;
-          const t3 = (s.falls > 1 ? `FALL ${s.falls} · ` : '') + `NEED ${(s.hold || 2.1).toFixed(1)} TAPS/S`;
-          ctx.font = '600 16px "Barlow Condensed", sans-serif';
+          const timeLeft = Math.max(0, 10 - (s.hangT || 0));
+          const urgent = timeLeft <= 3.0;
+          const t3 = `${timeLeft.toFixed(1)}s LEFT · NEED ${Math.round(needed)}/S` + (s.falls > 1 ? ` (FALL ${s.falls})` : '');
+          ctx.font = '700 16px "Barlow Condensed", sans-serif';
           ctx.lineWidth = 4;
           ctx.strokeStyle = 'rgba(8,16,15,.9)';
           ctx.strokeText(t3, lx, ly2);
-          ctx.fillStyle = s.falls > 1 ? COLORS.danger : '#ffffff';
+          ctx.fillStyle = urgent ? COLORS.danger : (s.falls > 1 ? '#ffa38b' : '#ffffff');
           ctx.fillText(t3, lx, ly2);
           ly2 += 20;
 
@@ -587,12 +597,18 @@ export class GagambakbakanScene extends Phaser.Scene {
         } else {
           this.drawBigText(ctx, 'FIGHT!', 190, 72, '#ffd694', this.gameState.stateT - 0.85);
         }
-      } else if (this.gameState.status === 'roundEnd' && this.gameState.stateT > 0.5) {
-        const wId = (this.gameState.p1 && this.gameState.p1.ko) ? 1 : 0;
-        const winner = wId === 0 ? this.gameState.p1 : this.gameState.p2;
-        const wName = (winner?.name || (wId === 0 ? 'AMBER' : 'JADE')).toUpperCase();
-        const wCol = winner?.color || (wId === 0 ? COLORS.amber : COLORS.jade);
-        this.drawBigText(ctx, `${wName} TAKES IT`, 190, 44, wCol, this.gameState.stateT - 0.5);
+      } else if (this.gameState.status === 'roundEnd' && this.gameState.stateT > 0.4) {
+        const p1Ko = !!(this.gameState.p1 && this.gameState.p1.ko);
+        const p2Ko = !!(this.gameState.p2 && this.gameState.p2.ko);
+        if (p1Ko || p2Ko) {
+          const wId = p1Ko ? 1 : 0;
+          const winner = wId === 0 ? this.gameState.p1 : this.gameState.p2;
+          const wName = (winner?.name || (wId === 0 ? 'AMBER' : 'JADE')).toUpperCase();
+          const wCol = winner?.color || (wId === 0 ? COLORS.amber : COLORS.jade);
+          this.drawBigText(ctx, `${wName} TAKES IT`, 190, 44, wCol, this.gameState.stateT - 0.4);
+        } else {
+          this.drawBigText(ctx, 'ROUND TIE!', 190, 52, '#ffd694', this.gameState.stateT - 0.4);
+        }
       }
     }
 
@@ -879,6 +895,7 @@ export class GagambakbakanScene extends Phaser.Scene {
   ) {
     const f = s.face;
     const hb = s.hb || 0;
+    const isHeavy = !!s.isHeavy;
     const t = this.time.now / 1000;
     const sweep = this.sweepCast(s);
     const sweepArc = sweep > 0 ? Math.sin(sweep * Math.PI) : 0;
@@ -910,92 +927,118 @@ export class GagambakbakanScene extends Phaser.Scene {
       let clawCol: string | undefined;
 
       if (!s.hang) {
-        if (s.atkT > 0 && i < 2) {
+        const isAttackingLeg = isHeavy ? (i === 0) : (!far && i === 0);
+
+        if (s.atkT > 0 && isAttackingLeg) {
           const atkType = (s.atkType !== undefined ? s.atkType : (s.atkId || 0)) % 3;
-          // Stagger front 4 legs so near/far and lead/secondary legs whip in an articulated sequence
-          const delay = (i === 0 ? 0 : 0.026) + (far ? 0.014 : 0);
+          // Stagger far arm slightly in heavy attack for articulated depth
+          const delay = (isHeavy && far) ? 0.010 : 0;
           const shiftedT = s.atkT > delay ? s.atkT - delay : s.atkT * 0.4;
-          const lp = attackPose(shiftedT);
+          const lp = attackPose(shiftedT, isHeavy);
 
           let wFx = baseFx, wFy = baseFy, wKx = baseKx, wKy = baseKy;
           let sFx = baseFx, sFy = baseFy, sKx = baseKx, sKy = baseKy;
           let arcDx = 0, arcDy = 0, arcKx = 0, arcKy = 0;
           let folDx = 0, folDy = 0;
 
-          if (atkType === 0) {
-            // Animation 0: Overhead Claw Cleave
-            const lead = i === 0 ? 1 : 0.78;
-            const depthOff = far ? 6 : 0;
-            wFx = bx + f * ((i === 0 ? 18 : 10) + depthOff);
-            wFy = by - (i === 0 ? 52 : 38) - (far ? 4 : 0);
-            wKx = bx + f * ((i === 0 ? 12 : 6) + depthOff * 0.5);
-            wKy = by - (i === 0 ? 60 : 46);
+          if (isHeavy) {
+            // Heavy 2-arm Attack: Dual Claw Crushing Guillotine
+            const depthOff = far ? 10 : 0;
+            wFx = bx + f * ((far ? 20 : 14) + depthOff);
+            wFy = by - 68 - (far ? 4 : 0);
+            wKx = bx + f * ((far ? 12 : 8) + depthOff * 0.5);
+            wKy = by - 78;
 
-            arcDx = f * (28 * lead);
-            arcDy = -22 * lead;
-            arcKx = f * (14 * lead);
-            arcKy = -16 * lead;
+            arcDx = f * 36;
+            arcDy = -26;
+            arcKx = f * 18;
+            arcKy = -18;
 
-            sFx = bx + f * ((i === 0 ? 94 : 76) + depthOff);
-            sFy = by + (i === 0 ? 9 : 4) + (far ? -3 : 2);
-            sKx = bx + f * ((i === 0 ? 48 : 38) + depthOff * 0.5);
-            sKy = by - (i === 0 ? 19 : 14);
+            sFx = bx + f * (104 + depthOff);
+            sFy = by + 12 + (far ? -3 : 2);
+            sKx = bx + f * (54 + depthOff * 0.5);
+            sKy = by - 16;
+
+            folDx = -f * 10;
+            folDy = 6;
+          } else if (atkType === 0) {
+            // Light Attack Variant 0: Quick Snap Jab (Straight Piercing Thrust)
+            wFx = bx + f * 10;
+            wFy = by - 16;
+            wKx = bx - f * 4;
+            wKy = by - 38;
+
+            arcDx = f * 16;
+            arcDy = -4;
+            arcKx = f * 8;
+            arcKy = -6;
+
+            sFx = bx + f * 96;
+            sFy = by - 10;
+            sKx = bx + f * 48;
+            sKy = by - 22;
+
+            folDx = -f * 8;
+            folDy = 2;
+          } else if (atkType === 1) {
+            // Light Attack Variant 1: Overhead Claw Chop (Single Hammer Cleave)
+            wFx = bx + f * 18;
+            wFy = by - 54;
+            wKx = bx + f * 12;
+            wKy = by - 62;
+
+            arcDx = f * 28;
+            arcDy = -22;
+            arcKx = f * 14;
+            arcKy = -16;
+
+            sFx = bx + f * 92;
+            sFy = by + 8;
+            sKx = bx + f * 46;
+            sKy = by - 16;
 
             folDx = -f * 6;
             folDy = 4;
-          } else if (atkType === 1) {
-            // Animation 1: Piercing Viper Thrust
-            const depthOff = far ? 5 : 0;
-            wFx = bx + f * ((i === 0 ? 8 : 2) + depthOff);
-            wFy = by - (i === 0 ? 14 : 5) - (far ? 3 : 0);
-            wKx = bx - f * ((i === 0 ? 4 : 10) - depthOff * 0.4);
-            wKy = by - (i === 0 ? 44 : 35);
-
-            arcDx = f * 16;
-            arcDy = i === 0 ? -4 : 2;
-            arcKx = f * 10;
-            arcKy = -6;
-
-            sFx = bx + f * ((i === 0 ? 98 : 84) + depthOff);
-            sFy = by - (i === 0 ? 12 : 2) + (far ? -4 : 1);
-            sKx = bx + f * ((i === 0 ? 52 : 43) + depthOff * 0.5);
-            sKy = by - (i === 0 ? 22 : 13);
-
-            folDx = -f * 10;
-            folDy = 2;
           } else {
-            // Animation 2: Rising Scythe Uppercut
-            const lead = i === 0 ? 1 : 0.8;
-            const depthOff = far ? 6 : 0;
-            wFx = bx + f * ((i === 0 ? 16 : 8) + depthOff);
+            // Light Attack Variant 2: Rising Scythe Uppercut (Outward Crescent Hook)
+            wFx = bx + f * 14;
             wFy = STICK.y + 4;
-            wKx = bx + f * ((i === 0 ? 10 : 4) + depthOff * 0.5);
-            wKy = by - (i === 0 ? 9 : 6);
+            wKx = bx + f * 8;
+            wKy = by - 10;
 
-            arcDx = f * (30 * lead);
-            arcDy = 12 * lead;
-            arcKx = f * (16 * lead);
-            arcKy = 6 * lead;
+            arcDx = f * 30;
+            arcDy = 12;
+            arcKx = f * 16;
+            arcKy = 6;
 
-            sFx = bx + f * ((i === 0 ? 88 : 72) + depthOff);
-            sFy = by - (i === 0 ? 52 : 38) - (far ? 5 : 0);
-            sKx = bx + f * ((i === 0 ? 44 : 34) + depthOff * 0.5);
-            sKy = by - (i === 0 ? 64 : 50);
+            sFx = bx + f * 90;
+            sFy = by - 48;
+            sKx = bx + f * 44;
+            sKy = by - 58;
 
-            folDx = -f * 5;
-            folDy = -6;
+            folDx = -f * 6;
+            folDy = -5;
           }
 
           fx = baseFx + lp.wind * (wFx - baseFx) + lp.strike * (sFx - baseFx) + lp.arc * arcDx + lp.follow * folDx;
           fy = baseFy + lp.wind * (wFy - baseFy) + lp.strike * (sFy - baseFy) + lp.arc * arcDy + lp.follow * folDy;
           kx = baseKx + lp.wind * (wKx - baseKx) + lp.strike * (sKx - baseKx) + lp.arc * arcKx;
           ky = baseKy + lp.wind * (wKy - baseKy) + lp.strike * (sKy - baseKy) + lp.arc * arcKy;
-          clawCol = s.power > 0 ? '#ffeaa7' : (s.leech > 0 ? '#ff6b81' : colLight);
+          clawCol = s.power > 0 ? '#ffeaa7' : (s.leech > 0 ? '#ff6b81' : (isHeavy ? '#ff9f43' : colLight));
+        } else if (s.atkT > 0 && i < 2) {
+          // Non-attacking front legs:
+          // In light attack: far lead leg (far && i === 0) and secondary legs (i === 1) stay grounded on the stick
+          // In heavy attack: secondary legs (i === 1) plant with deep knee bend to support the 2-arm smash
+          const bp = attackPose(s.atkT, isHeavy);
+          fx = baseFx - f * (isHeavy ? (4 + bp.strike * 4) : 2);
+          fy = STICK.y - 1;
+          kx = (ax + fx) / 2 + f * (far ? 2 : 5);
+          ky = Math.min(ay, fy) - (isHeavy ? (20 + bp.wind * 4 - bp.strike * 3) : 22);
         } else if (s.atkT > 0 && i >= 2) {
           // Rear legs (i = 2, 3) brace firmly on the twig during windup and drive/extend during the lunge
-          const bp = attackPose(s.atkT);
+          const bp = attackPose(s.atkT, isHeavy);
           const bodyShiftX = bx - s.x;
-          fx = baseFx - bodyShiftX * 0.75 - f * (bp.strike * 6 - bp.wind * 4);
+          fx = baseFx - bodyShiftX * 0.75 - f * (bp.strike * (isHeavy ? 9 : 6) - bp.wind * (isHeavy ? 6 : 4));
           fy = STICK.y - 1;
           kx = (ax + fx) / 2 - f * (6 + bp.wind * 5 - bp.strike * 4);
           ky = Math.min(ay, fy) - 24 - bp.wind * 6 + bp.strike * 5;
@@ -1161,14 +1204,15 @@ export class GagambakbakanScene extends Phaser.Scene {
       );
 
       // Lead claw windup telegraph glint star
-      if (!far && i === 0 && s.atkT > 0 && !s.hang) {
-        const glint = attackPose(s.atkT).glint;
+      const isGlintClaw = isHeavy ? (i === 0) : (!far && i === 0);
+      if (isGlintClaw && s.atkT > 0 && !s.hang) {
+        const glint = attackPose(s.atkT, isHeavy).glint;
         if (glint > 0.15) {
           ctx.save();
           ctx.globalAlpha = glint * 0.9;
-          ctx.strokeStyle = s.power > 0 ? '#ffeaa7' : '#ffffff';
-          ctx.lineWidth = 1.8;
-          const r = 4 + glint * 4;
+          ctx.strokeStyle = s.power > 0 ? '#ffeaa7' : (isHeavy ? '#ff9f43' : '#ffffff');
+          ctx.lineWidth = isHeavy ? 2.4 : 1.8;
+          const r = (isHeavy ? 6 : 4) + glint * (isHeavy ? 6 : 4);
           ctx.beginPath();
           ctx.moveTo(fx - r, fy);
           ctx.lineTo(fx + r, fy);
@@ -1198,7 +1242,8 @@ export class GagambakbakanScene extends Phaser.Scene {
 
     const f = s.face;
     const hb = s.hb || 0;
-    const pose = s.atkT > 0 ? attackPose(s.atkT) : { wind: 0, strike: 0, arc: 0, swing: 0, follow: 0, glint: 0 };
+    const isHeavy = !!s.isHeavy;
+    const pose = s.atkT > 0 ? attackPose(s.atkT, isHeavy) : { wind: 0, strike: 0, arc: 0, swing: 0, follow: 0, glint: 0 };
     const sweep = this.sweepCast(s);
     const sweepArc = sweep > 0 ? Math.sin(sweep * Math.PI) : 0;
     const powerBurst = this.skillCast(s, 'power', 0.42);
@@ -1225,33 +1270,42 @@ export class GagambakbakanScene extends Phaser.Scene {
     let headOffsetY = 0;
 
     if (s.atkT > 0) {
-      if (atkType === 0) {
-        // Overhead Claw Cleave: rears high on windup, lunges forward and down on strike
-        atkXOffset = -pose.wind * 7 + pose.strike * 13 + pose.arc * 4;
-        atkYOffset = -pose.wind * 6 + pose.strike * 3 - pose.arc * 4;
-        abdomenTilt = f * (pose.wind * 0.22 - pose.strike * 0.16);
-        abdomenScaleX = 1 - pose.wind * 0.05 + pose.strike * 0.07;
+      if (isHeavy) {
+        // Heavy 2-arm Attack: massive rear-back on windup, powerful forward lunge on strike
+        atkXOffset = -pose.wind * 14 + pose.strike * 20 + pose.arc * 5;
+        atkYOffset = -pose.wind * 10 + pose.strike * 6 - pose.arc * 5;
+        abdomenTilt = f * (pose.wind * 0.35 - pose.strike * 0.26);
+        abdomenScaleX = 1 - pose.wind * 0.08 + pose.strike * 0.12;
+        abdomenScaleY = 1 + pose.wind * 0.08 - pose.strike * 0.08;
+        headOffsetX = f * (-pose.wind * 4 + pose.strike * 8);
+        headOffsetY = -pose.wind * 6 + pose.strike * 4;
+      } else if (atkType === 0) {
+        // Light Attack Variant 0 (Snap Jab): sharp linear recoil and punch
+        atkXOffset = -pose.wind * 8 + pose.strike * 15 + pose.arc * 3;
+        atkYOffset = pose.wind * 1 - pose.strike * 1;
+        abdomenTilt = f * (-pose.wind * 0.10 + pose.strike * 0.08);
+        abdomenScaleX = 1 - pose.wind * 0.06 + pose.strike * 0.08;
+        abdomenScaleY = 1 + pose.wind * 0.05 - pose.strike * 0.06;
+        headOffsetX = f * (-pose.wind * 2 + pose.strike * 5);
+        headOffsetY = -pose.strike * 1.5;
+      } else if (atkType === 1) {
+        // Light Attack Variant 1 (Overhead Chop): slight rear up and chop down
+        atkXOffset = -pose.wind * 6 + pose.strike * 12 + pose.arc * 3;
+        atkYOffset = -pose.wind * 6 + pose.strike * 3 - pose.arc * 3;
+        abdomenTilt = f * (pose.wind * 0.20 - pose.strike * 0.14);
+        abdomenScaleX = 1 - pose.wind * 0.05 + pose.strike * 0.06;
         abdomenScaleY = 1 + pose.wind * 0.05 - pose.strike * 0.05;
         headOffsetX = f * (-pose.wind * 2 + pose.strike * 4);
         headOffsetY = -pose.wind * 4 + pose.strike * 3;
-      } else if (atkType === 1) {
-        // Piercing Viper Thrust: coils tightly back, then shoots forward horizontally
-        atkXOffset = -pose.wind * 10 + pose.strike * 17 + pose.arc * 5;
-        atkYOffset = pose.wind * 2 - pose.strike * 2;
-        abdomenTilt = f * (-pose.wind * 0.12 + pose.strike * 0.08);
-        abdomenScaleX = 1 - pose.wind * 0.08 + pose.strike * 0.11;
-        abdomenScaleY = 1 + pose.wind * 0.06 - pose.strike * 0.07;
-        headOffsetX = f * (-pose.wind * 3 + pose.strike * 6);
-        headOffsetY = -pose.strike * 1.5;
       } else {
-        // Rising Scythe Uppercut: crouches low against twig, then scoops upward
-        atkXOffset = -pose.wind * 6 + pose.strike * 13 + pose.arc * 5;
-        atkYOffset = pose.wind * 5 - pose.strike * 10 + pose.arc * 3;
-        abdomenTilt = f * (-pose.wind * 0.18 + pose.strike * 0.24);
-        abdomenScaleX = 1 + pose.wind * 0.05 + pose.strike * 0.06;
-        abdomenScaleY = 1 - pose.wind * 0.06 - pose.strike * 0.04;
+        // Light Attack Variant 2 (Rising Scythe Uppercut): low crouch against twig and scoop up
+        atkXOffset = -pose.wind * 5 + pose.strike * 12 + pose.arc * 4;
+        atkYOffset = pose.wind * 4 - pose.strike * 8 + pose.arc * 2;
+        abdomenTilt = f * (-pose.wind * 0.16 + pose.strike * 0.20);
+        abdomenScaleX = 1 + pose.wind * 0.04 + pose.strike * 0.05;
+        abdomenScaleY = 1 - pose.wind * 0.05 - pose.strike * 0.04;
         headOffsetX = f * (pose.strike * 4);
-        headOffsetY = pose.wind * 3 - pose.strike * 6;
+        headOffsetY = pose.wind * 2.5 - pose.strike * 5;
       }
     } else if (sweepArc > 0) {
       atkXOffset = sweepArc * 11;
@@ -2314,8 +2368,9 @@ export class GagambakbakanScene extends Phaser.Scene {
     // Near primary curved fang
     let nearFangTipY = hy2 + 7 + fangOpen * 0.4;
     if (s.atkT > 0) {
-      if (atkType === 0) nearFangTipY = hy2 + 9 - pose.wind * 7 + pose.strike * 4;
-      else if (atkType === 1) nearFangTipY = hy2 + 4 - pose.wind * 3;
+      if (isHeavy) nearFangTipY = hy2 + 10 - pose.wind * 9 + pose.strike * 6;
+      else if (atkType === 0) nearFangTipY = hy2 + 4 - pose.wind * 3 + pose.strike * 1;
+      else if (atkType === 1) nearFangTipY = hy2 + 9 - pose.wind * 7 + pose.strike * 4;
       else nearFangTipY = hy2 + 8 + pose.wind * 3 - pose.strike * 9;
     }
     const nearFangTipX = hx2 + f * (21 + fangReach);
@@ -2403,52 +2458,62 @@ export class GagambakbakanScene extends Phaser.Scene {
       ctx.save();
       ctx.lineCap = 'round';
 
-      if (atkType === 0) {
-        // Animation 0: Overhead Claw Cleave
+      if (isHeavy) {
+        // Heavy 2-arm Sunder: Twin crushing crescent slashes with ground shockwave
         const t0 = Math.max(0, sw * 1.35 - 0.58);
         const t1 = Math.min(1, sw * 1.35 + 0.12);
+        const heavyCol = empoweredPower ? '#ffb347' : '#ff9f43';
 
+        // Near primary crescent slash
         this.drawCrescentSlash(
           ctx,
-          bx + f * 16, by - 46,
-          bx + f * 78, by - 44,
-          bx + f * (REACH + 12), by + 10,
+          bx + f * 18, by - 62,
+          bx + f * 86, by - 50,
+          bx + f * (REACH + 16), by + 12,
           t0, t1,
-          7.5 * powerBoost,
-          colAccent,
+          10 * powerBoost,
+          heavyCol,
           colCore,
-          alpha * 0.92
+          alpha * 0.95
         );
 
-        const st0 = Math.max(0, (sw - 0.08) * 1.35 - 0.52);
-        const st1 = Math.min(1, (sw - 0.08) * 1.35 + 0.1);
+        // Far secondary crescent slash (twin slash)
+        const st0 = Math.max(0, (sw - 0.05) * 1.35 - 0.54);
+        const st1 = Math.min(1, (sw - 0.05) * 1.35 + 0.1);
         if (st1 > st0 + 0.04) {
           this.drawCrescentSlash(
             ctx,
-            bx + f * 12, by - 34,
-            bx + f * 64, by - 32,
-            bx + f * (REACH + 2), by + 14,
+            bx + f * 24, by - 54,
+            bx + f * 76, by - 42,
+            bx + f * (REACH + 6), by + 16,
             st0, st1,
-            4.5 * powerBoost,
+            6.5 * powerBoost,
             colMain,
-            colAccent,
-            alpha * 0.68
+            heavyCol,
+            alpha * 0.78
           );
         }
 
-        if (sw > 0.32 && sw < 0.88) {
-          const imp = Math.sin(((sw - 0.32) / 0.56) * Math.PI);
+        // Heavy ground impact shockwave ring on the stick
+        if (sw > 0.28 && sw < 0.92) {
+          const imp = Math.sin(((sw - 0.28) / 0.64) * Math.PI);
           const impX = bx + f * (REACH + 6);
-          const impY = by + 8;
-          ctx.globalAlpha = imp * 0.8;
+          const impY = by + 10;
+          ctx.globalAlpha = imp * 0.9;
           ctx.strokeStyle = colCore;
-          ctx.lineWidth = 2.4 * powerBoost;
+          ctx.lineWidth = 3.2 * powerBoost;
           ctx.beginPath();
-          ctx.ellipse(impX, impY, (10 + (sw - 0.32) * 26) * powerBoost, 5 + (sw - 0.32) * 8, f * 0.25, 0, Math.PI * 2);
+          ctx.ellipse(impX, impY, (14 + (sw - 0.28) * 36) * powerBoost, 6 + (sw - 0.28) * 12, f * 0.2, 0, Math.PI * 2);
+          ctx.stroke();
+
+          ctx.strokeStyle = heavyCol;
+          ctx.lineWidth = 1.8;
+          ctx.beginPath();
+          ctx.ellipse(impX, impY, (8 + (sw - 0.28) * 22) * powerBoost, 4 + (sw - 0.28) * 7, f * 0.2, 0, Math.PI * 2);
           ctx.stroke();
         }
-      } else if (atkType === 1) {
-        // Animation 1: Piercing Viper Thrust
+      } else if (atkType === 0) {
+        // Light Attack Variant 0: Piercing Snap Jab
         const extend = Math.min(1, sw * 1.55);
         const tail = Math.max(0, (sw - 0.28) * 1.35);
         const startX = bx + f * lerp(18, 56, tail);
@@ -2520,8 +2585,52 @@ export class GagambakbakanScene extends Phaser.Scene {
           ctx.arc(tipX, tipY, 3.6 * powerBoost, 0, Math.PI * 2);
           ctx.fill();
         }
+      } else if (atkType === 1) {
+        // Light Attack Variant 1: Overhead Claw Chop
+        const t0 = Math.max(0, sw * 1.35 - 0.58);
+        const t1 = Math.min(1, sw * 1.35 + 0.12);
+
+        this.drawCrescentSlash(
+          ctx,
+          bx + f * 16, by - 46,
+          bx + f * 78, by - 44,
+          bx + f * (REACH + 12), by + 10,
+          t0, t1,
+          7.5 * powerBoost,
+          colAccent,
+          colCore,
+          alpha * 0.92
+        );
+
+        const st0 = Math.max(0, (sw - 0.08) * 1.35 - 0.52);
+        const st1 = Math.min(1, (sw - 0.08) * 1.35 + 0.1);
+        if (st1 > st0 + 0.04) {
+          this.drawCrescentSlash(
+            ctx,
+            bx + f * 12, by - 34,
+            bx + f * 64, by - 32,
+            bx + f * (REACH + 2), by + 14,
+            st0, st1,
+            4.5 * powerBoost,
+            colMain,
+            colAccent,
+            alpha * 0.68
+          );
+        }
+
+        if (sw > 0.32 && sw < 0.88) {
+          const imp = Math.sin(((sw - 0.32) / 0.56) * Math.PI);
+          const impX = bx + f * (REACH + 6);
+          const impY = by + 8;
+          ctx.globalAlpha = imp * 0.8;
+          ctx.strokeStyle = colCore;
+          ctx.lineWidth = 2.4 * powerBoost;
+          ctx.beginPath();
+          ctx.ellipse(impX, impY, (10 + (sw - 0.32) * 26) * powerBoost, 5 + (sw - 0.32) * 8, f * 0.25, 0, Math.PI * 2);
+          ctx.stroke();
+        }
       } else {
-        // Animation 2: Rising Scythe Uppercut
+        // Light Attack Variant 2: Rising Scythe Uppercut
         const t0 = Math.max(0, sw * 1.35 - 0.58);
         const t1 = Math.min(1, sw * 1.35 + 0.12);
 
@@ -2983,6 +3092,68 @@ export class GagambakbakanScene extends Phaser.Scene {
     // Bright, crisp filled text matching the spider color
     ctx.fillStyle = colLight;
     ctx.fillText(s.name, x, y);
+
+    ctx.restore();
+  }
+
+  private drawPlayerIndicator(ctx: CanvasRenderingContext2D, t: number) {
+    if (!this.gameState || !this.gameState.p1 || !this.gameState.p2) return;
+    if (this.gameState.status === 'draft' || this.gameState.status === 'waiting') return;
+
+    const myId = this.isOnline ? this.myPlayerId : 0;
+    const s = myId === 1 ? this.gameState.p2 : this.gameState.p1;
+    if (!s || s.ko) return;
+
+    const x = clamp(s.x, 40, CANVAS_WIDTH - 40);
+    const hb = s.hb || 0;
+    const onTwigY = STICK.y - BODY_H - 24;
+    const hangY = BODY_Y + (s.drop || 0) + 26 * hb - 32;
+    const baseY = s.hang ? hangY : onTwigY;
+    const y = baseY + Math.sin(t * 4.5) * 1.5;
+
+    const colLight = s.colorLight || (myId === 0 ? COLORS.amberLight : COLORS.jadeLight);
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    const bw = 32;
+    const bh = 14;
+    const r = 3.5;
+    const bx = -bw / 2;
+    const by = -bh - 4;
+
+    // Subtle drop shadow
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.75)';
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetY = 2;
+
+    // Dark pill container
+    ctx.fillStyle = 'rgba(8, 16, 15, 0.92)';
+    ctx.beginPath();
+    ctx.roundRect(bx, by, bw, bh, r);
+    ctx.fill();
+
+    // Clean neon border
+    ctx.shadowColor = 'transparent';
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = colLight;
+    ctx.stroke();
+
+    // Downward arrow pointer
+    ctx.fillStyle = colLight;
+    ctx.beginPath();
+    ctx.moveTo(-3.5, -4);
+    ctx.lineTo(3.5, -4);
+    ctx.lineTo(0, -0.5);
+    ctx.closePath();
+    ctx.fill();
+
+    // Bold YOU label
+    ctx.font = '800 10px "Barlow Condensed", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('YOU', 0, by + bh / 2 + 0.5);
 
     ctx.restore();
   }

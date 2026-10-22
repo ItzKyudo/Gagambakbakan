@@ -26,7 +26,7 @@ let animationFrameId: number | null = null;
 
 // Input tracking
 const keysDown = new Set<string>();
-const touchState = { left: false, right: false, strike: false, block: false, reel: 0 };
+const touchState = { left: false, right: false, strike: false, heavy: false, block: false, reel: 0 };
 let abQueueP1 = [0, 0]; // [s1, s2]
 let abQueueP2 = [0, 0]; // [s1, s2]
 let reelP2 = 0;
@@ -81,6 +81,18 @@ function setupKeyboardListeners() {
       return;
     }
 
+    const isZoomKey = (e.ctrlKey || e.metaKey) && (
+      e.key === '+' || e.key === '-' || e.key === '=' || e.key === '_' || e.key === '0' ||
+      e.code === 'Equal' || e.code === 'Minus' || e.code === 'Digit0' ||
+      e.code === 'NumpadAdd' || e.code === 'NumpadSubtract' || e.code === 'Numpad0' ||
+      e.keyCode === 187 || e.keyCode === 189 || e.keyCode === 107 || e.keyCode === 109 || e.keyCode === 48 || e.keyCode === 96
+    );
+    if (isZoomKey && gamePage) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+
     const preventKeys = ['Space', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
     if (preventKeys.includes(e.code) && currentGame) {
       e.preventDefault();
@@ -110,6 +122,14 @@ function setupKeyboardListeners() {
   window.addEventListener('blur', () => {
     keysDown.clear();
   });
+
+  // Global capture for wheel zoom attempts while in game
+  window.addEventListener('wheel', (e: WheelEvent) => {
+    if ((e.ctrlKey || e.metaKey) && gamePage) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, { capture: true, passive: false });
 }
 
 setupKeyboardListeners();
@@ -125,6 +145,7 @@ function getPlayerInput(isPlayer2: boolean = false): InputState {
       left: keysDown.has(kb.p2.left),
       right: keysDown.has(kb.p2.right),
       strike: keysDown.has(kb.p2.strike),
+      heavy: keysDown.has(kb.p2.heavy),
       block: keysDown.has(kb.p2.block),
       reel,
       ab1,
@@ -136,12 +157,13 @@ function getPlayerInput(isPlayer2: boolean = false): InputState {
   const left = keysDown.has(kb.p1.left) || touchState.left;
   const right = keysDown.has(kb.p1.right) || touchState.right;
   const strike = keysDown.has(kb.p1.strike) || touchState.strike;
+  const heavy = keysDown.has(kb.p1.heavy) || touchState.heavy;
   const block = keysDown.has(kb.p1.block) || touchState.block;
   const reel = touchState.reel;
   const ab1 = abQueueP1[0];
   const ab2 = abQueueP1[1];
 
-  return { left, right, strike, block, reel, ab1, ab2 };
+  return { left, right, strike, heavy, block, reel, ab1, ab2 };
 }
 
 function clearInputs() {
@@ -171,7 +193,7 @@ function showMainMenu() {
   gamePage = null;
   onlineDraftSubmitted = false;
   keysDown.clear();
-  touchState.left = touchState.right = touchState.strike = touchState.block = false;
+  touchState.left = touchState.right = touchState.strike = touchState.heavy = touchState.block = false;
   clearInputs();
 
   sound.music.play('ambient');
@@ -400,7 +422,7 @@ function getNetworkCallbacks() {
     onRoundWon: () => {
       // Gameplay music continues until match end
     },
-    onMatchEnd: (data: { winner: number; winnerName: string; p1Wins: number; p2Wins: number; forfeit?: boolean }) => {
+    onMatchEnd: (data: { winner: number; winnerName: string; p1Wins: number; p2Wins: number; forfeit?: boolean; isTimeOut?: boolean }) => {
       sound.music.play('ambient');
       onlineDraftSubmitted = false;
       if (gamePage) {

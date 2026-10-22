@@ -7,8 +7,10 @@ const BODY_Y = STICK.y + STICK.th + BODY_H;
 const LBL_Y = BODY_Y + 46;
 const MAXDROP = POND_Y - BODY_Y - 26 - 4;
 const REACH = 84, MINDIST = 48, SPEED = 175, PARRY = 0.08;
-const ATK = { wind: 0.16, act: 0.26, end: 0.46 };
-const REEL_CD = 0.14, TAP = 8, FALL_DEPTH = 100, SINK = 17, FALL_SPEED = 320, SURGE_LIFT = 50;
+const ATK_LIGHT = { wind: 0.10, act: 0.18, end: 0.3 };
+const ATK_HEAVY = { wind: 0.22, act: 0.38, end: 0.6 };
+const ATK = ATK_LIGHT;
+const REEL_CD = 0.14, TAP = 8, FALL_DEPTH = 100, FALL_SPEED = 320, SURGE_LIFT = 50;
 const FATIGUE_MAX = 4;
 const cl = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 
@@ -16,6 +18,7 @@ export interface PlayerInput {
   left: boolean;
   right: boolean;
   strike: boolean;
+  heavy: boolean;
   block: boolean;
   reel: number;
   ab1: number;
@@ -81,6 +84,7 @@ private fall(s: PlayerStateData) {
   s.drop = 12;
   s.dropV = 0;
   s.atkT = 0;
+  s.isHeavy = false;
   s.blocking = false;
   s.stun = 0;
   this.kb[s.id] = 0;
@@ -102,9 +106,9 @@ private fall(s: PlayerStateData) {
 
   const f = Math.min(s.falls - 1, FATIGUE_MAX);
   s.tapLift = TAP;
-  const sinkV = SINK * (1 + 0.5 * f);
   s.depth = Math.min(FALL_DEPTH + 12 * f, MAXDROP - 30);
-  s.hold = sinkV / Math.max(1, s.tapLift);
+  s.hangT = 0;
+  s.hold = Math.min(10, Math.max(1, s.falls));
   this.tapTimes[s.id] = [];
   s.rate = 0;
 
@@ -117,6 +121,7 @@ private fall(s: PlayerStateData) {
 private recover(s: PlayerStateData) {
   s.hang = false;
   s.falling = false;
+  s.hangT = 0;
   s.drop = 0;
   s.dropV = 0;
   s.grip = 55;
@@ -138,6 +143,7 @@ private guardBreak(s: PlayerStateData) {
   s.stun = 0.9;
   s.blocking = false;
   s.atkT = 0;
+  s.isHeavy = false;
 
   this.emitFx({ type: 'txt', x: s.x, y: LBL_Y, text: 'GUARD BREAK', col: '#e8593f' });
   this.emitFx({ type: 'spark', x: s.x, y: BODY_Y, col: '#bfe0f4', count: 12, sp: 200 });
@@ -175,6 +181,7 @@ private counter(b: PlayerStateData, a: PlayerStateData) {
   b.riposte = 0;
   a.stun = Math.max(a.stun, 0.7);
   a.atkT = 0;
+  a.isHeavy = false;
   this.cool[a.id] = 0.2;
 
   this.emitFx({ type: 'txt', x: b.x, y: LBL_Y + 4, text: 'RIPOSTE!', col: '#ffffff' });
@@ -183,30 +190,102 @@ private counter(b: PlayerStateData, a: PlayerStateData) {
   this.emitSound('parry');
 }
 
+private clash(a: PlayerStateData, b: PlayerStateData) {
+  const hx = (a.x + b.x) / 2;
+  const hy = BODY_Y - 6;
+
+  const isHeavy = !!a.isHeavy;
+  const pw = a.power > 0 || b.power > 0;
+  if (a.power > 0) a.power = 0;
+  if (b.power > 0) b.power = 0;
+
+  // Deflect both attacks
+  a.atkT = 0;
+  a.isHeavy = false;
+  b.atkT = 0;
+  b.isHeavy = false;
+
+  // Recovery cooldown & parry stance for both
+  this.cool[a.id] = isHeavy ? 0.16 : 0.10;
+  this.cool[b.id] = isHeavy ? 0.16 : 0.10;
+  a.parryT = 0.22;
+  b.parryT = 0.22;
+
+  // Mutual micro-recoil
+  a.stun = isHeavy ? 0.18 : 0.14;
+  b.stun = isHeavy ? 0.18 : 0.14;
+
+  // Pushback recoil separating both fighters back
+  const kbForce = isHeavy ? 260 : 200;
+  this.kb[a.id] = -a.face * (pw ? kbForce * 1.3 : kbForce);
+  this.kb[b.id] = -b.face * (pw ? kbForce * 1.3 : kbForce);
+
+  // Spark burst & shake
+  const sparkCount = isHeavy ? 26 : 16;
+  const sparkSpeed = isHeavy ? 340 : 260;
+  this.emitFx({ type: 'spark', x: hx, y: hy, col: '#ffffff', count: sparkCount, sp: sparkSpeed });
+  this.emitFx({ type: 'spark', x: hx, y: hy, col: a.color, count: 8, sp: 220 });
+  this.emitFx({ type: 'spark', x: hx, y: hy, col: b.color, count: 8, sp: 220 });
+  this.emitShake(isHeavy ? 9 : 6);
+  this.emitSound('parry');
+
+  const clashText = isHeavy ? 'HEAVY CLASH!' : 'CLASH!';
+  this.emitFx({ type: 'txt', x: hx, y: LBL_Y + 4, text: clashText, col: '#ffd694' });
+}
+
 private doStrike(a: PlayerStateData, b: PlayerStateData) {
   if (b.ko || b.hang) return;
+
+  const isHeavy = !!a.isHeavy;
   const d = (b.x - a.x) * a.face;
-  if (d < 0 || d > REACH || b.inv > 0) return;
+
+  // Spider hitboxes:
+  // Arm physically reaches ~96px forward for light attack, and ~108px for heavy attack.
+  // The target spider body extends ~28px towards a (head, pedipalps & fangs).
+  // If the arm of the spider reaches the spider body (d <= armReach + bodyRadius), it hits!
+  const armReach = isHeavy ? 108 : 96;
+  const bodyRadius = 28;
+  const maxHitDistance = armReach + bodyRadius; // 124px for light, 136px for heavy
+
+  if (d < -15 || d > maxHitDistance || b.inv > 0) return;
 
   const pw = a.power > 0;
-  if (pw) a.power = 0;
 
   if (b.riposte > 0) {
+    if (pw) a.power = 0;
     this.counter(b, a);
     return;
   }
 
-  const hx = (a.x + b.x) / 2;
+  // Attack clash rules:
+  // 1. Only works if the SAME attack is done (Light vs Light, or Heavy vs Heavy).
+  // 2. Will NOT clash if one player is slightly faster than the other (must reach strike frame near-simultaneously within ~25ms).
+  const aHeavy = isHeavy;
+  const bHeavy = !!b.isHeavy;
+  const sameAttack = aHeavy === bHeavy;
+  const facingEachOther = a.face !== b.face && (b.x - a.x) * a.face > 0;
+  const bWind = bHeavy ? ATK_HEAVY.wind : ATK_LIGHT.wind;
+  const isNearSimultaneous = b.atkT >= (bWind - 0.025) && b.atkT <= (bWind + 0.035);
+
+  if (sameAttack && facingEachOther && isNearSimultaneous && !b.blocking && b.stun <= 0) {
+    this.clash(a, b);
+    return;
+  }
+
+  if (pw) a.power = 0;
+
+  const hx = a.x + a.face * Math.min(armReach, Math.max(20, d - 8));
   const hy = BODY_Y - 6;
 
   if (b.blocking) {
     if (b.blockT <= PARRY) {
       // Perfect parry
-      a.stun = 0.7;
+      a.stun = isHeavy ? 0.85 : 0.65;
       a.atkT = 0;
+      a.isHeavy = false;
       this.cool[a.id] = 0.2;
       b.parryT = 0.25;
-      b.guard = Math.min(100, b.guard + 18);
+      b.guard = Math.min(100, b.guard + (isHeavy ? 24 : 16));
 
       this.emitFx({ type: 'txt', x: b.x, y: LBL_Y + 4, text: 'PARRY!', col: '#ffffff' });
       this.emitFx({ type: 'spark', x: hx, y: hy, col: '#ffffff', count: 16, sp: 280 });
@@ -214,39 +293,54 @@ private doStrike(a: PlayerStateData, b: PlayerStateData) {
       this.emitSound('parry');
     } else {
       // Normal block
-      b.guard -= pw ? 38 : 22;
-      b.grip = Math.max(1, b.grip - (pw ? 6 : 3));
-      this.kb[b.id] = a.face * (pw ? 260 : 150);
-      a.stun = 0.18;
+      const guardDmg = isHeavy ? (pw ? 48 : 36) : (pw ? 28 : 15);
+      const gripDmg = isHeavy ? (pw ? 8 : 4) : (pw ? 4 : 2);
+      const kbForce = isHeavy ? (pw ? 360 : 250) : (pw ? 200 : 120);
+      b.guard -= guardDmg;
+      b.grip = Math.max(1, b.grip - gripDmg);
+      this.kb[b.id] = a.face * kbForce;
+      a.stun = isHeavy ? 0.24 : 0.16;
 
-      this.emitFx({ type: 'txt', x: b.x, y: LBL_Y, text: 'BLOCK', col: b.colorLight });
-      this.emitFx({ type: 'spark', x: hx, y: hy, col: b.colorLight, count: 8, sp: 180 });
-      this.emitShake(3);
+      this.emitFx({ type: 'txt', x: b.x, y: LBL_Y, text: isHeavy ? 'CRUSH BLOCK' : 'BLOCK', col: b.colorLight });
+      this.emitFx({ type: 'spark', x: hx, y: hy, col: b.colorLight, count: isHeavy ? 12 : 8, sp: isHeavy ? 220 : 180 });
+      this.emitShake(isHeavy ? 5 : 3);
       this.emitSound('block');
       if (b.guard <= 0) this.guardBreak(b);
     }
   } else if (b.shield > 0) {
     this.absorb(b);
-    a.stun = 0.25;
+    a.stun = isHeavy ? 0.35 : 0.22;
     a.atkT = 0;
+    a.isHeavy = false;
   } else {
     // Direct hit
-    b.grip -= pw ? 36 : 20;
-    this.kb[b.id] = a.face * (pw ? 640 : 430);
-    b.stun = pw ? 0.42 : 0.28;
+    const gripDmg = isHeavy ? (pw ? 48 : 32) : (pw ? 26 : 14);
+    const kbForce = isHeavy ? (pw ? 760 : 580) : (pw ? 480 : 300);
+    const stunDur = isHeavy ? (pw ? 0.55 : 0.42) : (pw ? 0.32 : 0.20);
+    const flash = isHeavy ? 0.24 : 0.16;
+    b.grip -= gripDmg;
+    this.kb[b.id] = a.face * kbForce;
+    b.stun = stunDur;
     b.atkT = 0;
-    b.hitFlash = 0.2;
+    b.isHeavy = false;
+    b.hitFlash = flash;
 
-    this.emitFx({ type: 'spark', x: hx, y: hy, col: '#ffffff', count: 10, sp: 260 });
-    this.emitFx({ type: 'spark', x: hx, y: hy, col: a.color, count: 8, sp: 220 });
-    this.emitShake(pw ? 12 : 7);
-    this.emitSound(pw ? 'power_strike' : 'strike');
+    this.emitFx({ type: 'spark', x: hx, y: hy, col: '#ffffff', count: isHeavy ? 14 : 10, sp: isHeavy ? 300 : 260 });
+    this.emitFx({ type: 'spark', x: hx, y: hy, col: a.color, count: isHeavy ? 12 : 8, sp: isHeavy ? 260 : 220 });
+    this.emitShake(isHeavy ? (pw ? 15 : 10) : (pw ? 10 : 5));
+    this.emitSound(isHeavy ? 'power_strike' : (pw ? 'power_strike' : 'strike'));
 
-    if (pw) this.emitFx({ type: 'txt', x: b.x, y: LBL_Y, text: 'POWER HIT!', col: a.colorLight });
+    if (pw) {
+      this.emitFx({ type: 'txt', x: b.x, y: LBL_Y, text: isHeavy ? 'COLOSSAL SMASH!' : 'POWER HIT!', col: a.colorLight });
+    } else if (isHeavy) {
+      this.emitFx({ type: 'txt', x: b.x, y: LBL_Y, text: 'HEAVY HIT!', col: a.colorLight });
+    }
+
     if (a.leech > 0) {
       a.leech = 0;
-      a.grip = Math.min(100, a.grip + 20);
-      this.emitFx({ type: 'txt', x: a.x, y: LBL_Y, text: '+20 GRIP', col: '#9cf0a8' });
+      const leechGrip = isHeavy ? 30 : 18;
+      a.grip = Math.min(100, a.grip + leechGrip);
+      this.emitFx({ type: 'txt', x: a.x, y: LBL_Y, text: `+${leechGrip} GRIP`, col: '#9cf0a8' });
       this.emitFx({ type: 'spark', x: a.x, y: BODY_Y, col: '#d24a5a', count: 8, sp: 150 });
     }
 
@@ -545,14 +639,18 @@ private stepSpider(s: PlayerStateData, o: PlayerStateData, inp: PlayerInput, dt:
       if (s.drop >= s.depth) {
         s.drop = s.depth;
         s.falling = false;
+        s.hangT = 0;
+        s.hold = Math.min(10, Math.max(1, s.falls));
       }
     } else {
+      s.hangT += dt;
+      s.hold = Math.min(10, Math.max(1, s.falls));
+
       const times = this.tapTimes[id];
       while (times.length && this.timeElapsed - times[0] > 1) times.shift();
       s.rate = times.length;
 
-      const f = Math.min(s.falls - 1, FATIGUE_MAX);
-      const sinkV = SINK * (1 + 0.5 * f);
+      const sinkV = s.hold * s.tapLift;
       s.drop += s.anchorT > 0 ? 0 : sinkV * dt;
 
       if (inp.reel > 0) this.tapBuf[id] = true;
@@ -587,8 +685,11 @@ private stepSpider(s: PlayerStateData, o: PlayerStateData, inp: PlayerInput, dt:
 
     s.face = o.x >= s.x ? 1 : -1;
     if (s.drop <= 0) this.recover(s);
-    else if (s.drop >= MAXDROP) {
+    else if (s.hangT >= 10.0 || s.drop >= MAXDROP) {
       s.drop = MAXDROP;
+      if (s.hangT >= 10.0) {
+        this.emitFx({ type: 'txt', x: s.x, y: LBL_Y, text: 'TIME UP!', col: '#e8593f' });
+      }
       this.knockOut(s);
     }
     return;
@@ -634,7 +735,7 @@ private stepSpider(s: PlayerStateData, o: PlayerStateData, inp: PlayerInput, dt:
 
   const wait = this.battleState.status === 'fight' && o.hang && !o.ko;
   if (wait) {
-    inp = { left: false, right: false, strike: false, block: false, reel: 0, ab1: 0, ab2: 0 };
+    inp = { left: false, right: false, strike: false, heavy: false, block: false, reel: 0, ab1: 0, ab2: 0 };
     s.blocking = false;
   }
 
@@ -697,34 +798,49 @@ private stepSpider(s: PlayerStateData, o: PlayerStateData, inp: PlayerInput, dt:
 
   // Strike attack
   if (s.atkT > 0) {
+    const atkConfig = s.isHeavy ? ATK_HEAVY : ATK_LIGHT;
     const prevAtk = s.atkT;
     s.atkT += dt;
     const windup = this.windJitter[id];
     if (prevAtk < windup && s.atkT >= windup) {
       this.doStrike(s, o);
     }
-    if (s.atkT > 0.1 && s.atkT < ATK.act) {
-      const lx = s.x + s.face * 110 * dt;
+    if (s.atkT > 0.1 && s.atkT < atkConfig.act) {
+      const stepSpeed = s.isHeavy ? 140 : 110;
+      const lx = s.x + s.face * stepSpeed * dt;
       if (o.hang || o.ko || Math.abs(lx - o.x) >= MINDIST - 8) {
         s.x = cl(lx, STICK.l + 6, STICK.r - 6);
       }
     }
-    if (s.atkT >= ATK.end) {
+    if (s.atkT >= atkConfig.end) {
       s.atkT = 0;
-      this.cool[id] = 0.1;
+      this.cool[id] = s.isHeavy ? 0.08 : 0.04;
+      s.isHeavy = false;
     }
-  } else if (free && inp.strike && this.cool[id] <= 0 && !s.blocking) {
-    inp.strike = false;
-    s.atkT = 0.0001;
-    this.windJitter[id] = 0.14 + Math.random() * 0.04;
-    s.atkId++;
-    const prev = s.atkType ?? 0;
-    let next = Math.floor(Math.random() * 3);
-    if (next === prev) {
-      next = (prev + 1 + Math.floor(Math.random() * 2)) % 3;
+  } else if (free && (inp.heavy || inp.strike) && this.cool[id] <= 0 && !s.blocking) {
+    if (inp.heavy) {
+      inp.heavy = false;
+      inp.strike = false;
+      s.atkT = 0.0001;
+      s.isHeavy = true;
+      this.windJitter[id] = 0.20 + Math.random() * 0.04;
+      s.atkId++;
+      s.atkType = 0;
+      this.emitSound('power_strike');
+    } else {
+      inp.strike = false;
+      s.atkT = 0.0001;
+      s.isHeavy = false;
+      this.windJitter[id] = 0.09 + Math.random() * 0.02;
+      s.atkId++;
+      const prev = s.atkType ?? 0;
+      let next = Math.floor(Math.random() * 3);
+      if (next === prev) {
+        next = (prev + 1 + Math.floor(Math.random() * 2)) % 3;
+      }
+      s.atkType = next;
+      this.emitSound('swing');
     }
-    s.atkType = next;
-    this.emitSound('swing');
   }
 }
 

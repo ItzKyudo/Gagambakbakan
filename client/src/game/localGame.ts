@@ -1,4 +1,4 @@
-import { TAP, FALL_DEPTH, SINK } from './constants';
+import { TAP, FALL_DEPTH } from './constants';
 import { sound } from '../audio';
 import { LocalCombat } from './localCombat';
 import type { InputState, LocalBattleState, LocalPlayerState } from './localGameTypes';
@@ -14,7 +14,7 @@ export class LocalGameEngine {
   public onFx?: (fx: any) => void;
   public onShake?: (shake: { amount: number }) => void;
   public onRoundWon?: (data: { winner: number; round: number; p1Wins: number; p2Wins: number }) => void;
-  public onMatchEnd?: (data: { winner: number; winnerName: string; p1Wins: number; p2Wins: number; unlocked?: AbilityId[] }) => void;
+  public onMatchEnd?: (data: { winner: number; winnerName: string; p1Wins: number; p2Wins: number; unlocked?: AbilityId[]; isTimeOut?: boolean }) => void;
 
   private combat!: LocalCombat;
 
@@ -67,6 +67,8 @@ export class LocalGameEngine {
       status: 'draft',
       stateT: 0,
       round: 1,
+      roundTimer: 60,
+      matchTimer: 60,
       winner: -1,
       draftChoicesP1: [],
       draftChoicesP2: [],
@@ -140,6 +142,7 @@ export class LocalGameEngine {
       atkT: 0,
       atkId: 0,
       atkType: 0,
+      isHeavy: false,
       power: 0,
       shield: 0,
       riposte: 0,
@@ -150,7 +153,8 @@ export class LocalGameEngine {
       falls: 0,
       wins: 0,
       rate: 0,
-      hold: SINK / TAP,
+      hold: 1,
+      hangT: 0,
       tapLift: TAP,
       depth: FALL_DEPTH
     };
@@ -163,6 +167,8 @@ export class LocalGameEngine {
     this.state.p2.wins = 0;
     this.state.p1.falls = 0;
     this.state.p2.falls = 0;
+    this.state.roundTimer = 60;
+    this.state.matchTimer = 60;
 
     if (this.mode === 'demo') {
       this.state.p1.skill1 = 'dash';
@@ -220,6 +226,8 @@ export class LocalGameEngine {
     this.state.webs = [];
     this.state.status = 'ready';
     this.state.stateT = 0;
+    this.state.roundTimer = 60;
+    this.state.matchTimer = 60;
     this.combat.resetRound();
 
     if (this.mode !== 'demo') {
@@ -260,6 +268,7 @@ export class LocalGameEngine {
     s.atkT = 0;
     s.atkId = 0;
     s.atkType = 0;
+    s.isHeavy = false;
     s.power = 0;
     s.shield = 0;
     s.riposte = 0;
@@ -268,7 +277,8 @@ export class LocalGameEngine {
     s.quake = 0;
     s.anchorT = 0;
     s.rate = 0;
-    s.hold = SINK / TAP;
+    s.hold = 1;
+    s.hangT = 0;
     s.tapLift = TAP;
     s.depth = FALL_DEPTH;
   }
@@ -281,6 +291,20 @@ export class LocalGameEngine {
       this.state.stateT = 0;
     }
 
+    if (this.state.status === 'fight') {
+      const prevSec = Math.ceil(this.state.roundTimer);
+      this.state.roundTimer = Math.max(0, this.state.roundTimer - dt);
+      this.state.matchTimer = this.state.roundTimer;
+      const curSec = Math.ceil(this.state.roundTimer);
+      if (curSec < prevSec && curSec <= 5 && curSec > 0) {
+        sound.playTone(850 + (5 - curSec) * 100, 0.04, 'sine', 0.02);
+      }
+      if (this.state.roundTimer <= 0) {
+        this.timeOutRound();
+        return;
+      }
+    }
+
     this.combat.update(dt, humanInpP1, humanInpP2, this.mode, this.diff);
 
     if (this.state.status === 'roundEnd' && this.state.stateT > 2.4) {
@@ -290,6 +314,21 @@ export class LocalGameEngine {
         this.endRound();
       }
     }
+  }
+
+  private timeOutRound() {
+    this.state.status = 'roundEnd';
+    this.state.stateT = 0;
+
+    // Both spiders remain not KO'd, so no wins are awarded (round ends as a tie)
+    this.onFx?.({
+      type: 'txt',
+      x: 600,
+      y: 200,
+      text: 'TIME UP — TIE!',
+      col: '#ffd694'
+    });
+    sound.play('ko');
   }
 
   private endRound() {

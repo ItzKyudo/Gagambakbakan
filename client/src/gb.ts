@@ -38,6 +38,7 @@ export interface KeyBindings {
   left: string;
   right: string;
   strike: string;
+  heavy: string;
   block: string;
   climb: string;
   s1: string;
@@ -491,7 +492,8 @@ export function accessorySVG(acc: string): string {
 export const ACTIONS: [keyof KeyBindings, string][] = [
   ['left', 'Move left'],
   ['right', 'Move right'],
-  ['strike', 'Strike'],
+  ['strike', 'Light Attack (0.3s)'],
+  ['heavy', 'Heavy Attack (0.6s)'],
   ['block', 'Block'],
   ['climb', 'Climb (tap)'],
   ['s1', 'Skill 1'],
@@ -499,8 +501,8 @@ export const ACTIONS: [keyof KeyBindings, string][] = [
 ];
 
 export const DEF_KEYS: PlayerKeys = {
-  p1: { left: 'KeyA', right: 'KeyD', strike: 'KeyF', block: 'KeyG', climb: 'Space', s1: 'KeyQ', s2: 'KeyE' },
-  p2: { left: 'ArrowLeft', right: 'ArrowRight', strike: 'KeyK', block: 'KeyL', climb: 'Enter', s1: 'Comma', s2: 'Period' }
+  p1: { left: 'KeyA', right: 'KeyD', strike: 'KeyF', heavy: 'KeyR', block: 'KeyG', climb: 'Space', s1: 'KeyQ', s2: 'KeyE' },
+  p2: { left: 'ArrowLeft', right: 'ArrowRight', strike: 'KeyK', heavy: 'KeyI', block: 'KeyL', climb: 'Enter', s1: 'Comma', s2: 'Period' }
 };
 
 export const RESERVED_KEYS: string[] = ['Escape', 'KeyP', 'KeyH', 'Tab', 'F5', 'F12'];

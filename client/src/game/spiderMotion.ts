@@ -33,43 +33,51 @@ export function skillBurst(elapsed: number, duration = .4): SkillBurst {
   return { active: true, progress, pulse };
 }
 
-export function attackMotion(time: number): number {
-  if (time <= 0 || time >= .46) return 0;
-  if (time < .16) return -smoothMotion(time / .16);
-  if (time < .26) return -1 + 2 * smoothMotion((time - .16) / .1);
-  return 1 - smoothMotion((time - .26) / .2);
+export function attackMotion(time: number, isHeavy = false): number {
+  const dur = isHeavy ? 0.6 : 0.3;
+  const windEnd = isHeavy ? 0.22 : 0.10;
+  const actEnd = isHeavy ? 0.38 : 0.18;
+  if (time <= 0 || time >= dur) return 0;
+  if (time < windEnd) return -smoothMotion(time / windEnd);
+  if (time < actEnd) return -1 + 2 * smoothMotion((time - windEnd) / (actEnd - windEnd));
+  return 1 - smoothMotion((time - actEnd) / (dur - actEnd));
 }
 
-export function attackPose(time: number): AttackPose {
-  if (time <= 0 || time >= .46) {
+export function attackPose(time: number, isHeavy = false): AttackPose {
+  const dur = isHeavy ? 0.6 : 0.3;
+  const windEnd = isHeavy ? 0.22 : 0.10;
+  const actEnd = isHeavy ? 0.38 : 0.18;
+  const glintStart = isHeavy ? 0.08 : 0.03;
+
+  if (time <= 0 || time >= dur) {
     return { wind: 0, strike: 0, arc: 0, swing: 0, follow: 0, glint: 0 };
   }
 
-  const glint = time > .05 && time < .16
-    ? Math.sin(((time - .05) / .11) * Math.PI)
+  const glint = time > glintStart && time < windEnd
+    ? Math.sin(((time - glintStart) / (windEnd - glintStart)) * Math.PI)
     : 0;
 
-  const swing = time > .13 && time < .35
-    ? Math.max(0, Math.min(1, (time - .13) / .22))
+  const swing = time > windEnd && time < actEnd
+    ? Math.max(0, Math.min(1, (time - windEnd) / (actEnd - windEnd)))
     : 0;
 
-  if (time < .15) {
-    const p = time / .15;
+  if (time < windEnd) {
+    const p = time / windEnd;
     const wind = smoothMotion(p);
     return { wind, strike: 0, arc: 0, swing, follow: 0, glint };
   }
 
-  if (time < .25) {
-    const u = Math.max(0, Math.min(1, (time - .15) / .1));
+  if (time < actEnd) {
+    const u = Math.max(0, Math.min(1, (time - windEnd) / (actEnd - windEnd)));
     const snap = 1 - Math.pow(1 - u, 3);
-    const overshoot = Math.sin(u * Math.PI) * .1;
+    const overshoot = Math.sin(u * Math.PI) * (isHeavy ? 0.16 : 0.1);
     const wind = 1 - snap;
     const strike = snap + overshoot;
     const arc = Math.sin(u * Math.PI);
     return { wind, strike, arc, swing, follow: 0, glint };
   }
 
-  const r = Math.max(0, Math.min(1, (time - .25) / .21));
+  const r = Math.max(0, Math.min(1, (time - actEnd) / (dur - actEnd)));
   const easeOut = smoothMotion(r);
   const strike = 1 - easeOut;
   const follow = Math.sin(r * Math.PI);

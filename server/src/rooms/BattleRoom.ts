@@ -3,7 +3,7 @@ import { BattleStateData, PlayerStateData, WebStateData } from './schema/BattleS
 import { BattleCombat, type PlayerInput } from './BattleCombat';
 import { ABILITIES, getRandomAbilities, isAbilityId, selectDraftAbilities, validateUnlockedSkills, AbilityId } from '../abilities';
 
-const TAP = 8, FALL_DEPTH = 100, SINK = 17;
+const TAP = 8, FALL_DEPTH = 100;
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 
 function isValidCustomPattern(value: unknown): value is string {
@@ -32,6 +32,8 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
       status: 'waiting',
       stateT: 0,
       round: 1,
+      roundTimer: 60,
+      matchTimer: 60,
       winner: -1,
       draftChoicesP1: [],
       draftChoicesP2: [],
@@ -53,6 +55,7 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
       if (typeof data.left === 'boolean') current.left = data.left;
       if (typeof data.right === 'boolean') current.right = data.right;
       if (typeof data.strike === 'boolean') current.strike = data.strike;
+      if (typeof data.heavy === 'boolean') current.heavy = data.heavy;
       if (typeof data.block === 'boolean') current.block = data.block;
       if (typeof data.reel === 'number' && Number.isFinite(data.reel) && data.reel > 0) current.reel += Math.min(10, data.reel);
       if (typeof data.ab1 === 'number' && Number.isFinite(data.ab1) && data.ab1 > 0) current.ab1 += Math.min(1, data.ab1);
@@ -147,6 +150,7 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
       left: false,
       right: false,
       strike: false,
+      heavy: false,
       block: false,
       reel: 0,
       ab1: 0,
@@ -197,6 +201,8 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
     this.battleState.p2.wins = 0;
     this.battleState.p1.falls = 0;
     this.battleState.p2.falls = 0;
+    this.battleState.roundTimer = 60;
+    this.battleState.matchTimer = 60;
 
     // Offer all unlocked skills for each player based on their validated unlocked web skills
     const p1Skills = this.battleState.p1.unlockedSkills && this.battleState.p1.unlockedSkills.length > 0
@@ -230,6 +236,8 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
     this.battleState.webs = [];
     this.battleState.status = 'ready';
     this.battleState.stateT = 0;
+    this.battleState.roundTimer = 60;
+    this.battleState.matchTimer = 60;
     this.combat.resetRound();
 
     this.broadcast('roundStart', { round: this.battleState.round });
@@ -267,6 +275,7 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
     s.atkT = 0;
     s.atkId = 0;
     s.atkType = 0;
+    s.isHeavy = false;
     s.power = 0;
     s.shield = 0;
     s.riposte = 0;
@@ -275,7 +284,8 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
     s.quake = 0;
     s.anchorT = 0;
     s.rate = 0;
-    s.hold = SINK / TAP;
+    s.hold = 1;
+    s.hangT = 0;
     s.tapLift = TAP;
     s.depth = FALL_DEPTH;
   }
@@ -308,8 +318,17 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
       this.battleState.stateT = 0;
     }
 
-    const inp0 = this.playerInputs.get(this.battleState.p1.sessionId) || { left: false, right: false, strike: false, block: false, reel: 0, ab1: 0, ab2: 0 };
-    const inp1 = this.playerInputs.get(this.battleState.p2.sessionId) || { left: false, right: false, strike: false, block: false, reel: 0, ab1: 0, ab2: 0 };
+    if (this.battleState.status === 'fight') {
+      this.battleState.roundTimer = Math.max(0, this.battleState.roundTimer - dt);
+      this.battleState.matchTimer = this.battleState.roundTimer;
+      if (this.battleState.roundTimer <= 0) {
+        this.timeOutRound();
+        return;
+      }
+    }
+
+    const inp0 = this.playerInputs.get(this.battleState.p1.sessionId) || { left: false, right: false, strike: false, heavy: false, block: false, reel: 0, ab1: 0, ab2: 0 };
+    const inp1 = this.playerInputs.get(this.battleState.p2.sessionId) || { left: false, right: false, strike: false, heavy: false, block: false, reel: 0, ab1: 0, ab2: 0 };
 
     this.combat.update(dt, inp0, inp1);
 
@@ -324,6 +343,15 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
     if (this.battleState.status === 'roundEnd' && this.battleState.stateT > 2.4) {
       this.endRound();
     }
+  }
+
+  private timeOutRound() {
+    this.battleState.status = 'roundEnd';
+    this.battleState.stateT = 0;
+
+    // Both spiders remain not KO'd, round ends in a tie
+    this.broadcast('fx', { type: 'txt', x: 600, y: 200, text: 'TIME UP — TIE!', col: '#ffd694' });
+    this.broadcast('sound', { sound: 'ko' });
   }
 
   private endRound() {

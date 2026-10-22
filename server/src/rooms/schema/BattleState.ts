@@ -56,6 +56,7 @@ export interface PlayerStateData {
   atkT: number;
   atkId: number;
   atkType: number;
+  isHeavy: boolean;
 
   // Active ability buffs & states
   power: number;        // Power strike buff duration
@@ -69,6 +70,7 @@ export interface PlayerStateData {
   // Dangling stats
   rate: number;         // current taps/sec
   hold: number;         // needed taps/sec
+  hangT: number;        // seconds spent climbing / hanging
   tapLift: number;
   depth: number;
 }
@@ -88,6 +90,8 @@ export interface BattleStateData {
   status: 'waiting' | 'draft' | 'ready' | 'fight' | 'roundEnd' | 'matchEnd';
   stateT: number;
   round: number;
+  roundTimer: number;   // 60s countdown per round
+  matchTimer?: number;
   winner: number;       // -1 = none, 0 = Amber, 1 = Jade
   
   // Ability drafting phase state

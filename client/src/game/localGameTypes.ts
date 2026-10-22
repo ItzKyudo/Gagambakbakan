@@ -42,6 +42,7 @@ export interface LocalPlayerState {
   atkT: number;
   atkId: number;
   atkType: number;
+  isHeavy: boolean;
   power: number;
   shield: number;
   riposte: number;
@@ -53,6 +54,7 @@ export interface LocalPlayerState {
   wins: number;
   rate: number;
   hold: number;
+  hangT: number;
   tapLift: number;
   depth: number;
 }
@@ -71,6 +73,8 @@ export interface LocalBattleState {
   status: 'waiting' | 'draft' | 'ready' | 'fight' | 'roundEnd' | 'matchEnd';
   stateT: number;
   round: number;
+  roundTimer: number; // 60s per round
+  matchTimer?: number;
   winner: number;
   draftChoicesP1: AbilityId[];
   draftChoicesP2: AbilityId[];
@@ -85,6 +89,7 @@ export interface InputState {
   left: boolean;
   right: boolean;
   strike: boolean;
+  heavy: boolean;
   block: boolean;
   reel: number;
   ab1: number;

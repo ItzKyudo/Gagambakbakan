@@ -84,6 +84,8 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
     cleanupAccountDemo?.();
     cleanupAccountDemo = null;
     clearAbilitiesKeyHandler(abilitiesState);
+    document.body.classList.remove('main-menu-active', 'abilities-active', 'account-active', 'customize-active');
+    document.documentElement.classList.remove('main-menu-active', 'abilities-active', 'account-active', 'customize-active');
   };
 
   const onStart = (opts: MenuStartOptions) => {
@@ -93,8 +95,8 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
       return;
     }
     cleanup();
-    document.body.classList.remove('main-menu-active', 'abilities-active', 'account-active');
-    document.documentElement.classList.remove('main-menu-active', 'abilities-active', 'account-active');
+    document.body.classList.remove('main-menu-active', 'abilities-active', 'account-active', 'customize-active');
+    document.documentElement.classList.remove('main-menu-active', 'abilities-active', 'account-active', 'customize-active');
     rawOnStart(opts);
   };
 
@@ -250,6 +252,14 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
     } else {
       document.body.classList.remove('account-active');
       document.documentElement.classList.remove('account-active');
+    }
+
+    if (activeTab === 'customize') {
+      document.body.classList.add('customize-active');
+      document.documentElement.classList.add('customize-active');
+    } else {
+      document.body.classList.remove('customize-active');
+      document.documentElement.classList.remove('customize-active');
     }
 
     switch (activeTab) {

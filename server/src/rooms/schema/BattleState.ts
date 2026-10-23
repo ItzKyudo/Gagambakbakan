@@ -50,6 +50,7 @@ export interface PlayerStateData {
   cd2max: number;
   
   snare: number;        // tangled by web
+  venom: number;        // poison damage over time from venom spit
   dashT: number;
   dashDir: number;
   pounce: boolean;
@@ -73,6 +74,7 @@ export interface PlayerStateData {
   hangT: number;        // seconds spent climbing / hanging
   tapLift: number;
   depth: number;
+  pump?: number;
 }
 
 export interface WebStateData {

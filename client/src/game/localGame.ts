@@ -1,4 +1,4 @@
-import { TAP, FALL_DEPTH } from './constants';
+import { TAP, FALL_DEPTH, MAX_GRIP } from './constants';
 import { sound } from '../audio';
 import { LocalCombat } from './localCombat';
 import type { InputState, LocalBattleState, LocalPlayerState } from './localGameTypes';
@@ -113,7 +113,7 @@ export class LocalGameEngine {
       face,
       move: 0,
       walkPhase: 0,
-      grip: 100,
+      grip: MAX_GRIP,
       guard: 100,
       hang: false,
       falling: false,
@@ -136,6 +136,7 @@ export class LocalGameEngine {
       cd2: 0,
       cd2max: 5,
       snare: 0,
+      venom: 0,
       dashT: 0,
       dashDir: 0,
       pounce: false,
@@ -241,7 +242,7 @@ export class LocalGameEngine {
     s.face = face;
     s.move = 0;
     s.walkPhase = 0;
-    s.grip = 100;
+    s.grip = MAX_GRIP;
     s.guard = 100;
     s.hang = false;
     s.falling = false;
@@ -262,6 +263,7 @@ export class LocalGameEngine {
     s.cd2 = 0;
     s.cd2max = ABILITIES[s.skill2 as AbilityId]?.cd || 5;
     s.snare = 0;
+    s.venom = 0;
     s.dashT = 0;
     s.dashDir = 0;
     s.pounce = false;

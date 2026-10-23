@@ -11,6 +11,7 @@ const ATK_LIGHT = { wind: 0.10, act: 0.18, end: 0.3 };
 const ATK_HEAVY = { wind: 0.22, act: 0.38, end: 0.6 };
 const ATK = ATK_LIGHT;
 const REEL_CD = 0.14, TAP = 8, FALL_DEPTH = 100, FALL_SPEED = 320, SURGE_LIFT = 50;
+const MAX_GRIP = 120, RECOVER_GRIP = 65, VENOM_DUR = 3, VENOM_DPS = 5, WEB_SNARE = 1.6;
 const FATIGUE_MAX = 4;
 const cl = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 
@@ -93,6 +94,7 @@ private fall(s: PlayerStateData) {
   this.tapBuf[s.id] = false;
   s.dashT = 0;
   s.snare = 0;
+  s.venom = 0;
   s.pounce = false;
   s.power = 0;
   s.shield = 0;
@@ -124,7 +126,7 @@ private recover(s: PlayerStateData) {
   s.hangT = 0;
   s.drop = 0;
   s.dropV = 0;
-  s.grip = 55;
+  s.grip = RECOVER_GRIP;
   s.guard = 100;
   s.gLock = false;
   s.inv = 1.1;
@@ -339,7 +341,7 @@ private doStrike(a: PlayerStateData, b: PlayerStateData) {
     if (a.leech > 0) {
       a.leech = 0;
       const leechGrip = isHeavy ? 30 : 18;
-      a.grip = Math.min(100, a.grip + leechGrip);
+      a.grip = Math.min(MAX_GRIP, a.grip + leechGrip);
       this.emitFx({ type: 'txt', x: a.x, y: LBL_Y, text: `+${leechGrip} GRIP`, col: '#9cf0a8' });
       this.emitFx({ type: 'spark', x: a.x, y: BODY_Y, col: '#d24a5a', count: 8, sp: 150 });
     }
@@ -423,7 +425,7 @@ private useSkill(s: PlayerStateData, o: PlayerStateData, slotIndex: number, inp:
       return false;
 
     case 'mend':
-      s.grip = Math.min(100, s.grip + 35);
+      s.grip = Math.min(MAX_GRIP, s.grip + 35);
       this.emitFx({ type: 'txt', x: s.x, y: LBL_Y, text: '+35 GRIP', col: '#9cf0a8' });
       this.emitFx({ type: 'spark', x: s.x, y: BODY_Y, col: '#9cf0a8', count: 12, sp: 150 });
       this.emitSound('mend');
@@ -579,15 +581,17 @@ private stepWebs(dt: number) {
         this.emitFx({ type: 'spark', x: t.x, y: BODY_Y, col: '#f3f7ee', count: 8, sp: 180 });
         this.emitSound('hook');
       } else if (w.k === 'spit') {
-        t.stun = Math.max(t.stun, 0.9);
-        t.atkT = 0;
-        t.grip = Math.max(1, t.grip - 6);
+        // Venom: no stun, poisons grip over time instead
+        t.venom = VENOM_DUR;
         t.hitFlash = 0.15;
         this.emitFx({ type: 'txt', x: t.x, y: LBL_Y, text: 'VENOM!', col: '#9cf06a' });
         this.emitFx({ type: 'spark', x: t.x, y: BODY_Y, col: '#9cf06a', count: 10, sp: 180 });
         this.emitSound('spit');
       } else {
-        t.snare = 1.6;
+        // Tangled: slowed and cannot attack (blocking still allowed)
+        t.snare = WEB_SNARE;
+        t.atkT = 0;
+        t.isHeavy = false;
         t.grip = Math.max(1, t.grip - 4);
         t.hitFlash = 0.15;
         this.emitFx({ type: 'txt', x: t.x, y: LBL_Y, text: 'TANGLED!', col: me.colorLight });
@@ -618,6 +622,13 @@ private stepSpider(s: PlayerStateData, o: PlayerStateData, inp: PlayerInput, dt:
   s.anchorT = Math.max(0, s.anchorT - dt);
   this.reelCd[id] = Math.max(0, this.reelCd[id] - dt);
   s.snare = Math.max(0, s.snare - dt);
+  s.pump = Math.max(0, (s.pump || 0) - dt * 6);
+  if (s.venom > 0 && !s.hang && !s.ko) {
+    s.venom = Math.max(0, s.venom - dt);
+    s.grip = Math.max(1, s.grip - VENOM_DPS * dt);
+  } else if (s.hang) {
+    s.venom = 0;
+  }
 
   s.hb += ((s.hang ? 1 : 0) - s.hb) * Math.min(1, dt * 9);
   if (s.ko) return;
@@ -671,6 +682,7 @@ private stepSpider(s: PlayerStateData, o: PlayerStateData, inp: PlayerInput, dt:
           }
         }
 
+        s.pump = 1.0;
         times.push(this.timeElapsed);
         this.emitSound('reel');
       }
@@ -711,7 +723,8 @@ private stepSpider(s: PlayerStateData, o: PlayerStateData, inp: PlayerInput, dt:
   if (s.dashT > 0) {
     s.dashT -= dt;
     let dxn = cl(s.x + s.dashDir * 900 * dt, STICK.l + 6, STICK.r - 6);
-    if (!o.hang && !o.ko && Math.abs(dxn - o.x) < MINDIST && Math.abs(dxn - o.x) < Math.abs(s.x - o.x)) {
+    // Dash phases through opponents; only pounce is body-blocked
+    if (s.pounce && !o.hang && !o.ko && Math.abs(dxn - o.x) < MINDIST && Math.abs(dxn - o.x) < Math.abs(s.x - o.x)) {
       dxn = s.x;
     }
     s.x = dxn;
@@ -739,7 +752,7 @@ private stepSpider(s: PlayerStateData, o: PlayerStateData, inp: PlayerInput, dt:
     s.blocking = false;
   }
 
-  if (s.stun <= 0) s.grip = Math.min(100, s.grip + 2 * dt);
+  if (s.stun <= 0 && s.venom <= 0) s.grip = Math.min(MAX_GRIP, s.grip + 2 * dt);
   if (s.atkT <= 0 && s.stun <= 0) s.face = o.x >= s.x ? 1 : -1;
 
   const free = s.stun <= 0 && s.atkT <= 0;
@@ -817,7 +830,7 @@ private stepSpider(s: PlayerStateData, o: PlayerStateData, inp: PlayerInput, dt:
       this.cool[id] = s.isHeavy ? 0.08 : 0.04;
       s.isHeavy = false;
     }
-  } else if (free && (inp.heavy || inp.strike) && this.cool[id] <= 0 && !s.blocking) {
+  } else if (free && (inp.heavy || inp.strike) && this.cool[id] <= 0 && !s.blocking && s.snare <= 0) {
     if (inp.heavy) {
       inp.heavy = false;
       inp.strike = false;
@@ -848,6 +861,8 @@ private separate(dt: number) {
   const a = this.battleState.p1;
   const b = this.battleState.p2;
   if (a.hang || b.hang || a.ko || b.ko) return;
+  // Let a dashing spider phase through without pushback
+  if ((a.dashT > 0 && !a.pounce) || (b.dashT > 0 && !b.pounce)) return;
   const dx = b.x - a.x;
   const ad = Math.abs(dx);
   if (ad < MINDIST - 4) {

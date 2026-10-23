@@ -223,32 +223,54 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
     clearAbilitiesKeyHandler(abilitiesState);
 
     cancelAnimationFrame(spiderLookFrame);
-    container.onpointermove = event => {
-      if (event.pointerType === 'touch') return;
-      cancelAnimationFrame(spiderLookFrame);
-      const { clientX, clientY } = event;
-      spiderLookFrame = requestAnimationFrame(() => {
-        const spider = container.querySelector<SVGSVGElement>('#showcaseStage > .spider-art, #preview > .spider-art');
-        if (!spider) return;
-        const rect = spider.getBoundingClientRect();
-        const x = Math.max(-1, Math.min(1, (clientX - rect.left - rect.width / 2) / (rect.width * .65)));
-        const y = Math.max(-1, Math.min(1, (clientY - rect.top - rect.height / 2) / (rect.height * .65)));
-        spider.style.setProperty('--look-x', `${(x * 2.6).toFixed(2)}px`);
-        spider.style.setProperty('--look-y', `${(y * 1.8).toFixed(2)}px`);
-        spider.style.setProperty('--look-r', `${(y * 2.4).toFixed(2)}deg`);
-        spider.style.setProperty('--eye-x', `${(x * 2.2).toFixed(2)}px`);
-        spider.style.setProperty('--eye-y', `${(y * 1.4).toFixed(2)}px`);
-      });
-    };
-    container.onpointerleave = () => {
-      cancelAnimationFrame(spiderLookFrame);
-      const spider = container.querySelector<SVGSVGElement>('#showcaseStage > .spider-art, #preview > .spider-art');
-      spider?.style.removeProperty('--look-x');
-      spider?.style.removeProperty('--look-y');
-      spider?.style.removeProperty('--look-r');
-      spider?.style.removeProperty('--eye-x');
-      spider?.style.removeProperty('--eye-y');
-    };
+    const spiderHost = container.querySelector<HTMLElement>('#showcaseStage, #preview');
+    const spider = spiderHost?.querySelector<SVGSVGElement>('.spider-art');
+
+    if (spiderHost && spider) {
+      let cachedRect: DOMRect | null = null;
+      let lastRectTime = 0;
+      let lookPending = false;
+      let targetX = 0;
+      let targetY = 0;
+
+      container.onpointermove = event => {
+        if (event.pointerType === 'touch') return;
+        targetX = event.clientX;
+        targetY = event.clientY;
+        if (!lookPending) {
+          lookPending = true;
+          spiderLookFrame = requestAnimationFrame(() => {
+            lookPending = false;
+            const now = performance.now();
+            if (!cachedRect || now - lastRectTime > 800) {
+              cachedRect = spider.getBoundingClientRect();
+              lastRectTime = now;
+            }
+            const rect = cachedRect;
+            const x = Math.max(-1, Math.min(1, (targetX - rect.left - rect.width / 2) / (rect.width * .65)));
+            const y = Math.max(-1, Math.min(1, (targetY - rect.top - rect.height / 2) / (rect.height * .65)));
+            spider.style.setProperty('--look-x', `${(x * 2.6).toFixed(2)}px`);
+            spider.style.setProperty('--look-y', `${(y * 1.8).toFixed(2)}px`);
+            spider.style.setProperty('--look-r', `${(y * 2.4).toFixed(2)}deg`);
+            spider.style.setProperty('--eye-x', `${(x * 2.2).toFixed(2)}px`);
+            spider.style.setProperty('--eye-y', `${(y * 1.4).toFixed(2)}px`);
+          });
+        }
+      };
+      container.onpointerleave = () => {
+        cancelAnimationFrame(spiderLookFrame);
+        lookPending = false;
+        cachedRect = null;
+        spider.style.removeProperty('--look-x');
+        spider.style.removeProperty('--look-y');
+        spider.style.removeProperty('--look-r');
+        spider.style.removeProperty('--eye-x');
+        spider.style.removeProperty('--eye-y');
+      };
+    } else {
+      container.onpointermove = null;
+      container.onpointerleave = null;
+    }
 
     // Top menu back buttons
     container.querySelectorAll('#btnBackToMain').forEach(btn => {

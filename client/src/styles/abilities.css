@@ -198,8 +198,8 @@ body.abilities-active .menu-view-container {
 }
 
 @keyframes pointsGlow {
-  0% { box-shadow: 0 0 12px rgba(242, 163, 58, 0.3); border-color: var(--amber); }
-  100% { box-shadow: 0 0 24px rgba(242, 163, 58, 0.7); border-color: #ffd694; }
+  0% { opacity: 0.8; }
+  100% { opacity: 1; }
 }
 
 .sp-icon {
@@ -279,7 +279,7 @@ body.abilities-active .menu-view-container {
   border: 1.5px solid rgba(52, 80, 75, 0.8);
   border-radius: 16px;
   box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.8), 0 16px 40px rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(12px);
+  /* backdrop-filter removed for 60fps pan */
   cursor: grab;
   touch-action: none;
   user-select: none;
@@ -313,8 +313,7 @@ body.abilities-active .menu-view-container {
 .silk-edge.edge-active {
   stroke: #4cc7b2;
   stroke-width: 3.5;
-  filter: drop-shadow(0 0 6px rgba(76, 199, 178, 0.8));
-  opacity: 0.95;
+  opacity: 1;
 }
 
 .silk-edge.edge-available {
@@ -322,8 +321,7 @@ body.abilities-active .menu-view-container {
   stroke-width: 2.8;
   stroke-dasharray: 8 6;
   animation: silkFlow 1.6s linear infinite;
-  filter: drop-shadow(0 0 8px rgba(242, 163, 58, 0.7));
-  opacity: 0.95;
+  opacity: 1;
 }
 
 @keyframes silkFlow {
@@ -446,7 +444,7 @@ body.abilities-active .menu-view-container {
   bottom: 20px;
   width: 330px;
   max-height: calc(100% - 40px);
-  background: rgba(14, 25, 24, 0.95);
+  background: rgba(14, 25, 24, 0.97);
   border: 1.5px solid rgba(76, 199, 178, 0.4);
   border-radius: 14px;
   padding: 20px;
@@ -454,7 +452,6 @@ body.abilities-active .menu-view-container {
   flex-direction: column;
   gap: 12px;
   box-shadow: 0 20px 48px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(16px);
   z-index: 20;
   box-sizing: border-box;
   overflow-y: auto;
@@ -544,7 +541,7 @@ body.abilities-active .menu-view-container {
   border-radius: 8px;
   padding: 4px;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(3px);
 }
 
 .swv-hud-btn {

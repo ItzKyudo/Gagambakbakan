@@ -36,6 +36,7 @@ export interface LocalPlayerState {
   cd2: number;
   cd2max: number;
   snare: number;
+  venom: number;
   dashT: number;
   dashDir: number;
   pounce: boolean;
@@ -57,6 +58,7 @@ export interface LocalPlayerState {
   hangT: number;
   tapLift: number;
   depth: number;
+  pump?: number;
 }
 
 export interface LocalWebState {

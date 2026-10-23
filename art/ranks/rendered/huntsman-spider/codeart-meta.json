@@ -1,0 +1,143 @@
+{
+  "schema": "codeart2d.codeart_meta.v1",
+  "art_source": "code",
+  "placeholder": false,
+  "disclosure": "code-drawn, no image model",
+  "generator": "svg_render.py",
+  "spec_sha256": "ff155955cfca7dd632f55c7ea6b5cceee6032fd09145270e958339135bc66f66",
+  "renderer": {
+    "backend": "resvg_py",
+    "name": "resvg-py",
+    "version": "0.5.0",
+    "engine": "resvg 0.48.1",
+    "zoom": 1,
+    "size": [
+      512,
+      512
+    ]
+  },
+  "palette": {
+    "colors": {
+      "0": "#a9d3e2",
+      "1": "#effbff",
+      "2": "#1b2735",
+      "3": "#11131b",
+      "4": "#a7c4d4",
+      "5": "#526d83",
+      "6": "#34414b",
+      "7": "#19212c",
+      "8": "#0c1019",
+      "9": "#c5baa0",
+      "10": "#8b806c",
+      "11": "#49443f",
+      "12": "#1a1c22",
+      "13": "#fff5db",
+      "14": "#501d31",
+      "15": "#020409",
+      "16": "#15151e",
+      "17": "#10131c",
+      "18": "#11151e",
+      "19": "#9aabb8",
+      "20": "#18151b",
+      "21": "#17151a",
+      "22": "#f5ddbe",
+      "23": "#211a1c",
+      "24": "#12121a",
+      "25": "#fff2d5",
+      "26": "#20191b",
+      "27": "#23212a",
+      "28": "#18151e"
+    },
+    "variants": {}
+  },
+  "outputs": [
+    {
+      "path": "base/huntsman-spider.svg",
+      "sha256": "3f0a38ed19b4d3eef47d4beada4521ccae5baabb68b9b1b0de2975a040599416",
+      "bytes": 12420
+    },
+    {
+      "path": "base/huntsman-spider.png",
+      "sha256": "ef41771581f6ededcb638317a5d7e6f3abf19c9834adfe878b7f5cfa6d25ea8f",
+      "bytes": 125987
+    }
+  ],
+  "qa": {
+    "status": "pass",
+    "method": "svg_render.py render: every variant's compiled SVG passed codeart_core.lint_portable_svg (portable profile) before rasterizing",
+    "notProven": [
+      "Appearance, readability and appeal; look at the PNGs at game size.",
+      "Agreement with other renderers on this machine; run svg_render.py doctor (renders are bit-exact only for the recorded renderer version).",
+      "That the art matches the brief and the intent of the SVG.",
+      "Pixel gates: vector renders are anti-aliased by design, so partial alpha and colours outside the palette are expected and not checked (render with --crisp for pixel art)."
+    ],
+    "checks": [
+      {
+        "id": "lint",
+        "status": "pass",
+        "value": 0,
+        "threshold": 0,
+        "profile": "portable"
+      }
+    ],
+    "inputs": [
+      {
+        "path": "../../../../client/public/ranks/huntsman-spider.svg",
+        "sha256": "ff155955cfca7dd632f55c7ea6b5cceee6032fd09145270e958339135bc66f66",
+        "bytes": 12437
+      }
+    ],
+    "outputs": [
+      {
+        "path": "base/huntsman-spider.svg",
+        "sha256": "3f0a38ed19b4d3eef47d4beada4521ccae5baabb68b9b1b0de2975a040599416",
+        "bytes": 12420
+      },
+      {
+        "path": "base/huntsman-spider.png",
+        "sha256": "ef41771581f6ededcb638317a5d7e6f3abf19c9834adfe878b7f5cfa6d25ea8f",
+        "bytes": 125987
+      }
+    ],
+    "tool": {
+      "name": "svg_render.py render",
+      "version": "0.4.0"
+    }
+  },
+  "svg": {
+    "mode": "vector",
+    "profile": "portable",
+    "zoom": 1,
+    "canvas": [
+      512,
+      512
+    ],
+    "anchor_px": [
+      256.0,
+      256.0
+    ],
+    "palette_source": "svg-colours",
+    "variants": {
+      "base": "base"
+    },
+    "images": [
+      {
+        "variant": "base",
+        "file": "base/huntsman-spider.png",
+        "scale": 1,
+        "size": [
+          512,
+          512
+        ],
+        "anchor_px": [
+          256.0,
+          256.0
+        ],
+        "visible": 107754,
+        "partial_alpha": 15221,
+        "off_palette": 99279,
+        "colors": 8576
+      }
+    ]
+  }
+}

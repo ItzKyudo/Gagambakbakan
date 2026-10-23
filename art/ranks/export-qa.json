@@ -1,0 +1,73 @@
+{
+  "status": "pass",
+  "checks": [
+    {
+      "icon": "wolf-spider",
+      "status": "pass",
+      "size": [
+        512,
+        512
+      ],
+      "alpha_bounds": [
+        85,
+        39,
+        427,
+        461
+      ],
+      "transparent_background": true,
+      "unclipped": true,
+      "svg_render_qa": "pass"
+    },
+    {
+      "icon": "huntsman-spider",
+      "status": "pass",
+      "size": [
+        512,
+        512
+      ],
+      "alpha_bounds": [
+        85,
+        39,
+        427,
+        461
+      ],
+      "transparent_background": true,
+      "unclipped": true,
+      "svg_render_qa": "pass"
+    },
+    {
+      "icon": "philippine-tarantula",
+      "status": "pass",
+      "size": [
+        512,
+        512
+      ],
+      "alpha_bounds": [
+        72,
+        39,
+        440,
+        461
+      ],
+      "transparent_background": true,
+      "unclipped": true,
+      "svg_render_qa": "pass"
+    },
+    {
+      "icon": "brown-widow",
+      "status": "pass",
+      "size": [
+        512,
+        512
+      ],
+      "alpha_bounds": [
+        50,
+        21,
+        462,
+        461
+      ],
+      "transparent_background": true,
+      "unclipped": true,
+      "svg_render_qa": "pass"
+    }
+  ]
+}

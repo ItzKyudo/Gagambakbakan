@@ -1,0 +1,146 @@
+{
+  "schema": "codeart2d.codeart_meta.v1",
+  "art_source": "code",
+  "placeholder": false,
+  "disclosure": "code-drawn, no image model",
+  "generator": "svg_render.py",
+  "spec_sha256": "7874f8f7e0742a718170e960f014eb43774bfc9ca915246be53b8dc058fb64a7",
+  "renderer": {
+    "backend": "resvg_py",
+    "name": "resvg-py",
+    "version": "0.5.0",
+    "engine": "resvg 0.48.1",
+    "zoom": 1,
+    "size": [
+      512,
+      512
+    ]
+  },
+  "palette": {
+    "colors": {
+      "0": "#f26b76",
+      "1": "#fff4c8",
+      "2": "#33202d",
+      "3": "#11131b",
+      "4": "#e6bd63",
+      "5": "#9a652c",
+      "6": "#34414b",
+      "7": "#19212c",
+      "8": "#0c1019",
+      "9": "#b99a88",
+      "10": "#735044",
+      "11": "#35272b",
+      "12": "#13141c",
+      "13": "#fff5db",
+      "14": "#501d31",
+      "15": "#020409",
+      "16": "#15151e",
+      "17": "#10131c",
+      "18": "#11151e",
+      "19": "#9aabb8",
+      "20": "#18151b",
+      "21": "#17151a",
+      "22": "#f5ddbe",
+      "23": "#4a222b",
+      "24": "#f9e5d4",
+      "25": "#211a1c",
+      "26": "#12121a",
+      "27": "#fff2d5",
+      "28": "#20191b",
+      "29": "#23212a",
+      "30": "#18151e",
+      "31": "#674b2f"
+    },
+    "variants": {}
+  },
+  "outputs": [
+    {
+      "path": "base/brown-widow.svg",
+      "sha256": "35aee56dda19886b59cebed538091dd4336946ba914041bd80232b39493089c9",
+      "bytes": 13410
+    },
+    {
+      "path": "base/brown-widow.png",
+      "sha256": "8b94d7d77809f1b276e7159418c9bbdd31cd5dc0de5a0118b2181d68c82722dd",
+      "bytes": 138281
+    }
+  ],
+  "qa": {
+    "status": "pass",
+    "method": "svg_render.py render: every variant's compiled SVG passed codeart_core.lint_portable_svg (portable profile) before rasterizing",
+    "notProven": [
+      "Appearance, readability and appeal; look at the PNGs at game size.",
+      "Agreement with other renderers on this machine; run svg_render.py doctor (renders are bit-exact only for the recorded renderer version).",
+      "That the art matches the brief and the intent of the SVG.",
+      "Pixel gates: vector renders are anti-aliased by design, so partial alpha and colours outside the palette are expected and not checked (render with --crisp for pixel art)."
+    ],
+    "checks": [
+      {
+        "id": "lint",
+        "status": "pass",
+        "value": 0,
+        "threshold": 0,
+        "profile": "portable"
+      }
+    ],
+    "inputs": [
+      {
+        "path": "../../../../client/public/ranks/brown-widow.svg",
+        "sha256": "7874f8f7e0742a718170e960f014eb43774bfc9ca915246be53b8dc058fb64a7",
+        "bytes": 13429
+      }
+    ],
+    "outputs": [
+      {
+        "path": "base/brown-widow.svg",
+        "sha256": "35aee56dda19886b59cebed538091dd4336946ba914041bd80232b39493089c9",
+        "bytes": 13410
+      },
+      {
+        "path": "base/brown-widow.png",
+        "sha256": "8b94d7d77809f1b276e7159418c9bbdd31cd5dc0de5a0118b2181d68c82722dd",
+        "bytes": 138281
+      }
+    ],
+    "tool": {
+      "name": "svg_render.py render",
+      "version": "0.4.0"
+    }
+  },
+  "svg": {
+    "mode": "vector",
+    "profile": "portable",
+    "zoom": 1,
+    "canvas": [
+      512,
+      512
+    ],
+    "anchor_px": [
+      256.0,
+      256.0
+    ],
+    "palette_source": "svg-colours",
+    "variants": {
+      "base": "base"
+    },
+    "images": [
+      {
+        "variant": "base",
+        "file": "base/brown-widow.png",
+        "scale": 1,
+        "size": [
+          512,
+          512
+        ],
+        "anchor_px": [
+          256.0,
+          256.0
+        ],
+        "visible": 117074,
+        "partial_alpha": 12040,
+        "off_palette": 104946,
+        "colors": 11305
+      }
+    ]
+  }
+}

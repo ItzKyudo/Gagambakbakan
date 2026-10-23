@@ -1,0 +1,44 @@
+{
+  "art_source": "code",
+  "placeholder": false,
+  "disclosure": "code-drawn, no image model",
+  "purpose": "Online matchmaking rank icons; independent of EXP and ability unlocks",
+  "source": "art/ranks/build_icons.py",
+  "source_sha256": "06be5e59341e06335d725de7d242083f7b2f1831e78353d3256ef0891037c6ed",
+  "canvas": [
+    512,
+    512
+  ],
+  "background": "transparent",
+  "light_direction": "upper left",
+  "icons": [
+    {
+      "rank": 1,
+      "name": "Wolf Spider",
+      "title": "Grave Stalker",
+      "svg": "wolf-spider.svg",
+      "sha256": "e1b0b1bb649e752dd181b846a0382c8b9e9c435e4750022492ca4a5641afede6"
+    },
+    {
+      "rank": 2,
+      "name": "Huntsman Spider",
+      "title": "Nightmare Prowler",
+      "svg": "huntsman-spider.svg",
+      "sha256": "91dc6a24f83231482315190d344abeae504f9847c92daa0069db15cf2eafc75c"
+    },
+    {
+      "rank": 3,
+      "name": "Philippine Tarantula",
+      "title": "Hellspawn",
+      "svg": "philippine-tarantula.svg",
+      "sha256": "6ec1c7f33d52122f39cfa9c1ee388535117ec9a5a581c35909739a6973c6e378"
+    },
+    {
+      "rank": 4,
+      "name": "Brown Widow",
+      "title": "Death's Empress",
+      "svg": "brown-widow.svg",
+      "sha256": "cde5ed3532812eb5f6cb4827105bf14c6cb1e3847b542724f4ca3edca7a83f4f"
+    }
+  ]
+}

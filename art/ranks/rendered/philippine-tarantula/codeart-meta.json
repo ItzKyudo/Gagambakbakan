@@ -1,0 +1,143 @@
+{
+  "schema": "codeart2d.codeart_meta.v1",
+  "art_source": "code",
+  "placeholder": false,
+  "disclosure": "code-drawn, no image model",
+  "generator": "svg_render.py",
+  "spec_sha256": "5092555c553a6a5fd79450c9dd1daa8be0471ec1a8f3580b80d89c5a4e595376",
+  "renderer": {
+    "backend": "resvg_py",
+    "name": "resvg-py",
+    "version": "0.5.0",
+    "engine": "resvg 0.48.1",
+    "zoom": 1,
+    "size": [
+      512,
+      512
+    ]
+  },
+  "palette": {
+    "colors": {
+      "0": "#f0a25b",
+      "1": "#fff0bd",
+      "2": "#381a22",
+      "3": "#11131b",
+      "4": "#e5a04e",
+      "5": "#a4482b",
+      "6": "#34414b",
+      "7": "#19212c",
+      "8": "#0c1019",
+      "9": "#ffca87",
+      "10": "#d17a3d",
+      "11": "#7b3d27",
+      "12": "#281b1c",
+      "13": "#fff5db",
+      "14": "#501d31",
+      "15": "#020409",
+      "16": "#15151e",
+      "17": "#10131c",
+      "18": "#11151e",
+      "19": "#9aabb8",
+      "20": "#18151b",
+      "21": "#17151a",
+      "22": "#f5ddbe",
+      "23": "#211a1c",
+      "24": "#12121a",
+      "25": "#fff2d5",
+      "26": "#20191b",
+      "27": "#23212a",
+      "28": "#18151e"
+    },
+    "variants": {}
+  },
+  "outputs": [
+    {
+      "path": "base/philippine-tarantula.svg",
+      "sha256": "2d6b0aea923b715bb2711b8340d1bf6c814b8e9f26e03d5fc0f5980c957e6933",
+      "bytes": 18381
+    },
+    {
+      "path": "base/philippine-tarantula.png",
+      "sha256": "2b4ecefdb218c0f70471235369bf842645419a4983c12411c10aceb540e31c9b",
+      "bytes": 133273
+    }
+  ],
+  "qa": {
+    "status": "pass",
+    "method": "svg_render.py render: every variant's compiled SVG passed codeart_core.lint_portable_svg (portable profile) before rasterizing",
+    "notProven": [
+      "Appearance, readability and appeal; look at the PNGs at game size.",
+      "Agreement with other renderers on this machine; run svg_render.py doctor (renders are bit-exact only for the recorded renderer version).",
+      "That the art matches the brief and the intent of the SVG.",
+      "Pixel gates: vector renders are anti-aliased by design, so partial alpha and colours outside the palette are expected and not checked (render with --crisp for pixel art)."
+    ],
+    "checks": [
+      {
+        "id": "lint",
+        "status": "pass",
+        "value": 0,
+        "threshold": 0,
+        "profile": "portable"
+      }
+    ],
+    "inputs": [
+      {
+        "path": "../../../../client/public/ranks/philippine-tarantula.svg",
+        "sha256": "5092555c553a6a5fd79450c9dd1daa8be0471ec1a8f3580b80d89c5a4e595376",
+        "bytes": 18399
+      }
+    ],
+    "outputs": [
+      {
+        "path": "base/philippine-tarantula.svg",
+        "sha256": "2d6b0aea923b715bb2711b8340d1bf6c814b8e9f26e03d5fc0f5980c957e6933",
+        "bytes": 18381
+      },
+      {
+        "path": "base/philippine-tarantula.png",
+        "sha256": "2b4ecefdb218c0f70471235369bf842645419a4983c12411c10aceb540e31c9b",
+        "bytes": 133273
+      }
+    ],
+    "tool": {
+      "name": "svg_render.py render",
+      "version": "0.4.0"
+    }
+  },
+  "svg": {
+    "mode": "vector",
+    "profile": "portable",
+    "zoom": 1,
+    "canvas": [
+      512,
+      512
+    ],
+    "anchor_px": [
+      256.0,
+      256.0
+    ],
+    "palette_source": "svg-colours",
+    "variants": {
+      "base": "base"
+    },
+    "images": [
+      {
+        "variant": "base",
+        "file": "base/philippine-tarantula.png",
+        "scale": 1,
+        "size": [
+          512,
+          512
+        ],
+        "anchor_px": [
+          256.0,
+          256.0
+        ],
+        "visible": 110221,
+        "partial_alpha": 13038,
+        "off_palette": 99979,
+        "colors": 10640
+      }
+    ]
+  }
+}

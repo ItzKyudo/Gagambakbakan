@@ -1,5 +1,34 @@
-brag-output/
+# Dependencies
+node_modules/
+*/node_modules/
+**/node_modules/
 
-brag-output-2026-10-22-event
-brag-output-2026-10-22-walkthrough
+# Production builds & dist folders
+dist/
+*/dist/
+**/dist/
 server/dist/
+client/dist/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# System and editor files
+.DS_Store
+Thumbs.db
+.vscode/
+!.vscode/extensions.json
+.idea/
+
+# Brag outputs
+brag-output/
+brag-output-*

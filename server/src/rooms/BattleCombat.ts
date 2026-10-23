@@ -114,7 +114,7 @@ private fall(s: PlayerStateData) {
   this.tapTimes[s.id] = [];
   s.rate = 0;
 
-  this.emitFx({ type: 'txt', x: s.x, y: LBL_Y, text: s.falls > 1 ? `FALL Ã—${s.falls}` : 'FALL!', col: '#e8593f' });
+  this.emitFx({ type: 'txt', x: s.x, y: LBL_Y, text: s.falls > 1 ? `FALL ×${s.falls}` : 'FALL!', col: '#e8593f' });
   this.emitFx({ type: 'dust', x: s.x, y: STICK.y + STICK.th, count: 6 });
   this.emitShake(6);
   this.emitSound('fall');
@@ -776,7 +776,6 @@ private stepSpider(s: PlayerStateData, o: PlayerStateData, inp: PlayerInput, dt:
     if (!s.blocking) {
       s.blocking = true;
       s.blockT = 0;
-      s.guard = Math.max(0, s.guard - 2);
     }
     s.blockT += dt;
     s.guard -= 9 * dt;

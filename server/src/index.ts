@@ -18,7 +18,8 @@ listen(config({
       res.json({
         game: 'Gagambakbakan',
         version: '1.0.0',
-        rooms: ['battle']
+        rooms: ['battle'],
+        ranks: ['wolf-spider', 'huntsman-spider', 'philippine-tarantula', 'brown-widow']
       });
     });
   },

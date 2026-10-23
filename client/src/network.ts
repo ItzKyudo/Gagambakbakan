@@ -1,4 +1,5 @@
 import { Client, Room } from 'colyseus.js';
+import { normalizeRankId } from './ui/menu/rankTitle';
 
 export interface NetworkCallbacks {
   onAssigned?: (data: { id: number; name: string }) => void;
@@ -141,7 +142,7 @@ export class NetworkManager {
     }
     const client = this.initClient(callbacks);
     const opts = typeof profile === 'string' ? { name: profile, rank: 'wolf-spider', rating: 0, isRanked: false } : { rank: 'wolf-spider', rating: 0, isRanked: false, ...profile };
-    opts.rank = opts.rank || 'wolf-spider';
+    opts.rank = normalizeRankId(opts.rank);
     opts.isRanked = Boolean(opts.isRanked);
     const room = await client.joinOrCreate('battle', opts);
     if (this.client === client) this.room = room;

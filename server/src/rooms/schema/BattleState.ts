@@ -22,7 +22,7 @@ export interface PlayerStateData {
   walkPhase: number;
   
   // Combat stats
-  grip: number;         // 0 - 100
+  grip: number;         // 0 - 120
   guard: number;        // 0 - 100
   falls: number;
   wins: number;

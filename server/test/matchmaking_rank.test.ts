@@ -1,71 +1,15 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-
-// Ranking tiers based on competitive rating starting at 0 and escalating in difficulty
-type SpiderRankId = 'wolf-spider' | 'huntsman-spider' | 'philippine-tarantula' | 'brown-widow';
-
-interface SpiderRank {
-  id: SpiderRankId;
-  title: string;
-  minRating: number;
-}
-
-const SPIDER_RANKS: SpiderRank[] = [
-  { id: 'wolf-spider', title: 'Grave Stalker', minRating: 0 },
-  { id: 'huntsman-spider', title: 'Nightmare Prowler', minRating: 300 },
-  { id: 'philippine-tarantula', title: 'Hellspawn', minRating: 800 },
-  { id: 'brown-widow', title: "Death's Empress", minRating: 1600 }
-];
-
-function getRankFromRating(rating: number = 0): SpiderRank {
-  const safeRating = Math.max(0, rating | 0);
-  let rank = SPIDER_RANKS[0];
-  for (const r of SPIDER_RANKS) {
-    if (safeRating >= r.minRating) {
-      rank = r;
-    }
-  }
-  return rank;
-}
-
-function calculateRatingChange(currentRating: number = 0, won: boolean): { newRating: number; delta: number } {
-  const safeRating = Math.max(0, currentRating | 0);
-  const rank = getRankFromRating(safeRating);
-  let winGain = 25;
-  let lossLoss = 10;
-
-  switch (rank.id) {
-    case 'wolf-spider':
-      winGain = 25;
-      lossLoss = 10;
-      break;
-    case 'huntsman-spider':
-      winGain = 22;
-      lossLoss = 15;
-      break;
-    case 'philippine-tarantula':
-      winGain = 18;
-      lossLoss = 18;
-      break;
-    case 'brown-widow':
-      winGain = 15;
-      lossLoss = 20;
-      break;
-  }
-
-  const delta = won ? winGain : -lossLoss;
-  const newRating = Math.max(0, safeRating + delta);
-  return { newRating, delta };
-}
-
-function calculateWinRate(wins: number, played: number): number {
-  if (!played || played <= 0) return 0;
-  return Math.round((Math.max(0, wins) / played) * 100);
-}
-
-function canPairInMatchmaking(rankA: string, rankB: string): boolean {
-  return rankA === rankB;
-}
+import {
+  SpiderRankId,
+  SpiderRank,
+  SPIDER_RANKS,
+  getRankFromRating,
+  calculateRatingChange,
+  calculateWinRate,
+  canPairInMatchmaking,
+  normalizeRankId
+} from '../src/ranks';
 
 test('getRankFromRating starts at 0 and maps escalating tiers', () => {
   assert.equal(getRankFromRating(0).id, 'wolf-spider');
@@ -109,4 +53,25 @@ test('matchmaking strictly pairs only players with identical rank', () => {
   assert.equal(canPairInMatchmaking('huntsman-spider', 'huntsman-spider'), true);
   assert.equal(canPairInMatchmaking('wolf-spider', 'huntsman-spider'), false);
   assert.equal(canPairInMatchmaking('wolf-spider', 'brown-widow'), false);
+  // Legacy ranks normalize to their canonical tier
+  assert.equal(canPairInMatchmaking('brawler', 'wolf-spider'), true);
+  assert.equal(canPairInMatchmaking('striker', 'huntsman-spider'), true);
+  assert.equal(canPairInMatchmaking('duelist', 'philippine-tarantula'), true);
+  assert.equal(canPairInMatchmaking('grandmaster', 'brown-widow'), true);
+});
+
+test('normalizeRankId normalizes legacy and unknown rank strings', () => {
+  assert.equal(normalizeRankId('wolf-spider'), 'wolf-spider');
+  assert.equal(normalizeRankId('novice'), 'wolf-spider');
+  assert.equal(normalizeRankId('brawler'), 'wolf-spider');
+  assert.equal(normalizeRankId('huntsman-spider'), 'huntsman-spider');
+  assert.equal(normalizeRankId('striker'), 'huntsman-spider');
+  assert.equal(normalizeRankId('weaver'), 'huntsman-spider');
+  assert.equal(normalizeRankId('philippine-tarantula'), 'philippine-tarantula');
+  assert.equal(normalizeRankId('duelist'), 'philippine-tarantula');
+  assert.equal(normalizeRankId('brown-widow'), 'brown-widow');
+  assert.equal(normalizeRankId('master'), 'brown-widow');
+  assert.equal(normalizeRankId('grandmaster'), 'brown-widow');
+  assert.equal(normalizeRankId('unknown'), 'wolf-spider');
+  assert.equal(normalizeRankId(undefined), 'wolf-spider');
 });

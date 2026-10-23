@@ -2,6 +2,8 @@ import { Room, Client } from 'colyseus';
 import { BattleStateData, PlayerStateData, WebStateData } from './schema/BattleState';
 import { BattleCombat, type PlayerInput } from './BattleCombat';
 import { ABILITIES, getRandomAbilities, isAbilityId, selectDraftAbilities, validateUnlockedSkills, AbilityId } from '../abilities';
+import { getRankFromRating, normalizeRankId, calculateRatingChange } from '../ranks';
+import { validateUsername } from '../auth';
 
 const TAP = 8, FALL_DEPTH = 100;
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
@@ -27,7 +29,10 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
   private rematchVotes: Set<string> = new Set();
 
   onCreate(options: any) {
-    const roomRank = typeof options?.rank === 'string' ? options.rank : 'wolf-spider';
+    const rating = Number.isFinite(options?.rating) ? Math.max(0, Number(options.rating) | 0) : 0;
+    const roomRank = typeof options?.rank === 'string'
+      ? normalizeRankId(options.rank)
+      : getRankFromRating(rating).id;
     const isRanked = Boolean(options?.isRanked);
     this.setMetadata({ rank: roomRank, isRanked });
     this.battleState = {
@@ -139,7 +144,10 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
 
     player.sessionId = client.sessionId;
     player.connected = true;
-    if (typeof options.name === 'string') player.name = options.name.replace(/[<>&"]/g, '').trim().slice(0, 10) || player.name;
+    if (typeof options.name === 'string') {
+      const v = validateUsername(options.name);
+      player.name = v.ok && v.clean ? v.clean : (options.name.replace(/[<>&"]/g, '').trim().slice(0, 10) || player.name);
+    }
     if (typeof options.color === 'string' && HEX_COLOR.test(options.color)) player.color = options.color;
     if (typeof options.colorDark === 'string' && HEX_COLOR.test(options.colorDark)) player.colorDark = options.colorDark;
     if (typeof options.colorLight === 'string' && HEX_COLOR.test(options.colorLight)) player.colorLight = options.colorLight;
@@ -162,11 +170,12 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
         player.acc = options.acc;
       }
     }
-    if (typeof options.rank === 'string' && ['wolf-spider', 'huntsman-spider', 'philippine-tarantula', 'brown-widow', 'novice', 'brawler', 'striker', 'weaver', 'duelist', 'master', 'grandmaster'].includes(options.rank)) {
-      player.rank = options.rank;
-    }
     if (Number.isFinite(options.rating)) {
-      player.rating = Number(options.rating);
+      player.rating = Math.max(0, Number(options.rating) | 0);
+      player.rank = getRankFromRating(player.rating).id;
+    } else if (typeof options.rank === 'string') {
+      player.rank = normalizeRankId(options.rank);
+      player.rating = getRankFromRating(0).minRating;
     }
     player.isRanked = Boolean(options.isRanked);
     player.unlockedSkills = validateUnlockedSkills(options.unlockedSkills, lvl);
@@ -204,11 +213,26 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
       this.battleState.stateT = 0;
       this.battleState.winner = winner.id;
       winner.wins = Math.max(winner.wins, 2);
+
+      const p1Won = winner.id === 0;
+      const p1Delta = calculateRatingChange(this.battleState.p1.rating, p1Won);
+      const p2Delta = calculateRatingChange(this.battleState.p2.rating, !p1Won);
+      if (this.battleState.p1.isRanked || this.battleState.p2.isRanked) {
+        this.battleState.p1.rating = p1Delta.newRating;
+        this.battleState.p1.rank = getRankFromRating(p1Delta.newRating).id;
+        this.battleState.p2.rating = p2Delta.newRating;
+        this.battleState.p2.rank = getRankFromRating(p2Delta.newRating).id;
+      }
+
       this.broadcast('matchEnd', {
         winner: winner.id,
         winnerName: winner.name,
         p1Wins: this.battleState.p1.wins,
         p2Wins: this.battleState.p2.wins,
+        p1RatingChange: p1Delta.delta,
+        p2RatingChange: p2Delta.delta,
+        p1NewRating: p1Delta.newRating,
+        p2NewRating: p2Delta.newRating,
         forfeit: true
       });
       return;
@@ -377,7 +401,7 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
 
     // Both spiders remain not KO'd, round ends in a tie
     this.broadcast('fx', { type: 'txt', x: 600, y: 200, text: 'TIME UP — TIE!', col: '#ffd694' });
-    this.broadcast('sound', { sound: 'ko' });
+    this.broadcast('snd', { name: 'ko' });
   }
 
   private endRound() {
@@ -388,12 +412,27 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
       this.battleState.status = 'matchEnd';
       this.battleState.stateT = 0;
       this.battleState.winner = p1Wins >= 2 ? 0 : 1;
-      const winnerName = this.battleState.winner === 0 ? this.battleState.p1.name : this.battleState.p2.name;
+      const winner = this.battleState.winner === 0 ? this.battleState.p1 : this.battleState.p2;
+
+      const p1Won = this.battleState.winner === 0;
+      const p1Delta = calculateRatingChange(this.battleState.p1.rating, p1Won);
+      const p2Delta = calculateRatingChange(this.battleState.p2.rating, !p1Won);
+      if (this.battleState.p1.isRanked || this.battleState.p2.isRanked) {
+        this.battleState.p1.rating = p1Delta.newRating;
+        this.battleState.p1.rank = getRankFromRating(p1Delta.newRating).id;
+        this.battleState.p2.rating = p2Delta.newRating;
+        this.battleState.p2.rank = getRankFromRating(p2Delta.newRating).id;
+      }
+
       this.broadcast('matchEnd', {
         winner: this.battleState.winner,
-        winnerName,
+        winnerName: winner.name,
         p1Wins,
-        p2Wins
+        p2Wins,
+        p1RatingChange: p1Delta.delta,
+        p2RatingChange: p2Delta.delta,
+        p1NewRating: p1Delta.newRating,
+        p2NewRating: p2Delta.newRating
       });
     } else {
       this.battleState.round++;

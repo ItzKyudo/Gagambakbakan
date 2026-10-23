@@ -58,7 +58,7 @@ export function bindAccountEvents(
     if (state.widgetId) return;
     loadTurnstileScript().then(() => {
       const widgetEl = container.querySelector('#turnstileWidget') as HTMLElement | null;
-      if (widgetEl && state.mode === 'register' && !state.widgetId) {
+      if (widgetEl && !state.widgetId) {
         state.widgetId = renderTurnstile(
           widgetEl,
           (token) => {
@@ -79,6 +79,7 @@ export function bindAccountEvents(
   const switchMode = (mode: 'login' | 'register') => {
     state.mode = mode;
     state.captchaToken = null;
+    resetTurnstile(state.widgetId);
     sound.playTone(520, 0.08, 'triangle', 0.05, 150);
 
     // Update active tab buttons
@@ -102,22 +103,18 @@ export function bindAccountEvents(
       txtPassword.placeholder = mode === 'register' ? 'Minimum 6 characters' : 'Enter your password';
       txtPassword.autocomplete = mode === 'register' ? 'new-password' : 'current-password';
     }
-    if (wrapTurnstile) wrapTurnstile.style.display = mode === 'register' ? 'block' : 'none';
+    if (wrapTurnstile) wrapTurnstile.style.display = 'block';
     if (submitText) {
       submitText.textContent = mode === 'register' ? 'Create Account' : 'Log In & Enter Arena';
     }
 
-    if (mode === 'register') {
-      ensureTurnstile();
-    }
+    ensureTurnstile();
   };
 
   tabLogin?.addEventListener('click', () => switchMode('login'));
   tabRegister?.addEventListener('click', () => switchMode('register'));
 
-  if (state.mode === 'register') {
-    ensureTurnstile();
-  }
+  ensureTurnstile();
 
   // Sign out button (authenticated view)
   container.querySelector('#btnAuthSignOut')?.addEventListener('click', async () => {
@@ -210,14 +207,22 @@ export function bindAccountEvents(
       }
     } else {
       // Login
+      const hasTurnstileWidget = Boolean(container.querySelector('#turnstileWidget'));
+      if (hasTurnstileWidget && !state.captchaToken && typeof (window as any).turnstile !== 'undefined') {
+        showAlert({ type: 'error', text: 'Please complete the anti-spam verification.' });
+        return;
+      }
+
       setSubmitLoading(true);
       showAlert(null);
 
-      const res = await signInUser(email, password);
+      const res = await signInUser(email, password, state.captchaToken || undefined);
       setSubmitLoading(false);
 
       if (!res.ok) {
         sound.playTone(220, 0.15, 'sawtooth', 0.05, -50);
+        resetTurnstile(state.widgetId);
+        state.captchaToken = null;
         showAlert({ type: 'error', text: res.message || 'Invalid email or password.' });
       } else {
         sound.playTone(720, 0.15, 'square', 0.05, 300);

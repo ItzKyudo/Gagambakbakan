@@ -128,7 +128,7 @@ export function renderMainMenuView(): string {
                 <i class="sib-dot" style="background:${getColor(looks.p1.color).main}; box-shadow: 0 0 10px ${getColor(looks.p1.color).main};"></i>
                 <span class="sib-name" id="showcaseName">${looks.p1.name}</span>
                 <span class="sib-lvl-badge">LVL ${expInfo.level}</span>
-                <button type="button" class="btn ghost btn-account-pill" id="btnGoAccount" title="View Account & Stats" style="margin-left:auto; padding:2px 8px; font-size:11px; height:24px; border-radius:12px; gap:4px; border-color:rgba(76,199,178,0.3); color:var(--jade);">
+                <button type="button" class="btn ghost btn-account-pill" id="btnGoAccount" title="Account" style="margin-left:auto; padding:2px 8px; font-size:11px; height:24px; border-radius:12px; gap:4px; border-color:rgba(76,199,178,0.3); color:var(--jade);">
                   ${icon(User, { width: 12, height: 12, 'stroke-width': 2.5 })}
                   <span>Account</span>
                 </button>

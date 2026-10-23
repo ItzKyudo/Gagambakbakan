@@ -7,11 +7,9 @@ import {
   Mail,
   AlertCircle,
   CheckCircle2,
-  Swords,
   type IconNode
 } from 'lucide';
-import { getAuthUser, getUserProfile, isSupabaseConfigured } from '../../auth';
-import { getColor, getLooks, spiderSVG } from '../../gb';
+import { getAuthUser, isSupabaseConfigured } from '../../auth';
 import type { AccountState } from './accountController';
 
 function icon(node: IconNode, attrs: Record<string, string | number> = {}): string {
@@ -20,9 +18,6 @@ function icon(node: IconNode, attrs: Record<string, string | number> = {}): stri
 
 export function renderAccountView(state: AccountState): string {
   const user = getAuthUser();
-  const profile = getUserProfile();
-  const looks = getLooks();
-  const spiderColor = getColor(looks.p1.color);
 
   return `
     <div class="page account-page fullscreen-account">
@@ -32,9 +27,9 @@ export function renderAccountView(state: AccountState): string {
           <span>Menu</span>
         </button>
         <div style="text-align:right;">
-          <h1 style="margin:0; line-height:1.1;"><span class="a">${user ? 'Fighter' : 'Arena'}</span> <span class="j">${user ? 'Dossier' : 'Login'}</span></h1>
+          <h1 style="margin:0; line-height:1.1;"><span class="a">${user ? 'Your' : 'Arena'}</span> <span class="j">${user ? 'Account' : 'Login'}</span></h1>
           <p class="note" style="margin:4px 0 0 0; color:${user ? 'var(--muted)' : 'var(--amber)'};">
-            ${user ? 'Your authenticated profile, battle record &amp; rankings.' : 'Step onto the tingting. Sign in or register to play.'}
+            ${user ? 'Manage your signed-in session.' : 'Step onto the tingting. Sign in or register to play.'}
           </p>
         </div>
       </header>
@@ -56,47 +51,11 @@ export function renderAccountView(state: AccountState): string {
           <!-- LEFT COLUMN (40%): LOGIN / REGISTER / DOSSIER DIRECT ON BACKGROUND -->
           <div class="account-left-col">
             ${user ? `
-              <div class="account-direct-wrap" style="max-width:440px; width:100%; display:grid; gap:18px;">
-                <div style="display:flex; align-items:center; gap:16px;">
-                  <div style="width:68px; height:68px; border-radius:50%; background:${spiderColor.dark}; border:2px solid ${spiderColor.main}; display:flex; align-items:center; justify-content:center; box-shadow:0 0 20px ${spiderColor.main}55;">
-                    <div style="transform:scale(0.75); width:68px; height:68px; display:flex; align-items:center; justify-content:center;">
-                      ${spiderSVG(looks.p1, '-acc-avatar')}
-                    </div>
-                  </div>
-                  <div>
-                    <div style="display:flex; align-items:center; gap:8px;">
-                      <h2 style="margin:0; font-family:var(--display); font-size:26px;">${profile?.username || user.user_metadata?.username || 'Fighter'}</h2>
-                      <span style="font-size:10px; font-weight:700; color:var(--jade); background:rgba(76,199,178,0.14); border:1px solid rgba(76,199,178,0.35); border-radius:12px; padding:2px 8px;">
-                        VERIFIED
-                      </span>
-                    </div>
-                    <div style="font-size:13px; color:var(--muted); margin-top:2px;">${user.email}</div>
-                  </div>
-                </div>
-
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-                  <div style="background:rgba(13,26,34,0.7); backdrop-filter:blur(8px); border:1px solid var(--line); border-radius:10px; padding:14px; text-align:center;">
-                    <div style="font-size:11px; font-family:var(--label); text-transform:uppercase; color:var(--muted); letter-spacing:0.08em;">Rating (ELO)</div>
-                    <div style="font-family:var(--display); font-size:32px; color:var(--amber); margin-top:2px;">${profile?.rating ?? 1000}</div>
-                  </div>
-                  <div style="background:rgba(13,26,34,0.7); backdrop-filter:blur(8px); border:1px solid var(--line); border-radius:10px; padding:14px; text-align:center;">
-                    <div style="font-size:11px; font-family:var(--label); text-transform:uppercase; color:var(--muted); letter-spacing:0.08em;">Record</div>
-                    <div style="font-family:var(--display); font-size:32px; color:var(--jade); margin-top:2px;">
-                      ${profile?.wins ?? 0}<span style="font-size:18px; color:var(--muted);">W</span> - ${profile?.losses ?? 0}<span style="font-size:18px; color:var(--muted);">L</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div style="display:grid; gap:10px; margin-top:8px;">
-                  <button type="button" class="btn primary" id="btnBackToMain" style="justify-content:center; gap:8px; font-weight:700; text-transform:uppercase; min-height:46px;">
-                    ${icon(Swords, { width: 16, height: 16, 'stroke-width': 2.2 })}
-                    <span>Enter Arena (Play)</span>
-                  </button>
-                  <button type="button" class="btn ghost" id="btnAuthSignOut" style="justify-content:center; gap:8px; border-color:rgba(228,88,79,0.35); color:var(--coral); min-height:42px;">
-                    ${icon(LogOut, { width: 15, height: 15, 'stroke-width': 2.2 })}
-                    <span>Sign Out</span>
-                  </button>
-                </div>
+              <div class="account-direct-wrap" style="max-width:440px; width:100%;">
+                <button type="button" class="btn ghost" id="btnAuthSignOut" style="width:100%; justify-content:center; gap:8px; border-color:rgba(228,88,79,0.35); color:var(--coral); min-height:42px;">
+                  ${icon(LogOut, { width: 15, height: 15, 'stroke-width': 2.2 })}
+                  <span>Sign Out</span>
+                </button>
               </div>
             ` : `
               <div class="account-direct-wrap" style="max-width:440px; width:100%; display:grid; gap:16px;">
@@ -152,7 +111,7 @@ export function renderAccountView(state: AccountState): string {
                   </div>
 
                   <!-- DIRECT CLOUDFLARE TURNSTILE WIDGET (LEFT-ALIGNED WITH INPUTS) -->
-                  <div id="wrapAuthTurnstile" style="${state.mode === 'register' ? '' : 'display:none;'}">
+                  <div id="wrapAuthTurnstile">
                     <div id="turnstileWidget" style="min-height:65px; display:flex; align-items:center; justify-content:flex-start; margin:6px 0;"></div>
                   </div>
 

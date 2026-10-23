@@ -177,7 +177,8 @@ export async function signUpUser(
 
 export async function signInUser(
   email: string,
-  pass: string
+  pass: string,
+  captchaToken?: string
 ): Promise<{ ok: boolean; message?: string }> {
   if (!supabase) {
     return { ok: false, message: 'Supabase configuration is missing in .env.' };
@@ -185,7 +186,8 @@ export async function signInUser(
 
   const { data, error } = await supabase.auth.signInWithPassword({
     email: email.trim(),
-    password: pass
+    password: pass,
+    options: captchaToken ? { captchaToken } : undefined
   });
 
   if (error) {

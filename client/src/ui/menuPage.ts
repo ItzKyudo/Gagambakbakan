@@ -34,6 +34,9 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
 
   initAuth();
   subscribeAuth(() => {
+    if (activeTab === 'account' && getAuthUser()) {
+      activeTab = 'main';
+    }
     if (activeTab === 'main' || activeTab === 'account') {
       render();
     }

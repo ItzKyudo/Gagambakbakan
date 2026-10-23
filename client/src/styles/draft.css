@@ -204,9 +204,7 @@
 .draft-card {
   --card-acc: var(--amber);
   position: relative;
-  background: linear-gradient(165deg, rgba(22, 38, 36, 0.84) 0%, rgba(10, 20, 19, 0.94) 100%);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: linear-gradient(165deg, rgba(22, 38, 36, 0.96) 0%, rgba(10, 20, 19, 0.98) 100%);
   border: 1.5px solid rgba(255, 255, 255, 0.14);
   border-radius: 16px;
   padding: 12px 12px 14px 12px;

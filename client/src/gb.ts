@@ -25,6 +25,8 @@ export interface SpiderLook {
   customPattern: string;
 }
 
+export type GraphicQuality = 'auto' | 'low' | 'medium' | 'high';
+
 export interface GameSettings {
   sound: boolean;
   sfx: boolean;
@@ -32,6 +34,7 @@ export interface GameSettings {
   music: boolean;
   musicVol: number;
   diff: 'easy' | 'normal' | 'hard';
+  quality: GraphicQuality;
 }
 
 export interface KeyBindings {
@@ -86,8 +89,31 @@ export const DEF_SET: GameSettings = {
   sfxVol: 0.7,
   music: true,
   musicVol: 0.5,
-  diff: 'normal'
+  diff: 'normal',
+  quality: 'auto'
 };
+
+export function getEffectiveQuality(q?: GraphicQuality): 'low' | 'medium' | 'high' {
+  const chosen = q || getSettings().quality;
+  if (chosen === 'low' || chosen === 'medium' || chosen === 'high') return chosen;
+
+  // Auto-detection: identify lower-tier CPUs, mobile browsers, or devices with low concurrency
+  if (typeof navigator !== 'undefined') {
+    const cores = navigator.hardwareConcurrency || 4;
+    const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+    if (isMobile || cores <= 2) return 'low';
+    if (cores <= 4) return 'medium';
+  }
+  return 'medium';
+}
+
+export function applyQualityClass(quality?: GraphicQuality): void {
+  if (typeof document === 'undefined') return;
+  const eff = getEffectiveQuality(quality);
+  const root = document.documentElement;
+  root.classList.remove('quality-low', 'quality-medium', 'quality-high');
+  root.classList.add(`quality-${eff}`);
+}
 
 export function getSettings(): GameSettings {
   const s = lsGet<Partial<GameSettings>>('settings', {}) || {};
@@ -97,7 +123,8 @@ export function getSettings(): GameSettings {
     sfxVol: typeof s.sfxVol === 'number' ? s.sfxVol : DEF_SET.sfxVol,
     music: typeof s.music === 'boolean' ? s.music : DEF_SET.music,
     musicVol: typeof s.musicVol === 'number' ? s.musicVol : DEF_SET.musicVol,
-    diff: (s.diff === 'easy' || s.diff === 'normal' || s.diff === 'hard') ? s.diff : DEF_SET.diff
+    diff: (s.diff === 'easy' || s.diff === 'normal' || s.diff === 'hard') ? s.diff : DEF_SET.diff,
+    quality: (s.quality === 'low' || s.quality === 'medium' || s.quality === 'high' || s.quality === 'auto') ? s.quality : DEF_SET.quality
   };
   o.sfxVol = Math.max(0, Math.min(1, o.sfxVol));
   o.musicVol = Math.max(0, Math.min(1, o.musicVol));

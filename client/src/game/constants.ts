@@ -21,6 +21,11 @@ export const FATIGUE_MAX = 4;
 export const DASH_CD = 3;
 export const WEB_CD = 5;
 export const SURGE_CD = 6;
+export const MAX_GRIP = 120;        // spider grip (health) pool
+export const RECOVER_GRIP = 65;     // grip restored after climbing back up
+export const VENOM_DUR = 3;         // venom spit damage-over-time duration (s)
+export const VENOM_DPS = 5;         // grip lost per second while venomed
+export const WEB_SNARE = 1.6;       // web tangle duration (s) - no attacking, blocking allowed
 
 export const CANVAS_WIDTH = 1200;
 export const CANVAS_HEIGHT = 560;

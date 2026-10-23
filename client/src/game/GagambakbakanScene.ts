@@ -44,8 +44,12 @@ export class GagambakbakanScene extends Phaser.Scene {
   public isOnline: boolean = false;
   public shakeAmount: number = 0;
   public transparentBg: boolean = false;
+  public quality: 'low' | 'medium' | 'high' = 'medium';
 
+  private dpr: number = 1;
   private bgCanvas!: HTMLCanvasElement;
+  private stickCanvas!: HTMLCanvasElement;
+  private pondGradient!: CanvasGradient;
   private flies: Array<{ x: number; y: number; ph: number; sp: number }> = [];
   private grain: Array<{ x: number; y: number; len: number }> = [];
   private particles: Particle[] = [];
@@ -62,17 +66,31 @@ export class GagambakbakanScene extends Phaser.Scene {
     super({ key: 'GagambakbakanScene' });
   }
 
+  private getDpr(): number {
+    // Low and Medium quality use 1x DPR to drastically reduce canvas memory bandwidth & fill-rate
+    if (this.quality === 'low' || this.quality === 'medium') {
+      return 1;
+    }
+    return Math.min(2, window.devicePixelRatio || 1);
+  }
+
   create() {
+    this.dpr = this.getDpr();
     this.createBackgroundCache();
     this.createWoodGrain();
+    this.createStickCache();
     this.createFlies();
 
-    // Create high-res offscreen rendering surface
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    // Create rendering surface sized to optimized DPR
     this.renderCanvas = document.createElement('canvas');
-    this.renderCanvas.width = CANVAS_WIDTH * dpr;
-    this.renderCanvas.height = CANVAS_HEIGHT * dpr;
-    this.renderCtx = this.renderCanvas.getContext('2d')!;
+    this.renderCanvas.width = CANVAS_WIDTH * this.dpr;
+    this.renderCanvas.height = CANVAS_HEIGHT * this.dpr;
+    this.renderCtx = this.renderCanvas.getContext('2d', { alpha: this.transparentBg })!;
+
+    // Pre-create and cache static pond water gradient
+    this.pondGradient = this.renderCtx.createLinearGradient(0, POND_Y, 0, CANVAS_HEIGHT);
+    this.pondGradient.addColorStop(0, 'rgba(46,129,144,.8)');
+    this.pondGradient.addColorStop(1, 'rgba(14,56,68,.96)');
 
     // Register canvas texture in Phaser
     if (this.textures.exists('brawlCanvas')) {
@@ -83,9 +101,18 @@ export class GagambakbakanScene extends Phaser.Scene {
     this.displayImage.setDisplaySize(CANVAS_WIDTH, CANVAS_HEIGHT);
   }
 
+  private createStickCache() {
+    this.stickCanvas = document.createElement('canvas');
+    this.stickCanvas.width = CANVAS_WIDTH;
+    this.stickCanvas.height = CANVAS_HEIGHT;
+    const sCtx = this.stickCanvas.getContext('2d')!;
+    this.drawStickToContext(sCtx);
+  }
+
   private createFlies() {
     this.flies = [];
-    for (let i = 0; i < 22; i++) {
+    const count = this.quality === 'low' ? 0 : (this.quality === 'medium' ? 8 : 22);
+    for (let i = 0; i < count; i++) {
       this.flies.push({
         x: Math.random() * CANVAS_WIDTH,
         y: 120 + Math.random() * 330,
@@ -205,9 +232,11 @@ export class GagambakbakanScene extends Phaser.Scene {
   }
 
   public addFx(fx: any) {
+    const isLow = this.quality === 'low';
     if (fx.type === 'spark') {
       const sp = fx.sp || 200;
-      const count = fx.count || 8;
+      const baseCount = fx.count || 8;
+      const count = isLow ? Math.max(3, Math.floor(baseCount * 0.5)) : baseCount;
       for (let i = 0; i < count; i++) {
         const angle = (i / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
         const speed = sp * (0.55 + Math.random() * 0.65);
@@ -224,7 +253,7 @@ export class GagambakbakanScene extends Phaser.Scene {
           streak: sp >= 170
         });
       }
-      if (sp >= 170) {
+      if (sp >= 170 && !isLow) {
         this.impactRings.push({
           x: fx.x,
           y: fx.y,
@@ -236,7 +265,8 @@ export class GagambakbakanScene extends Phaser.Scene {
         });
       }
     } else if (fx.type === 'dust') {
-      for (let i = 0; i < (fx.count || 6); i++) {
+      const count = isLow ? 3 : (fx.count || 6);
+      for (let i = 0; i < count; i++) {
         this.particles.push({
           x: fx.x + (Math.random() - 0.5) * 28,
           y: fx.y,
@@ -250,7 +280,8 @@ export class GagambakbakanScene extends Phaser.Scene {
         });
       }
     } else if (fx.type === 'splash') {
-      for (let i = 0; i < 34; i++) {
+      const count = isLow ? 16 : 34;
+      for (let i = 0; i < count; i++) {
         this.particles.push({
           x: fx.x + (Math.random() - 0.5) * 20,
           y: fx.y,
@@ -282,29 +313,38 @@ export class GagambakbakanScene extends Phaser.Scene {
     const dt = Math.min(0.033, delta / 1000);
     this.shakeAmount *= Math.exp(-10 * dt);
 
-    // Update particles
+    // Update particles (O(1) swap-and-pop avoids expensive array shifts)
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const p = this.particles[i];
       p.life -= dt;
       p.vy += p.g * dt;
       p.x += p.vx * dt;
       p.y += p.vy * dt;
-      if (p.life <= 0) this.particles.splice(i, 1);
+      if (p.life <= 0) {
+        this.particles[i] = this.particles[this.particles.length - 1];
+        this.particles.pop();
+      }
     }
 
-    // Update impact rings
+    // Update impact rings (O(1) swap-and-pop)
     for (let r = this.impactRings.length - 1; r >= 0; r--) {
       const ring = this.impactRings[r];
       ring.life -= dt;
-      if (ring.life <= 0) this.impactRings.splice(r, 1);
+      if (ring.life <= 0) {
+        this.impactRings[r] = this.impactRings[this.impactRings.length - 1];
+        this.impactRings.pop();
+      }
     }
 
-    // Update floating texts
+    // Update floating texts (O(1) swap-and-pop)
     for (let j = this.floatingTexts.length - 1; j >= 0; j--) {
       const f = this.floatingTexts[j];
       f.life -= dt * 0.9;
       f.y -= 34 * dt;
-      if (f.life <= 0) this.floatingTexts.splice(j, 1);
+      if (f.life <= 0) {
+        this.floatingTexts[j] = this.floatingTexts[this.floatingTexts.length - 1];
+        this.floatingTexts.pop();
+      }
     }
 
     this.render(time / 1000);
@@ -318,8 +358,7 @@ export class GagambakbakanScene extends Phaser.Scene {
 
   private render(t: number) {
     const ctx = this.renderCtx;
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
     // Camera screen shake
@@ -332,21 +371,23 @@ export class GagambakbakanScene extends Phaser.Scene {
     if (!this.transparentBg) {
       ctx.drawImage(this.bgCanvas, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-      // Fireflies
-      this.flies.forEach((fl) => {
-      const x = fl.x + Math.sin(t * fl.sp + fl.ph) * 40;
-      const y = fl.y + Math.cos(t * fl.sp * 1.3 + fl.ph) * 24;
-      const a = 0.4 + 0.6 * Math.max(0, Math.sin(t * 1.6 + fl.ph * 3));
-      ctx.fillStyle = `rgba(232,245,138,${(0.14 * a).toFixed(3)})`;
-      ctx.beginPath();
-      ctx.arc(x, y, 8, 0, Math.PI * 2);
-      ctx.fill();
+      // Fireflies (skipped on low quality, reduced on medium)
+      if (this.flies.length > 0) {
+        this.flies.forEach((fl) => {
+          const x = fl.x + Math.sin(t * fl.sp + fl.ph) * 40;
+          const y = fl.y + Math.cos(t * fl.sp * 1.3 + fl.ph) * 24;
+          const a = 0.4 + 0.6 * Math.max(0, Math.sin(t * 1.6 + fl.ph * 3));
+          ctx.fillStyle = `rgba(232,245,138,${(0.14 * a).toFixed(3)})`;
+          ctx.beginPath();
+          ctx.arc(x, y, 8, 0, Math.PI * 2);
+          ctx.fill();
 
-      ctx.fillStyle = `rgba(240,250,160,${a.toFixed(3)})`;
-      ctx.beginPath();
-      ctx.arc(x, y, 1.6, 0, Math.PI * 2);
-      ctx.fill();
-    });
+          ctx.fillStyle = `rgba(240,250,160,${a.toFixed(3)})`;
+          ctx.beginPath();
+          ctx.arc(x, y, 1.6, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
     }
 
     const isDrafting = this.gameState && this.gameState.status === 'draft';
@@ -518,8 +559,6 @@ export class GagambakbakanScene extends Phaser.Scene {
     // Particles & combat text
     this.drawParticles(ctx);
 
-    // Player tracker indicator (YOU label)
-    this.drawPlayerIndicator(ctx, t);
 
     // Dangling pace gauges & prompt overlays
     if (this.gameState && this.gameState.p1 && this.gameState.p2) {
@@ -616,6 +655,14 @@ export class GagambakbakanScene extends Phaser.Scene {
   }
 
   private drawStick(ctx: CanvasRenderingContext2D) {
+    if (this.stickCanvas) {
+      ctx.drawImage(this.stickCanvas, 0, 0);
+    } else {
+      this.drawStickToContext(ctx);
+    }
+  }
+
+  private drawStickToContext(ctx: CanvasRenderingContext2D) {
     const l = STICK.l, r = STICK.r, y = STICK.y, th = STICK.th, x0 = l - 16, x1 = r + 16;
     ctx.lineCap = 'round';
 
@@ -1042,6 +1089,12 @@ export class GagambakbakanScene extends Phaser.Scene {
           fy = STICK.y - 1;
           kx = (ax + fx) / 2 - f * (6 + bp.wind * 5 - bp.strike * 4);
           ky = Math.min(ay, fy) - 24 - bp.wind * 6 + bp.strike * 5;
+        } else if (s.blocking && i >= 2) {
+          // Rear legs plant deep and crouch back into the twig bark to brace against impact
+          fx = baseFx - f * (6 + (i - 2) * 5);
+          fy = STICK.y - 1;
+          kx = baseKx - f * 6;
+          ky = baseKy + 4;
         } else if (sweep > 0 && i < 2) {
           // Low 360-style spinning scythe sweep
           const reachSweep = Math.sin(sweep * Math.PI);
@@ -1128,10 +1181,32 @@ export class GagambakbakanScene extends Phaser.Scene {
           ky = lerp(baseKy, by - 42, carapaceBurst);
           clawCol = '#d4ecff';
         } else if ((s.blocking || s.shield > 0) && i < 2) {
-          fx = bx + f * (31 + i * 11);
-          fy = by - 25 - i * 8;
-          kx = bx + f * (13 + i * 6);
-          ky = by - 43;
+          const isParryStance = s.parryT > 0 || (s.blockT !== undefined && s.blockT <= 0.08);
+          const guardTension = Math.sin(t * 32) * (s.gLock ? 2.5 : 0.8);
+
+          if (i === 0) {
+            // Primary blocking forearms: raised high and crossed defensively in front of face & fangs
+            if (!far) {
+              // Foreground arm: raises high, elbow forward, claw angled down across chest
+              fx = bx + f * 44;
+              fy = by - 6 + guardTension;
+              kx = bx + f * 26 + guardTension;
+              ky = by - 52;
+            } else {
+              // Far arm: crosses behind/over the front arm to complete the defensive X-guard
+              fx = bx + f * 42;
+              fy = by - 16 - guardTension;
+              kx = bx + f * 22 - guardTension;
+              ky = by - 56;
+            }
+            clawCol = isParryStance ? '#ffffff' : colLight;
+          } else {
+            // Secondary arms: tucked in tight behind/underneath the primary guard arms
+            fx = bx + f * (far ? 28 : 34);
+            fy = STICK.y - 2;
+            kx = bx + f * (far ? 14 : 18);
+            ky = by - 36;
+          }
         } else if (s.riposte > 0 && i < 2) {
           // Crossed X-blade counter guard
           fx = bx + f * (i === 0 ? 58 : 42);
@@ -1155,24 +1230,63 @@ export class GagambakbakanScene extends Phaser.Scene {
       if (hb > 0.01) {
         const surgePull = surgeBurst.active ? surgeBurst.pulse : 0;
         const anchorBrace = s.anchorT > 0 ? Math.min(1, s.anchorT * 3) : 0;
-        let hx = bx + f * (-34 + i * 24) * (far ? 1.12 : 1) + Math.sin(t * 8 + i * 1.7) * (5 + (s.pump || 0) * 8) * (1 - anchorBrace * 0.7);
-        let hy = by - 38 - 8 * Math.sin(t * 6 + i) * (1 - anchorBrace * 0.7) - (s.pump || 0) * 16;
-        let hkx = (ax + hx) / 2 + f * (i < 2 ? 12 : -12);
-        let hky = Math.min(ay, hy) - 6;
+        const climbRate = Math.max(2.4, (s.rate || 0) * 1.6 + (s.falling ? 1.0 : 0) + (s.pump || 0) * 2.2);
+        const climbPhase = t * climbRate * Math.PI * 2 + (far ? Math.PI : 0);
+        const reach = Math.sin(climbPhase);
+        const lift = Math.max(0, Math.cos(climbPhase));
+        const pumpLift = (s.pump || 0) * 6;
 
-        // Surge skill: front legs reach high up the silk line and yank downward
+        let hx = baseFx;
+        let hy = baseFy;
+        let hkx = baseKx;
+        let hky = baseKy;
+
+        if (i === 0) {
+          // Primary climbing arms (lead claws): reach high up along the vertical silk thread
+          hx = bx + f * (46 + reach * 16 + pumpLift);
+          hy = by + (far ? -5 : 5) - (far ? 1 : -1) * lift * 6;
+          hkx = bx + f * (24 + reach * 8);
+          hky = by + (far ? -26 : 26) - (far ? 1 : -1) * lift * 8;
+          clawCol = colLight;
+        } else if (i === 1) {
+          // Secondary climbing arms: alternate with 90° phase shift
+          const phase1 = climbPhase + Math.PI * 0.5;
+          const reach1 = Math.sin(phase1);
+          const lift1 = Math.max(0, Math.cos(phase1));
+          hx = bx + f * (34 + reach1 * 12 + pumpLift * 0.6);
+          hy = by + (far ? -7 : 7) - (far ? 1 : -1) * lift1 * 5;
+          hkx = bx + f * (16 + reach1 * 6);
+          hky = by + (far ? -32 : 32) - (far ? 1 : -1) * lift1 * 6;
+          clawCol = colLight;
+        } else if (i === 2) {
+          // Middle stabilizer legs: grasp & guide thread beside the body
+          const phase2 = climbPhase + Math.PI;
+          const reach2 = Math.sin(phase2 * 0.8);
+          hx = bx - f * (6 + reach2 * 8);
+          hy = by + (far ? -22 : 22);
+          hkx = bx - f * 8;
+          hky = by + (far ? -36 : 36);
+        } else {
+          // Hind trailing legs: trail beneath the abdomen
+          hx = bx - f * (38 + Math.sin(t * 5 + (far ? 2 : 0)) * 6);
+          hy = by + (far ? -14 : 14) + Math.cos(t * 4 + i) * 3;
+          hkx = bx - f * 20;
+          hky = by + (far ? -26 : 26);
+        }
+
+        // Surge skill: front legs reach ultra-high and yank downward together
         if (surgePull > 0 && i < 2) {
-          hx = lerp(hx, bx - f * 6 + (i === 0 ? -4 : 4), surgePull);
-          hy = lerp(hy, by - 58 + surgeBurst.progress * 26, surgePull);
-          hkx = bx + f * (i === 0 ? 14 : -14);
-          hky = by - 42;
+          hx = bx + f * (58 + surgeBurst.progress * 10);
+          hy = by + (far ? -4 : 4) * (1 - surgePull);
+          hkx = bx + f * 28;
+          hky = by + (far ? -18 : 18);
           clawCol = '#ffffff';
         } else if (anchorBrace > 0 && (i === 1 || i === 2)) {
-          // Anchor Line: middle legs plant wide onto the silk stabilizer bar
-          hx = bx + f * (i === 1 ? 38 : -38) * (far ? 1.08 : 1);
-          hy = by - 22;
-          hkx = (ax + hx) / 2 + f * (i === 1 ? 10 : -10);
-          hky = by - 34;
+          // Anchor Line: middle legs lock wide onto the silk line
+          hx = bx + f * (i === 1 ? 16 : -16);
+          hy = by + (far ? -36 : 36);
+          hkx = bx + f * (i === 1 ? 6 : -6);
+          hky = by + (far ? -44 : 44);
         }
 
         fx = lerp(fx, hx, hb);
@@ -1193,14 +1307,20 @@ export class GagambakbakanScene extends Phaser.Scene {
         ctx.restore();
       }
 
+      const isArmBlocking = s.blocking && i === 0;
+      const legWidth = far
+        ? (isArmBlocking ? 3.8 : 3.2)
+        : (i < 2 && (s.atkT > 0 || sweepArc > 0 || isArmBlocking) ? 4.8 : 4);
+      const showClawTip = (!far || isArmBlocking) ? clawCol : undefined;
+
       this.legStroke(
         ctx,
         { x: ax, y: ay },
         { x: kx, y: ky },
         { x: fx, y: fy },
-        far ? 3.2 : (i < 2 && (s.atkT > 0 || sweepArc > 0) ? 4.4 : 4),
+        legWidth,
         far ? colDark : colMain,
-        !far ? clawCol : undefined
+        showClawTip
       );
 
       // Lead claw windup telegraph glint star
@@ -1342,8 +1462,13 @@ export class GagambakbakanScene extends Phaser.Scene {
       headOffsetX = f * 2.5 * moving;
     }
 
-    const bx = s.x + f * atkXOffset - (s.blocking ? f * 4 : 0) - f * cast * 4;
-    let by = STICK.y - BODY_H + (s.blocking ? 6 : 0) + atkYOffset;
+    if (s.blocking) {
+      atkXOffset -= 2;
+      headOffsetY += 3;
+      abdomenTilt -= f * 0.14;
+    }
+    const bx = s.x + f * atkXOffset - (s.blocking ? f * 5 : 0) - f * cast * 4;
+    let by = STICK.y - BODY_H + (s.blocking ? 5 : 0) + atkYOffset;
     by += Math.sin(t * 2.1 + s.id * 1.7) * .55 * (1 - moving) * (1 - hb);
     by -= gait.lift * 1.4 * moving;
     by -= cast * 2;
@@ -1359,8 +1484,8 @@ export class GagambakbakanScene extends Phaser.Scene {
 
     // Silk thread & Hang Skill VFX (Surge & Anchor Line)
     if (hb > 0.04) {
-      const tx = bx - f * 8;
-      const ty = byW - 16;
+      const tx = lerp(bx - f * 8, bx, hb);
+      const ty = lerp(byW - 16, byW - 22, hb);
       const ax0 = clamp(s.x, STICK.l, STICK.r);
       const ay0 = STICK.y + STICK.th - 2;
       const anchored = s.anchorT > 0;
@@ -1458,6 +1583,12 @@ export class GagambakbakanScene extends Phaser.Scene {
     ctx.translate(0, byW);
     ctx.scale(1, flip);
     ctx.translate(0, -(STICK.y - BODY_H));
+    if (hb > 0.001) {
+      const climbAngle = -f * (Math.PI / 2) * hb;
+      ctx.translate(bx, by);
+      ctx.rotate(climbAngle);
+      ctx.translate(-bx, -by);
+    }
 
     // Dash / Pounce translucent afterimage ghosts
     if (s.dashT > 0) {
@@ -2792,18 +2923,33 @@ export class GagambakbakanScene extends Phaser.Scene {
       ctx.restore();
     }
 
-    // Block energy shield
+    // Arm-Guard Chitin Block Shield (wrapping right on the crossed blocking forearms)
     if (s.blocking) {
-      const sx = bx + f * 16;
-      const sy = by - 4;
+      const sx = bx + f * 40;
+      const sy = by - 14;
+      const isParryStance = s.parryT > 0 || (s.blockT !== undefined && s.blockT <= 0.08);
       ctx.save();
-      ctx.globalAlpha = 0.32 + 0.1 * Math.sin(t * 12);
-      ctx.strokeStyle = colLight;
-      ctx.lineWidth = 4;
+      // Arm-guard aura glow
+      ctx.globalAlpha = 0.38 + 0.14 * Math.sin(t * 14) + (isParryStance ? 0.35 : 0);
+      ctx.strokeStyle = isParryStance ? '#ffffff' : colLight;
+      ctx.lineWidth = isParryStance ? 5 : 3.5;
+      ctx.lineCap = 'round';
       ctx.beginPath();
-      if (f > 0) ctx.arc(sx, sy, 46, -1, 1);
-      else ctx.arc(sx, sy, 46, Math.PI - 1, Math.PI + 1);
+      // Curved defensive shell hugging the crossed arms
+      if (f > 0) ctx.arc(sx, sy, 32, -0.9, 0.9);
+      else ctx.arc(sx, sy, 32, Math.PI - 0.9, Math.PI + 0.9);
       ctx.stroke();
+
+      // Dual-forearm deflect cross-sparks along the arm intersection
+      ctx.strokeStyle = isParryStance ? '#ffeaa7' : '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(sx - f * 4, sy - 14);
+      ctx.lineTo(sx + f * 4, sy + 14);
+      ctx.moveTo(sx + f * 4, sy - 14);
+      ctx.lineTo(sx - f * 4, sy + 14);
+      ctx.stroke();
+
       ctx.restore();
     }
 
@@ -2849,6 +2995,23 @@ export class GagambakbakanScene extends Phaser.Scene {
       ctx.beginPath();
       ctx.ellipse(wx, wy, 36, 30, 0, 0, Math.PI * 2);
       ctx.stroke();
+      ctx.restore();
+    }
+
+    // Venom poison: rising toxic bubbles while grip drains over time
+    if (s.venom > 0 && !s.hang) {
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, s.venom * 2) * 0.8;
+      ctx.fillStyle = '#9cf06a';
+      for (let q = 0; q < 5; q++) {
+        const ph = (t * 1.6 + q * 0.21) % 1;
+        const vx = bx + Math.sin(q * 2.3 + t * 3) * 18;
+        const vy = by + 8 - ph * 38;
+        ctx.globalAlpha = (1 - ph) * 0.8 * Math.min(1, s.venom * 2);
+        ctx.beginPath();
+        ctx.arc(vx, vy, 2.6 - ph * 1.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
       ctx.restore();
     }
 
@@ -3096,68 +3259,6 @@ export class GagambakbakanScene extends Phaser.Scene {
     ctx.restore();
   }
 
-  private drawPlayerIndicator(ctx: CanvasRenderingContext2D, t: number) {
-    if (!this.gameState || !this.gameState.p1 || !this.gameState.p2) return;
-    if (this.gameState.status === 'draft' || this.gameState.status === 'waiting') return;
-
-    const myId = this.isOnline ? this.myPlayerId : 0;
-    const s = myId === 1 ? this.gameState.p2 : this.gameState.p1;
-    if (!s || s.ko) return;
-
-    const x = clamp(s.x, 40, CANVAS_WIDTH - 40);
-    const hb = s.hb || 0;
-    const onTwigY = STICK.y - BODY_H - 24;
-    const hangY = BODY_Y + (s.drop || 0) + 26 * hb - 32;
-    const baseY = s.hang ? hangY : onTwigY;
-    const y = baseY + Math.sin(t * 4.5) * 1.5;
-
-    const colLight = s.colorLight || (myId === 0 ? COLORS.amberLight : COLORS.jadeLight);
-
-    ctx.save();
-    ctx.translate(x, y);
-
-    const bw = 32;
-    const bh = 14;
-    const r = 3.5;
-    const bx = -bw / 2;
-    const by = -bh - 4;
-
-    // Subtle drop shadow
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.75)';
-    ctx.shadowBlur = 6;
-    ctx.shadowOffsetY = 2;
-
-    // Dark pill container
-    ctx.fillStyle = 'rgba(8, 16, 15, 0.92)';
-    ctx.beginPath();
-    ctx.roundRect(bx, by, bw, bh, r);
-    ctx.fill();
-
-    // Clean neon border
-    ctx.shadowColor = 'transparent';
-    ctx.lineWidth = 1.5;
-    ctx.strokeStyle = colLight;
-    ctx.stroke();
-
-    // Downward arrow pointer
-    ctx.fillStyle = colLight;
-    ctx.beginPath();
-    ctx.moveTo(-3.5, -4);
-    ctx.lineTo(3.5, -4);
-    ctx.lineTo(0, -0.5);
-    ctx.closePath();
-    ctx.fill();
-
-    // Bold YOU label
-    ctx.font = '800 10px "Barlow Condensed", sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText('YOU', 0, by + bh / 2 + 0.5);
-
-    ctx.restore();
-  }
-
   private drawPond(ctx: CanvasRenderingContext2D, t: number) {
     if (this.transparentBg) return;
     let dang = 0;
@@ -3168,10 +3269,7 @@ export class GagambakbakanScene extends Phaser.Scene {
       });
     }
 
-    const g = ctx.createLinearGradient(0, POND_Y, 0, CANVAS_HEIGHT);
-    g.addColorStop(0, 'rgba(46,129,144,.8)');
-    g.addColorStop(1, 'rgba(14,56,68,.96)');
-    ctx.fillStyle = g;
+    ctx.fillStyle = this.pondGradient || 'rgba(14,56,68,.96)';
     ctx.beginPath();
     ctx.moveTo(0, CANVAS_HEIGHT);
     for (let x = 0; x <= CANVAS_WIDTH; x += 12) {
@@ -3235,6 +3333,7 @@ export class GagambakbakanScene extends Phaser.Scene {
     });
 
     ctx.lineCap = 'round';
+    const isLow = this.quality === 'low';
     this.particles.forEach((p) => {
       const alpha = Math.max(0, p.life / p.max);
       ctx.globalAlpha = alpha;
@@ -3247,9 +3346,13 @@ export class GagambakbakanScene extends Phaser.Scene {
         ctx.stroke();
       }
       ctx.fillStyle = p.col;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.sz, 0, Math.PI * 2);
-      ctx.fill();
+      if (isLow || p.sz <= 2.2) {
+        ctx.fillRect(p.x - p.sz, p.y - p.sz, p.sz * 2, p.sz * 2);
+      } else {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.sz, 0, Math.PI * 2);
+        ctx.fill();
+      }
     });
     ctx.globalAlpha = 1;
 

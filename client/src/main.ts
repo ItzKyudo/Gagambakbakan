@@ -13,7 +13,7 @@ import { GagambakbakanScene } from './game/GagambakbakanScene';
 import { LocalGameEngine, type InputState } from './game/localGame';
 import { network } from './network';
 import { sound } from './audio';
-import { getKeys, getLooks, getColor, getProgress, getLevel, getUnlockedIds, recordOnlineMatch, type PlayerKeys } from './gb';
+import { getKeys, getLooks, getColor, getProgress, getLevel, getUnlockedIds, recordOnlineMatch, applyQualityClass, type PlayerKeys } from './gb';
 import { getAuthUser } from './auth';
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
@@ -618,6 +618,7 @@ function startLocalGame(opts: MenuStartOptions) {
 }
 
 // Initial Boot
+applyQualityClass();
 window.addEventListener('resize', syncDeviceAvailability);
 window.addEventListener('orientationchange', syncDeviceAvailability);
 syncDeviceAvailability();

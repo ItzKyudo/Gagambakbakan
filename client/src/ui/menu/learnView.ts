@@ -114,6 +114,10 @@ export function bindLearnDemo(container: HTMLElement): () => void {
   }
 
   function renderFrame(now: number) {
+    if (document.hidden) {
+      animationFrame = requestAnimationFrame(renderFrame);
+      return;
+    }
     const frame = learnDemoFrame((now - started) / 1000);
     if (frame.phase !== lastPhase) {
       reset();

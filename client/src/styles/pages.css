@@ -236,7 +236,7 @@ body:has(#pick:not([hidden])) .rail { display: none !important; }
 .thanks { display: grid; gap: 12px; }
 .thanks h2 { font-family: var(--display); font-weight: 400; font-size: 28px; letter-spacing: 0; text-transform: none; color: var(--fg); margin: 0; }
 .thanks p { color: var(--muted); margin: 0; }
-.stage { width: 100%; filter: drop-shadow(0 14px 20px rgba(0,0,0,.55)); }
+.stage { width: 100%; }
 .stage svg { width: 100%; height: auto; display: block; overflow: visible; }
 
 /* Scene backdrop animations */
@@ -266,7 +266,7 @@ body:has(#pick:not([hidden])) .rail { display: none !important; }
 .custom-preview-column, .custom-options-column { display: grid; gap: 18px; align-content: start; min-width: 0; }
 .preview { position: relative; min-height: 300px; overflow: hidden; border-radius: 12px; background: linear-gradient(180deg, #203d42 0%, #142726 72%); display: grid; place-items: center; padding: 12px 12px 56px; box-shadow: inset 0 -50px 70px rgba(5, 15, 14, .42), 0 12px 30px rgba(0, 0, 0, .25); }
 .preview::before { content: ""; position: absolute; inset: -30% 12% 20%; border: 1px solid rgba(176, 242, 227, .14); border-radius: 50%; box-shadow: 0 0 0 38px rgba(176, 242, 227, .05), 0 0 0 76px rgba(176, 242, 227, .035); }
-.preview svg { position: relative; width: min(100%, 360px); height: auto; display: block; filter: drop-shadow(0 16px 14px rgba(0, 0, 0, .45)); }
+.preview svg { position: relative; width: min(100%, 360px); height: auto; display: block; }
 .preview .spider-abdomen, #showcaseStage .spider-abdomen { transform-box: view-box; transform-origin: 88px 96px; animation: spider-abdomen-breathe 3.8s ease-in-out infinite; }
 .preview .spider-head, #showcaseStage .spider-head { transform-box: view-box; transform-origin: 137px 105px; transform: translate(var(--look-x, 0), var(--look-y, 0)) rotate(var(--look-r, 0deg)); transition: transform 120ms cubic-bezier(.16, 1, .3, 1); }
 .preview .spider-head-motion, #showcaseStage .spider-head-motion { transform-box: view-box; transform-origin: 137px 105px; animation: spider-watch 6s cubic-bezier(.22, 1, .36, 1) infinite; }
@@ -293,7 +293,7 @@ body:has(#pick:not([hidden])) .rail { display: none !important; }
 .opt { min-width: 0; font-family: var(--label); font-weight: 600; font-size: 14px; letter-spacing: .06em; text-transform: uppercase; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); color: var(--muted); cursor: pointer; transition: transform .16s ease, border-color .16s ease, background-color .16s ease, color .16s ease, box-shadow .16s ease; }
 .visual-opts .opt { display: grid; gap: 2px; place-items: center; padding: 4px 6px 8px; overflow: hidden; }
 .choice-preview { width: 100%; height: 68px; display: grid; place-items: center; overflow: hidden; }
-.choice-preview svg { width: 118px; height: auto; transform: translateY(-5px); pointer-events: none; filter: drop-shadow(0 5px 5px rgba(0, 0, 0, .35)); }
+.choice-preview svg { width: 118px; height: auto; transform: translateY(-5px); pointer-events: none; }
 .choice-preview .accessory-art { width: 72px; height: 62px; transform: none; }
 .pattern-editing { cursor: crosshair; touch-action: none; }
 .pattern-editing .spider-art { user-select: none; }

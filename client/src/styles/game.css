@@ -239,12 +239,15 @@ body.game-active::-webkit-scrollbar {
   overflow: hidden;
   background: #12201f;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+  contain: layout paint;
 }
 
 .arena canvas {
   display: block;
   width: 100%;
   height: 100%;
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 .game-screen-fullscreen .arena {
@@ -1080,3 +1083,52 @@ body.game-active::-webkit-scrollbar {
   .btn { padding: 8px 16px; font-size: 15px; }
 }
 
+/* ====================================================
+   LOW-END PC / PERFORMANCE MODE OPTIMIZATIONS
+   ==================================================== */
+html.quality-low *,
+body.quality-low * {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+html.quality-low .igm-card,
+html.quality-low .overlay-modal,
+html.quality-low .draft-modal,
+html.quality-low .draft-card,
+html.quality-low .modal-box {
+  background: rgba(14, 25, 24, 0.96) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7) !important;
+}
+
+html.quality-low .fl {
+  display: none !important;
+}
+
+html.quality-low .arena canvas {
+  image-rendering: auto;
+}
+
+
+/* ---------- LOW-GRIP DANGER TINT ----------
+   Faded red glow on a fighter's side of the screen when their grip is low.
+   Opacity is driven from GamePage.updateHud (compositor-only, no layout cost). */
+.low-grip-tint {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 26%;
+  pointer-events: none;
+  z-index: 15;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  will-change: opacity;
+}
+.low-grip-tint.l {
+  left: 0;
+  background: linear-gradient(to right, rgba(232, 40, 40, 0.42) 0%, rgba(232, 40, 40, 0.14) 45%, rgba(232, 40, 40, 0) 100%);
+}
+.low-grip-tint.r {
+  right: 0;
+  background: linear-gradient(to left, rgba(232, 40, 40, 0.42) 0%, rgba(232, 40, 40, 0.14) 45%, rgba(232, 40, 40, 0) 100%);
+}

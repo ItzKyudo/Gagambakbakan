@@ -61,6 +61,18 @@ export function renderSettingsView(listeningKey: ListeningKey | null): string {
         </div>
       </section>
 
+      <!-- GRAPHICS & PERFORMANCE -->
+      <section class="sec" aria-label="Graphics and performance">
+        <h2>Graphics &amp; Performance</h2>
+        <p class="note">Set to <b>Low (Fastest)</b> for maximum FPS on low-end PCs, budget laptops, or integrated GPUs.</p>
+        <div class="seg" role="radiogroup" aria-label="Graphics quality">
+          <label><input type="radio" name="quality" value="auto" ${st.quality === 'auto' ? 'checked' : ''}><span>Auto</span></label>
+          <label><input type="radio" name="quality" value="low" ${st.quality === 'low' ? 'checked' : ''}><span>Low (Fastest)</span></label>
+          <label><input type="radio" name="quality" value="medium" ${st.quality === 'medium' ? 'checked' : ''}><span>Medium</span></label>
+          <label><input type="radio" name="quality" value="high" ${st.quality === 'high' ? 'checked' : ''}><span>High</span></label>
+        </div>
+      </section>
+
       <!-- CPU SKILL -->
       <section class="sec" aria-label="CPU skill">
         <h2>AI Difficulty</h2>

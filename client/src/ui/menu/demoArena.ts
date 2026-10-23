@@ -1,8 +1,20 @@
 import { createPhaserGame } from '../../game/phaserConfig';
 import { LocalGameEngine } from '../../game/localGame';
-import { getColor, getLooks } from '../../gb';
+import { getColor, getLooks, getEffectiveQuality } from '../../gb';
 
 export function mountDemoFightArena(previewEl: HTMLElement): () => void {
+  const effQuality = getEffectiveQuality();
+  // On low quality devices, skip the live AI battle in background menus to keep low-end PCs 100% cool and responsive
+  if (effQuality === 'low') {
+    previewEl.innerHTML = `
+      <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; min-height:220px; color:var(--muted); font-family:var(--label); font-weight:700; letter-spacing:0.06em; text-transform:uppercase; text-align:center; padding:20px; opacity:0.8;">
+        <span style="color:var(--jade-light); font-size:18px; margin-bottom:4px;">Gagambakbakan Arena</span>
+        <span style="font-size:12px; color:var(--muted);">Performance Mode Active</span>
+      </div>
+    `;
+    return () => {};
+  }
+
   const looks = getLooks();
   const c1 = getColor(looks.p1.color);
   const c2 = (c1.id === 'jade' || c1.id === 'toxic') ? getColor('amber') : getColor('jade');
@@ -44,8 +56,10 @@ export function mountDemoFightArena(previewEl: HTMLElement): () => void {
   const loop = (now: number) => {
     const dt = Math.min(0.033, (now - lastTime) / 1000);
     lastTime = now;
-    engine.update(dt, emptyInput, emptyInput);
-    scene.gameState = engine.state;
+    if (!document.hidden) {
+      engine.update(dt, emptyInput, emptyInput);
+      scene.gameState = engine.state;
+    }
     animId = requestAnimationFrame(loop);
   };
   animId = requestAnimationFrame(loop);

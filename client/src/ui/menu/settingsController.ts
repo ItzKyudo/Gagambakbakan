@@ -1,5 +1,5 @@
 import { sound } from '../../audio';
-import { defaultKeys, getSettings, saveKeys, saveSettings } from '../../gb';
+import { defaultKeys, getSettings, saveKeys, saveSettings, applyQualityClass, type GraphicQuality } from '../../gb';
 import type { ListeningKey } from './settingsView';
 
 export interface SettingsState {
@@ -73,6 +73,17 @@ export function bindSettingsEvents(container: HTMLElement, state: SettingsState,
       const val = (radio as HTMLInputElement).value as 'easy' | 'normal' | 'hard';
       st.diff = val;
       saveSettings(st);
+      sound.playTone(520, 0.08, 'triangle', 0.04, 160);
+    });
+  });
+
+  // Graphics quality radio
+  container.querySelectorAll('input[name="quality"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      const val = (radio as HTMLInputElement).value as GraphicQuality;
+      st.quality = val;
+      saveSettings(st);
+      applyQualityClass(val);
       sound.playTone(520, 0.08, 'triangle', 0.04, 160);
     });
   });

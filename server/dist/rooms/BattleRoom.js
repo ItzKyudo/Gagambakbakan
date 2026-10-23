@@ -245,7 +245,7 @@ class BattleRoom extends colyseus_1.Room {
         s.face = face;
         s.move = 0;
         s.walkPhase = 0;
-        s.grip = 100;
+        s.grip = 120;
         s.guard = 100;
         s.hang = false;
         s.falling = false;
@@ -266,6 +266,7 @@ class BattleRoom extends colyseus_1.Room {
         s.cd2 = 0;
         s.cd2max = s.skill2 ? (abilities_1.ABILITIES[s.skill2]?.cd || 5) : 0;
         s.snare = 0;
+        s.venom = 0;
         s.dashT = 0;
         s.dashDir = 0;
         s.pounce = false;

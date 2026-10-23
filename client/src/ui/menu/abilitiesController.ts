@@ -147,6 +147,7 @@ export function bindAbilitiesEvents(container: HTMLElement, state: AbilitiesView
   let initialPanY = 0;
   let dragDist = 0;
   let activePointerId: number | null = null;
+  let cachedRatio = 1;
 
   if (stage) {
     stage.addEventListener('pointerdown', (e: PointerEvent) => {
@@ -164,6 +165,8 @@ export function bindAbilitiesEvents(container: HTMLElement, state: AbilitiesView
       initialPanX = state.panX;
       initialPanY = state.panY;
       activePointerId = e.pointerId;
+      const rect = stage.getBoundingClientRect();
+      cachedRatio = 1100 / (rect.width || 1100);
     });
 
     stage.addEventListener('pointermove', (e: PointerEvent) => {
@@ -183,11 +186,8 @@ export function bindAbilitiesEvents(container: HTMLElement, state: AbilitiesView
           }
         }
 
-        const rect = stage.getBoundingClientRect();
-        const ratio = 1100 / (rect.width || 1100);
-
-        state.panX = initialPanX + dx * ratio;
-        state.panY = initialPanY + dy * ratio;
+        state.panX = initialPanX + dx * cachedRatio;
+        state.panY = initialPanY + dy * cachedRatio;
         state.panX = Math.max(-650, Math.min(550, state.panX));
         state.panY = Math.max(-550, Math.min(550, state.panY));
         applyViewport(false);

@@ -1,6 +1,7 @@
 import { sound } from '../audio';
 import { ABILITIES, type AbilityId } from '../game/abilities';
-import { getKeys, keyLabel, getColor, getLooks, getSettings, saveSettings } from '../gb';
+import { MAX_GRIP } from '../game/constants';
+import { getKeys, keyLabel, getColor, getLooks, getSettings, saveSettings, applyQualityClass, type GraphicQuality } from '../gb';
 
 export interface GamePageCallbacks {
   onBackToMenu: () => void;
@@ -29,6 +30,8 @@ export class GamePage {
   private pips2!: HTMLElement;
   private n2!: HTMLElement;
   private w2!: HTMLElement;
+  private lowTint1!: HTMLElement;
+  private lowTint2!: HTMLElement;
 
   private roundLbl!: HTMLElement;
   private hudTimer!: HTMLElement;
@@ -44,8 +47,21 @@ export class GamePage {
   private igmSubtitle!: HTMLElement;
   private igmSfxToggle!: HTMLButtonElement;
   private igmMusicToggle!: HTMLButtonElement;
+  private igmQualityToggle!: HTMLButtonElement;
   private igmBtnResume!: HTMLButtonElement;
   private igmBtnQuit!: HTMLButtonElement;
+
+  // HUD DOM change cache for low-end PC performance
+  private lastColor1: string = '';
+  private lastColor2: string = '';
+  private lastGrip1: number = -1;
+  private lastGuard1: number = -1;
+  private lastGrip2: number = -1;
+  private lastGuard2: number = -1;
+  private lastWins1: number = -1;
+  private lastWins2: number = -1;
+  private lastCd1: [number, number] = [-1, -1];
+  private lastCd2: [number, number] = [-1, -1];
 
   // Draft modal
   private pickModal!: HTMLElement;
@@ -126,6 +142,10 @@ export class GamePage {
         <div class="arena" id="arena">
           <div id="phaserContainer" style="width:100%; height:100%;"></div>
 
+          <!-- LOW-GRIP DANGER TINT (faded red on each fighter's side) -->
+          <div class="low-grip-tint l" id="lowTint1" aria-hidden="true"></div>
+          <div class="low-grip-tint r" id="lowTint2" aria-hidden="true"></div>
+
           <!-- IN-GAME TOP FIGHTER STATUS & HUD -->
           <div class="in-game-hud-overlay">
             <section class="hud in-game-hud" id="hud" aria-label="Match status">
@@ -134,7 +154,6 @@ export class GamePage {
                 <div class="fhead">
                   <i class="swatch"></i>
                   <span class="fname" id="n1">Amber</span>
-                  <span class="who" id="w1">You</span>
                   <span class="pips" id="pips1"><i class="pip"></i><i class="pip"></i></span>
                 </div>
                 <div class="meter grip-meter">
@@ -165,7 +184,7 @@ export class GamePage {
               <div class="fighter p2">
                 <div class="fhead">
                   <span class="pips" id="pips2"><i class="pip"></i><i class="pip"></i></span>
-                  <span class="who" id="w2">CPU</span>
+                  <span class="who" id="w2" style="display:none;"></span>
                   <span class="fname" id="n2">Jade</span>
                   <i class="swatch"></i>
                 </div>
@@ -257,6 +276,14 @@ export class GamePage {
                   </div>
                   <button type="button" class="btn igm-toggle-btn" id="igmMusicToggle">ON</button>
                 </div>
+
+                <div class="igm-setting-row">
+                  <div class="igm-setting-info">
+                    <span class="igm-setting-label">Graphics Quality</span>
+                    <span class="igm-setting-desc">Auto, Low (Fastest), Med, High</span>
+                  </div>
+                  <button type="button" class="btn igm-toggle-btn" id="igmQualityToggle">AUTO</button>
+                </div>
               </div>
 
               <!-- QUICK CONTROLS GUIDE -->
@@ -318,6 +345,8 @@ export class GamePage {
     this.pips2 = container.querySelector('#pips2') as HTMLElement;
     this.n2 = container.querySelector('#n2') as HTMLElement;
     this.w2 = container.querySelector('#w2') as HTMLElement;
+    this.lowTint1 = container.querySelector('#lowTint1') as HTMLElement;
+    this.lowTint2 = container.querySelector('#lowTint2') as HTMLElement;
 
     this.roundLbl = container.querySelector('#roundLbl') as HTMLElement;
     this.hudTimer = container.querySelector('#hudTimer') as HTMLElement;
@@ -333,6 +362,7 @@ export class GamePage {
     this.igmSubtitle = container.querySelector('#igmSubtitle') as HTMLElement;
     this.igmSfxToggle = container.querySelector('#igmSfxToggle') as HTMLButtonElement;
     this.igmMusicToggle = container.querySelector('#igmMusicToggle') as HTMLButtonElement;
+    this.igmQualityToggle = container.querySelector('#igmQualityToggle') as HTMLButtonElement;
     this.igmBtnResume = container.querySelector('#igmBtnResume') as HTMLButtonElement;
     this.igmBtnQuit = container.querySelector('#igmBtnQuit') as HTMLButtonElement;
 
@@ -417,6 +447,18 @@ export class GamePage {
       } else if (!this.isPaused) {
         sound.music.play('duel');
       }
+    });
+
+    // In-game Menu: Graphics quality toggle
+    this.igmQualityToggle?.addEventListener('click', () => {
+      const st = getSettings();
+      const qualities: GraphicQuality[] = ['auto', 'low', 'medium', 'high'];
+      const nextIdx = (qualities.indexOf(st.quality) + 1) % qualities.length;
+      st.quality = qualities[nextIdx];
+      saveSettings(st);
+      applyQualityClass(st.quality);
+      this.updateIgmSettingsUi(st);
+      sound.play('click');
     });
 
     // Escape key toggles in-game menu
@@ -857,10 +899,21 @@ export class GamePage {
   }
 
   /* ---------- LABELS AND ROOM BADGE ---------- */
-  public setLabels(mode: string, diff: string, myId: number = 0) {
+  public setLabels(mode: string, diff: string, _myId: number = 0) {
     this.gameMode = mode;
     this.gemSeen = {};
     this.lastControlsKey = '';
+    this.lastColor1 = '';
+    this.lastColor2 = '';
+    this.lastGrip1 = -1;
+    this.lastGuard1 = -1;
+    this.lastGrip2 = -1;
+    this.lastGuard2 = -1;
+    this.lastWins1 = -1;
+    this.lastWins2 = -1;
+    this.lastCd1 = [-1, -1];
+    this.lastCd2 = [-1, -1];
+
     const looks = getLooks();
     const c1 = getColor(looks.p1.color);
     const c2 = getColor(looks.p2.color);
@@ -871,19 +924,28 @@ export class GamePage {
     this.rootElement.querySelectorAll<HTMLElement>('.p2').forEach(e => e.style.setProperty('--c', mode === 'cpu' ? cpuColor.main : c2.main));
 
     if (mode === 'online') {
-      this.w1.textContent = myId === 0 ? 'You' : 'Opponent';
-      this.w2.textContent = myId === 1 ? 'You' : 'Opponent';
+      if (this.w1) this.w1.style.display = 'none';
+      if (this.w2) this.w2.style.display = 'none';
     } else if (mode === 'cpu') {
-      this.n1.textContent = looks.p1.name || 'You';
-      this.w1.textContent = 'You';
+      this.n1.textContent = looks.p1.name || 'Amber';
+      if (this.w1) this.w1.style.display = 'none';
       this.n2.textContent = cpuName;
-      this.w2.textContent = `CPU · ${diff}`;
+      if (this.w2) {
+        this.w2.textContent = `CPU · ${diff}`;
+        this.w2.style.display = '';
+      }
     } else {
       this.n1.textContent = looks.p1.name || 'Player 1';
-      this.w1.textContent = 'Player 1';
+      if (this.w1) this.w1.style.display = 'none';
       this.n2.textContent = looks.p2.name || 'Player 2';
-      this.w2.textContent = 'Player 2';
+      if (this.w2) this.w2.style.display = 'none';
     }
+  }
+
+  /** Opacity for the faded red side tint: fades in below 35% grip, stronger as grip drops. */
+  private lowGripTint(pct: number, s: any): string {
+    if (s.hang || s.ko || pct >= 35) return '0';
+    return (0.25 + 0.6 * (1 - pct / 35)).toFixed(2);
   }
 
   /* ---------- HUD UPDATES & ABILITY GEMS ---------- */
@@ -894,10 +956,12 @@ export class GamePage {
     const s2 = state.p2;
     const kb = getKeys();
 
-    if (s1.color) {
+    if (s1.color && this.lastColor1 !== s1.color) {
+      this.lastColor1 = s1.color;
       this.rootElement.querySelectorAll<HTMLElement>('.p1').forEach(e => e.style.setProperty('--c', s1.color));
     }
-    if (s2.color) {
+    if (s2.color && this.lastColor2 !== s2.color) {
+      this.lastColor2 = s2.color;
       this.rootElement.querySelectorAll<HTMLElement>('.p2').forEach(e => e.style.setProperty('--c', s2.color));
     }
 
@@ -906,14 +970,34 @@ export class GamePage {
     if (this.n1.textContent !== name1) this.n1.textContent = name1;
     if (this.n2.textContent !== name2) this.n2.textContent = name2;
 
-    // Grip & Guard meters
-    this.grip1.style.width = `${Math.max(0, Math.min(100, s1.grip))}%`;
-    this.guard1.style.width = `${Math.max(0, Math.min(100, s1.guard))}%`;
-    this.gb1.classList.toggle('low', s1.grip < 30);
+    // Grip & Guard meters (DOM caching avoids browser layout thrashing)
+    const g1 = Math.round(Math.max(0, Math.min(100, (s1.grip / MAX_GRIP) * 100)));
+    if (g1 !== this.lastGrip1) {
+      this.lastGrip1 = g1;
+      this.grip1.style.width = `${g1}%`;
+      this.gb1.classList.toggle('low', g1 < 30);
+      this.lowTint1.style.opacity = this.lowGripTint(g1, s1);
+    }
 
-    this.grip2.style.width = `${Math.max(0, Math.min(100, s2.grip))}%`;
-    this.guard2.style.width = `${Math.max(0, Math.min(100, s2.guard))}%`;
-    this.gb2.classList.toggle('low', s2.grip < 30);
+    const gd1 = Math.round(Math.max(0, Math.min(100, s1.guard)));
+    if (gd1 !== this.lastGuard1) {
+      this.lastGuard1 = gd1;
+      this.guard1.style.width = `${gd1}%`;
+    }
+
+    const g2 = Math.round(Math.max(0, Math.min(100, (s2.grip / MAX_GRIP) * 100)));
+    if (g2 !== this.lastGrip2) {
+      this.lastGrip2 = g2;
+      this.grip2.style.width = `${g2}%`;
+      this.gb2.classList.toggle('low', g2 < 30);
+      this.lowTint2.style.opacity = this.lowGripTint(g2, s2);
+    }
+
+    const gd2 = Math.round(Math.max(0, Math.min(100, s2.guard)));
+    if (gd2 !== this.lastGuard2) {
+      this.lastGuard2 = gd2;
+      this.guard2.style.width = `${gd2}%`;
+    }
 
     // Player 1 ability gems (Slot 1 & Slot 2)
     const p1Skills = [s1.skill1 || 'dash', s1.skill2 || ''];
@@ -936,10 +1020,10 @@ export class GamePage {
       const g = j === 0 ? this.g1a : this.g1b;
       const id = p1Skills[j] as AbilityId;
       if (!id || !ABILITIES[id]) {
-        g.style.display = 'none';
+        if (g.style.display !== 'none') g.style.display = 'none';
         return;
       }
-      g.style.display = '';
+      if (g.style.display !== '') g.style.display = '';
 
       const sd = ABILITIES[id];
       const tag = '1' + (j ? 'b' : 'a');
@@ -956,20 +1040,26 @@ export class GamePage {
         g.setAttribute('aria-label', sd.name);
       }
 
-      if (kbEl) {
+      if (kbEl && kbEl.textContent !== keyLabel(bindCode)) {
         kbEl.textContent = keyLabel(bindCode);
       }
 
       const usable = (sd.use === 'hang') === !!s1.hang;
       const cd = p1Cds[j];
       const max = p1CdMax[j] || sd.cd || 1;
-      const pct = Math.max(0, Math.min(100, 100 * cd / max));
-      g.style.setProperty('--cd', `${pct.toFixed(1)}%`);
-      g.classList.toggle('ready', cd <= 0 && usable);
-      g.classList.toggle('off', !usable);
+      const pct = Math.round(Math.max(0, Math.min(100, 100 * cd / max)));
+      const isReady = cd <= 0 && usable;
 
-      if (cdEl) {
-        cdEl.textContent = cd > 0.1 ? (cd >= 10 ? Math.ceil(cd).toString() : cd.toFixed(1)) : '';
+      if (Math.abs(cd - this.lastCd1[j]) > 0.05 || (cd <= 0 !== this.lastCd1[j] <= 0)) {
+        this.lastCd1[j] = cd;
+        g.style.setProperty('--cd', `${pct}%`);
+        g.classList.toggle('ready', isReady);
+        g.classList.toggle('off', !usable);
+
+        if (cdEl) {
+          const txt = cd > 0.1 ? (cd >= 10 ? Math.ceil(cd).toString() : cd.toFixed(1)) : '';
+          if (cdEl.textContent !== txt) cdEl.textContent = txt;
+        }
       }
     });
 
@@ -977,10 +1067,10 @@ export class GamePage {
       const g = j === 0 ? this.g2a : this.g2b;
       const id = p2Skills[j] as AbilityId;
       if (!id || !ABILITIES[id]) {
-        g.style.display = 'none';
+        if (g.style.display !== 'none') g.style.display = 'none';
         return;
       }
-      g.style.display = '';
+      if (g.style.display !== '') g.style.display = '';
 
       const sd = ABILITIES[id];
       const tag = '2' + (j ? 'b' : 'a');
@@ -998,31 +1088,47 @@ export class GamePage {
       }
 
       if (kbEl) {
-        kbEl.textContent = human ? keyLabel(bindCode) : '';
-        kbEl.style.display = human ? 'block' : 'none';
+        const expected = human ? keyLabel(bindCode) : '';
+        if (kbEl.textContent !== expected) kbEl.textContent = expected;
+        const expectedDisplay = human ? 'block' : 'none';
+        if (kbEl.style.display !== expectedDisplay) kbEl.style.display = expectedDisplay;
       }
 
       const usable = (sd.use === 'hang') === !!s2.hang;
       const cd = p2Cds[j];
       const max = p2CdMax[j] || sd.cd || 1;
-      const pct = Math.max(0, Math.min(100, 100 * cd / max));
-      g.style.setProperty('--cd', `${pct.toFixed(1)}%`);
-      g.classList.toggle('ready', cd <= 0 && usable);
-      g.classList.toggle('off', !usable);
+      const pct = Math.round(Math.max(0, Math.min(100, 100 * cd / max)));
+      const isReady = cd <= 0 && usable;
 
-      if (cdEl) {
-        cdEl.textContent = cd > 0.1 ? (cd >= 10 ? Math.ceil(cd).toString() : cd.toFixed(1)) : '';
+      if (Math.abs(cd - this.lastCd2[j]) > 0.05 || (cd <= 0 !== this.lastCd2[j] <= 0)) {
+        this.lastCd2[j] = cd;
+        g.style.setProperty('--cd', `${pct}%`);
+        g.classList.toggle('ready', isReady);
+        g.classList.toggle('off', !usable);
+
+        if (cdEl) {
+          const txt = cd > 0.1 ? (cd >= 10 ? Math.ceil(cd).toString() : cd.toFixed(1)) : '';
+          if (cdEl.textContent !== txt) cdEl.textContent = txt;
+        }
       }
     });
 
-    // Round wins pips
-    const pipsEl1 = this.pips1.children;
-    for (let j = 0; j < pipsEl1.length; j++) {
-      pipsEl1[j].classList.toggle('on', j < (s1.wins || 0));
+    // Round wins pips (only touch classes on actual change)
+    const w1 = s1.wins || 0;
+    if (w1 !== this.lastWins1) {
+      this.lastWins1 = w1;
+      const pipsEl1 = this.pips1.children;
+      for (let j = 0; j < pipsEl1.length; j++) {
+        pipsEl1[j].classList.toggle('on', j < w1);
+      }
     }
-    const pipsEl2 = this.pips2.children;
-    for (let k = 0; k < pipsEl2.length; k++) {
-      pipsEl2[k].classList.toggle('on', k < (s2.wins || 0));
+    const w2 = s2.wins || 0;
+    if (w2 !== this.lastWins2) {
+      this.lastWins2 = w2;
+      const pipsEl2 = this.pips2.children;
+      for (let k = 0; k < pipsEl2.length; k++) {
+        pipsEl2[k].classList.toggle('on', k < w2);
+      }
     }
 
     const roundText = `Round ${state.round || 1}`;
@@ -1108,6 +1214,12 @@ export class GamePage {
 
     this.igmMusicToggle.textContent = st.music ? 'ON' : 'OFF';
     this.igmMusicToggle.classList.toggle('active', !!st.music);
+
+    if (this.igmQualityToggle) {
+      const q = st.quality || 'auto';
+      this.igmQualityToggle.textContent = q.toUpperCase();
+      this.igmQualityToggle.classList.toggle('active', q !== 'auto');
+    }
   }
 
   public togglePause() {

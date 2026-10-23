@@ -94,7 +94,7 @@ html.is-mobile-or-tablet .mobile-blocker {
   display: flex !important;
 }
 
-@media (max-width: 1024px), (hover: none) and (pointer: coarse) {
+@media ((hover: none) and (pointer: coarse)), ((pointer: coarse) and (max-width: 1024px)) {
   body {
     overflow: hidden !important;
     padding: 0 !important;

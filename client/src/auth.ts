@@ -35,7 +35,7 @@ export interface UserProfile {
 
 let currentUser: User | null = null;
 let currentProfile: UserProfile | null = null;
-type AuthListener = () => void;
+export type AuthListener = (event?: string) => void;
 const listeners = new Set<AuthListener>();
 
 export function getAuthUser(): User | null {
@@ -53,8 +53,8 @@ export function subscribeAuth(fn: AuthListener): () => void {
   };
 }
 
-function notify() {
-  listeners.forEach(fn => fn());
+function notify(event?: string) {
+  listeners.forEach(fn => fn(event));
 }
 
 export async function fetchProfile(userId: string): Promise<UserProfile | null> {
@@ -238,16 +238,26 @@ export async function initAuth(): Promise<void> {
     console.warn('Supabase getSession error:', err);
   }
 
-  supabase.auth.onAuthStateChange(async (_event, session) => {
-    currentUser = session?.user || null;
+  supabase.auth.onAuthStateChange(async (event, session) => {
+    const newUser = session?.user || null;
+    const sameUser = Boolean(currentUser?.id && newUser?.id && currentUser.id === newUser.id);
+
+    if (event === 'TOKEN_REFRESHED' && sameUser) {
+      // Token refreshed silently in background; session user hasn't changed.
+      // Do not re-fetch profile or trigger UI re-renders on window blur/focus.
+      currentUser = newUser;
+      return;
+    }
+
+    currentUser = newUser;
     if (currentUser) {
       currentProfile = await fetchProfile(currentUser.id);
       syncNameWithProfile();
     } else {
       currentProfile = null;
-  cachedPodiumStatus = null;
+      cachedPodiumStatus = null;
     }
-    notify();
+    notify(event);
   });
 }
 

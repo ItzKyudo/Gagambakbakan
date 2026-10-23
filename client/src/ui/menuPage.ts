@@ -23,7 +23,8 @@ import { renderProfileView, bindProfileEvents } from './menu/profileView';
 export type { MenuStartOptions } from './menu/menuTypes';
 
 
-export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuStartOptions) => void) {
+export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuStartOptions) => void): () => void {
+  let isDestroyed = false;
   let activeTab: MenuTab = 'main';
   const customizeState: CustomizeState = { player: 'p1', drawColor: '#e8593f' };
   const settingsState: SettingsState = { listeningKey: null };
@@ -33,16 +34,43 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
   let cleanupAccountDemo: (() => void) | null = null;
   const abilitiesState = createAbilitiesViewState();
   const accountState = createAccountState();
+  let lastAuthUserId = getAuthUser()?.id;
 
   initAuth();
-  subscribeAuth(() => {
+  const unsubscribeAuth = subscribeAuth((event) => {
+    if (isDestroyed) return;
+    if (event === 'TOKEN_REFRESHED') return;
+
+    const currentUserId = getAuthUser()?.id;
+
     if (activeTab === 'account' && getAuthUser()) {
+      lastAuthUserId = currentUserId;
       activeTab = 'main';
-    }
-    if (activeTab === 'main' || activeTab === 'account') {
       render();
+      return;
+    }
+
+    if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED' || lastAuthUserId !== currentUserId) {
+      lastAuthUserId = currentUserId;
+      if (activeTab === 'main' || activeTab === 'account') {
+        render();
+      }
     }
   });
+
+  const cleanup = () => {
+    if (isDestroyed) return;
+    isDestroyed = true;
+    unsubscribeAuth();
+    window.removeEventListener('keydown', onWindowKeyDown);
+    cleanupMainDemo?.();
+    cleanupMainDemo = null;
+    cleanupLearnDemo?.();
+    cleanupLearnDemo = null;
+    cleanupAccountDemo?.();
+    cleanupAccountDemo = null;
+    clearAbilitiesKeyHandler(abilitiesState);
+  };
 
   const onStart = (opts: MenuStartOptions) => {
     if (!getAuthUser()) {
@@ -50,11 +78,9 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
       render();
       return;
     }
-    cleanupMainDemo?.();
-    cleanupMainDemo = null;
+    cleanup();
     document.body.classList.remove('main-menu-active', 'abilities-active', 'account-active');
     document.documentElement.classList.remove('main-menu-active', 'abilities-active', 'account-active');
-    clearAbilitiesKeyHandler(abilitiesState);
     rawOnStart(opts);
   };
 
@@ -62,6 +88,7 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
   sound.music.arm('ambient');
 
   function render() {
+    if (isDestroyed) return;
     const optionsCol = container.querySelector<HTMLElement>('.custom-options-column');
     const savedOptionsScroll = optionsCol ? optionsCol.scrollTop : 0;
     const savedWinScroll = typeof window !== 'undefined' ? window.scrollY : 0;
@@ -407,4 +434,6 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
   window.addEventListener('keydown', onWindowKeyDown);
 
   render();
+
+  return cleanup;
 }

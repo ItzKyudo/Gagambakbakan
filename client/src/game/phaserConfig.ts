@@ -43,7 +43,8 @@ export function createPhaserGame(
     fps: {
       target: 60,
       forceSetTimeOut: false
-    }
+    },
+    autoFocus: false
   };
 
   const game = new Phaser.Game(config);

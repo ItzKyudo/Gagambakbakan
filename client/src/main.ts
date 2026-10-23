@@ -41,9 +41,10 @@ function isMobileOrTablet(): boolean {
   const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Tablet|Silk|Kindle|PlayBook/i.test(ua);
   const isIPadOS = /Macintosh/i.test(ua) && navigator.maxTouchPoints > 1;
   const isCoarseNoHover = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+  const isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
   const isSmallScreen = window.matchMedia('(max-width: 1024px)').matches;
 
-  return isMobileUA || isIPadOS || isCoarseNoHover || isSmallScreen;
+  return isMobileUA || isIPadOS || isCoarseNoHover || (isTouchDevice && isSmallScreen);
 }
 
 function syncDeviceAvailability() {
@@ -177,6 +178,8 @@ function clearInputs() {
   abQueueP2[1] = 0;
 }
 
+let currentMenuCleanup: (() => void) | null = null;
+
 function showMainMenu() {
   if (animationFrameId) {
     cancelAnimationFrame(animationFrameId);
@@ -198,9 +201,13 @@ function showMainMenu() {
   touchState.left = touchState.right = touchState.strike = touchState.heavy = touchState.block = false;
   clearInputs();
 
+  currentMenuCleanup?.();
+  currentMenuCleanup = null;
+
   sound.music.play('ambient');
 
-  renderMenuPage(app, (opts) => {
+  currentMenuCleanup = renderMenuPage(app, (opts) => {
+    currentMenuCleanup = null;
     startGame(opts);
   });
 }
@@ -210,6 +217,9 @@ async function startGame(opts: MenuStartOptions) {
     showMainMenu();
     return;
   }
+  currentMenuCleanup?.();
+  currentMenuCleanup = null;
+
   app.innerHTML = '';
 
   gamePage = new GamePage(app, {

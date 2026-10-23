@@ -106,6 +106,11 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
       }
     });
 
+    // Handle voluntary player surrender in online mode
+    this.onMessage('surrender', (client) => {
+      this.handleForfeit(client.sessionId);
+    });
+
     // 60 FPS authoritative server loop, 30 FPS network state broadcast
     let broadcastT = 0;
     this.setSimulationInterval((dtMs) => {
@@ -198,13 +203,10 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
     }
   }
 
-  onLeave(client: Client) {
-    const isP1 = this.battleState.p1.sessionId === client.sessionId;
-    const isP2 = this.battleState.p2.sessionId === client.sessionId;
-    if (isP1) this.battleState.p1.connected = false;
-    if (isP2) this.battleState.p2.connected = false;
-    this.playerInputs.delete(client.sessionId);
-    this.rematchVotes.delete(client.sessionId);
+  private handleForfeit(sessionId: string) {
+    const isP1 = this.battleState.p1.sessionId === sessionId;
+    const isP2 = this.battleState.p2.sessionId === sessionId;
+    if (!isP1 && !isP2) return;
 
     const activeStatuses = ['draft', 'ready', 'fight', 'roundEnd'];
     if (activeStatuses.includes(this.battleState.status)) {
@@ -235,6 +237,20 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
         p2NewRating: p2Delta.newRating,
         forfeit: true
       });
+    }
+  }
+
+  onLeave(client: Client) {
+    const isP1 = this.battleState.p1.sessionId === client.sessionId;
+    const isP2 = this.battleState.p2.sessionId === client.sessionId;
+    if (isP1) this.battleState.p1.connected = false;
+    if (isP2) this.battleState.p2.connected = false;
+    this.playerInputs.delete(client.sessionId);
+    this.rematchVotes.delete(client.sessionId);
+
+    const activeStatuses = ['draft', 'ready', 'fight', 'roundEnd'];
+    if (activeStatuses.includes(this.battleState.status)) {
+      this.handleForfeit(client.sessionId);
       return;
     }
 

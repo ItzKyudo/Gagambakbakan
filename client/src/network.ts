@@ -207,6 +207,12 @@ export class NetworkManager {
     }
   }
 
+  public sendSurrender() {
+    if (this.room) {
+      this.room.send('surrender', {});
+    }
+  }
+
   public sendSelectSkills(skills: string[]) {
     if (this.room) {
       this.room.send('selectSkills', { skills });

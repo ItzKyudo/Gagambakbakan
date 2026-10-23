@@ -214,6 +214,11 @@ async function startGame(opts: MenuStartOptions) {
 
   gamePage = new GamePage(app, {
     onBackToMenu: () => showMainMenu(),
+    onSurrender: () => {
+      if (opts.mode === 'online') {
+        network.sendSurrender();
+      }
+    },
     onPauseToggle: (isPaused) => {
       if (isPaused) sound.music.stop();
       else sound.music.play('duel');

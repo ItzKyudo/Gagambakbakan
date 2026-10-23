@@ -329,6 +329,17 @@ fieldset:disabled .seg span {
   border-color: var(--fg);
 }
 
+.btn.danger {
+  background: var(--danger, #e8593f);
+  border-color: var(--danger, #e8593f);
+  color: #fff;
+}
+
+.btn.danger:hover {
+  background: #ff6b52;
+  border-color: #ff6b52;
+}
+
 .btn.big {
   font-size: 22px;
   padding: 13px 40px;

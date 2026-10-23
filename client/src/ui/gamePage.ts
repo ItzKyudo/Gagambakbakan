@@ -9,12 +9,14 @@ export interface GamePageCallbacks {
   onRematch: () => void;
   onAbilityTrigger: (slot: number) => void; // 0 = Slot 1, 1 = Slot 2
   onTouchInput: (key: 'left' | 'right' | 'strike' | 'heavy' | 'block' | 'reel', active: boolean) => void;
+  onSurrender?: () => void;
 }
 
 export class GamePage {
   public rootElement!: HTMLElement;
   public phaserContainer!: HTMLElement;
   private callbacks: GamePageCallbacks;
+  private lastStateStatus: string = '';
 
   // DOM references
   private grip1!: HTMLElement;
@@ -422,7 +424,11 @@ export class GamePage {
     // In-game Menu: Quit button
     this.igmBtnQuit.addEventListener('click', () => {
       this.closeInGameMenu();
-      this.callbacks.onBackToMenu();
+      if (this.gameMode === 'online' && this.lastStateStatus !== 'matchEnd') {
+        this.showSurrenderConfirmModal();
+      } else {
+        this.callbacks.onBackToMenu();
+      }
     });
 
     // In-game Menu: SFX toggle
@@ -951,6 +957,7 @@ export class GamePage {
   /* ---------- HUD UPDATES & ABILITY GEMS ---------- */
   public updateHud(state: any) {
     if (!state || !state.p1 || !state.p2) return;
+    this.lastStateStatus = state.status || '';
 
     const s1 = state.p1;
     const s2 = state.p2;
@@ -1150,7 +1157,7 @@ export class GamePage {
   }
 
   /* ---------- MODALS & OVERLAYS ---------- */
-  public showModal(title: string, sub: string, buttons: Array<{ label: string; primary?: boolean; onClick: () => void }>, extraHtml?: string) {
+  public showModal(title: string, sub: string, buttons: Array<{ label: string; primary?: boolean; danger?: boolean; onClick: () => void }>, extraHtml?: string) {
     if (this.inGameMenuModal) this.inGameMenuModal.hidden = true;
     this.ovTitle.textContent = title;
     this.ovSub.textContent = sub;
@@ -1174,6 +1181,31 @@ export class GamePage {
     this.overlay.hidden = false;
   }
 
+  public showSurrenderConfirmModal() {
+    this.showModal(
+      'Surrender Match?',
+      'Are you sure you want to surrender? Leaving an active battle will forfeit the match and count as a defeat.',
+      [
+        {
+          label: 'Surrender',
+          danger: true,
+          onClick: () => {
+            this.hideModal();
+            this.callbacks.onSurrender?.();
+            this.callbacks.onBackToMenu();
+          }
+        },
+        {
+          label: 'Keep Fighting',
+          primary: true,
+          onClick: () => {
+            this.hideModal();
+          }
+        }
+      ]
+    );
+  }
+
   public hideModal() {
     this.overlay.hidden = true;
   }
@@ -1190,6 +1222,10 @@ export class GamePage {
     } else {
       this.igmTitle.textContent = 'Game Menu';
       this.igmSubtitle.textContent = 'Match in progress (online matches cannot be paused).';
+      this.igmBtnQuit.textContent = this.lastStateStatus === 'matchEnd' ? 'Quit to Menu' : 'Surrender & Quit';
+    }
+    if (!isOnline) {
+      this.igmBtnQuit.textContent = 'Quit to Menu';
     }
 
     const st = getSettings();

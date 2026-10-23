@@ -424,7 +424,8 @@ export class GamePage {
     // In-game Menu: Quit button
     this.igmBtnQuit.addEventListener('click', () => {
       this.closeInGameMenu();
-      if (this.gameMode === 'online' && this.lastStateStatus !== 'matchEnd') {
+      const isMatchActive = this.lastStateStatus === 'draft' || this.lastStateStatus === 'ready' || this.lastStateStatus === 'fight' || this.lastStateStatus === 'roundEnd';
+      if (this.gameMode === 'online' && isMatchActive) {
         this.showSurrenderConfirmModal();
       } else {
         this.callbacks.onBackToMenu();
@@ -1172,7 +1173,8 @@ export class GamePage {
     buttons.forEach((b) => {
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = `btn ${b.primary ? 'primary' : 'ghost'}`;
+      const variant = b.danger ? 'danger' : (b.primary ? 'primary' : 'ghost');
+      btn.className = `btn ${variant}`;
       btn.textContent = b.label;
       btn.addEventListener('click', b.onClick);
       this.ovBtns.appendChild(btn);
@@ -1190,9 +1192,14 @@ export class GamePage {
           label: 'Surrender',
           danger: true,
           onClick: () => {
-            this.hideModal();
+            this.showModal('Surrendering...', 'Submitting forfeit to server...', []);
             this.callbacks.onSurrender?.();
-            this.callbacks.onBackToMenu();
+            // Fallback timeout in case connection drops before server acknowledges
+            setTimeout(() => {
+              if (this.lastStateStatus !== 'matchEnd') {
+                this.callbacks.onBackToMenu();
+              }
+            }, 2500);
           }
         },
         {
@@ -1222,7 +1229,8 @@ export class GamePage {
     } else {
       this.igmTitle.textContent = 'Game Menu';
       this.igmSubtitle.textContent = 'Match in progress (online matches cannot be paused).';
-      this.igmBtnQuit.textContent = this.lastStateStatus === 'matchEnd' ? 'Quit to Menu' : 'Surrender & Quit';
+      const isMatchActive = this.lastStateStatus === 'draft' || this.lastStateStatus === 'ready' || this.lastStateStatus === 'fight' || this.lastStateStatus === 'roundEnd';
+      this.igmBtnQuit.textContent = isMatchActive ? 'Surrender & Quit' : 'Quit to Menu';
     }
     if (!isOnline) {
       this.igmBtnQuit.textContent = 'Quit to Menu';

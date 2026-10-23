@@ -43,7 +43,7 @@ export function renderCustomizeView(customizePlayer: 'p1' | 'p2', drawColor: str
       </header>
       <p class="note">Build your fighter. Every change saves automatically and carries into battle.</p>
 
-      <div class="customize-rank-banner" style="display:flex; align-items:center; gap:16px; background:rgba(16,28,27,0.85); border:1.5px solid rgba(255,255,255,0.08); border-radius:12px; padding:10px 16px; margin: 0 0 16px 0; max-width:860px; box-shadow: 0 4px 16px rgba(0,0,0,0.3);">
+      <div class="customize-rank-banner" style="display:flex; align-items:center; gap:16px; background:rgba(16,28,27,0.85); border:1.5px solid rgba(255,255,255,0.08); border-radius:12px; padding:10px 16px; margin: 0 0 16px 0; max-width:100%; box-shadow: 0 4px 16px rgba(0,0,0,0.3);">
         <div style="flex-shrink:0; display:flex; align-items:center;">
           ${renderRankBadgeSVG(rankInfo.id, 46)}
         </div>

@@ -226,6 +226,7 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
         this.battleState.p2.rank = getRankFromRating(p2Delta.newRating).id;
       }
 
+      this.broadcast('state', this.battleState);
       this.broadcast('matchEnd', {
         winner: winner.id,
         winnerName: winner.name,
@@ -440,6 +441,7 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
         this.battleState.p2.rank = getRankFromRating(p2Delta.newRating).id;
       }
 
+      this.broadcast('state', this.battleState);
       this.broadcast('matchEnd', {
         winner: this.battleState.winner,
         winnerName: winner.name,

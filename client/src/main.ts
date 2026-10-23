@@ -369,6 +369,7 @@ async function startOnlineGame(opts: MenuStartOptions) {
 
 function getNetworkCallbacks(isRanked: boolean) {
   let matchRecorded = false;
+  let lastHandledStatus = '';
   return {
     onAssigned: (data: { id: number; name: string }) => {
       if (currentScene) currentScene.myPlayerId = data.id;
@@ -388,9 +389,15 @@ function getNetworkCallbacks(isRanked: boolean) {
       if (gamePage) {
         gamePage.updateHud(state);
 
+        const statusChanged = lastHandledStatus !== state.status;
+        lastHandledStatus = state.status;
+
         // Handle drafting phase in online mode
         if (state.status === 'draft') {
-          sound.music.play('ambient');
+          if (statusChanged) {
+            sound.music.play('ambient');
+            gamePage.hideModal();
+          }
           const myId = network.myPlayerId >= 0 ? network.myPlayerId : (currentScene ? currentScene.myPlayerId : 0);
           const myDrafted = myId === 0 ? state.p1Drafted : state.p2Drafted;
           const myChoices = myId === 0 ? state.draftChoicesP1 : state.draftChoicesP2;
@@ -404,11 +411,14 @@ function getNetworkCallbacks(isRanked: boolean) {
           }
         } else if (state.status === 'ready' || state.status === 'fight') {
           onlineDraftSubmitted = false;
-          if (gamePage.isDraftOpen) {
-            gamePage.hideDraftModal();
+          if (statusChanged) {
+            if (gamePage.isDraftOpen) {
+              gamePage.hideDraftModal();
+            }
+            // Dismiss pre-match lobby modal (Connecting... or Waiting for Opponent) when match starts
+            gamePage.hideModal();
+            sound.music.play('duel');
           }
-          gamePage.hideModal();
-          sound.music.play('duel');
         }
       }
     },
@@ -440,6 +450,7 @@ function getNetworkCallbacks(isRanked: boolean) {
       onlineDraftSubmitted = false;
       if (gamePage) {
         if (gamePage.isDraftOpen) gamePage.hideDraftModal();
+        gamePage.closeInGameMenu();
         const myId = network.myPlayerId >= 0 ? network.myPlayerId : (currentScene ? currentScene.myPlayerId : 0);
         const isMe = myId === data.winner;
         const myWins = myId === 0 ? data.p1Wins : data.p2Wins;
@@ -458,9 +469,9 @@ function getNetworkCallbacks(isRanked: boolean) {
           sound.play('power_up');
         }
 
-        const title = isMe ? (data.forfeit ? 'VICTORY BY FORFEIT!' : 'VICTORY!') : 'DEFEAT!';
+        const title = isMe ? (data.forfeit ? 'VICTORY BY FORFEIT!' : 'VICTORY!') : (data.forfeit ? 'DEFEAT BY SURRENDER' : 'DEFEAT!');
         const sub = data.forfeit
-          ? (isMe ? 'Your opponent abandoned the match. Full victory awarded!' : 'Match abandoned.')
+          ? (isMe ? 'Your opponent surrendered the match. Full victory awarded!' : 'You surrendered the match.')
           : `${data.winnerName} won the match (${data.p1Wins} - ${data.p2Wins})!`;
 
         const rewardHtml = `
@@ -517,8 +528,9 @@ function getNetworkCallbacks(isRanked: boolean) {
       }
     },
     onPlayerLeft: () => {
-      if (gamePage && currentScene?.gameState?.status !== 'matchEnd') {
+      if (gamePage && !matchRecorded && currentScene?.gameState?.status !== 'matchEnd') {
         if (gamePage.isDraftOpen) gamePage.hideDraftModal();
+        gamePage.closeInGameMenu();
         gamePage.showModal('Opponent Left', 'Your opponent disconnected from the match.', [
           { label: 'Menu', primary: true, onClick: () => showMainMenu() }
         ]);
@@ -528,8 +540,9 @@ function getNetworkCallbacks(isRanked: boolean) {
       console.error('Room error:', err);
     },
     onDisconnect: () => {
-      if (gamePage) {
+      if (gamePage && !matchRecorded && currentScene?.gameState?.status !== 'matchEnd') {
         if (gamePage.isDraftOpen) gamePage.hideDraftModal();
+        gamePage.closeInGameMenu();
         gamePage.showModal('Disconnected', 'Lost connection to game server.', [
           { label: 'Menu', primary: true, onClick: () => showMainMenu() }
         ]);

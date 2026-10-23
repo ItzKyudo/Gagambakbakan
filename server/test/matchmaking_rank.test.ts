@@ -75,3 +75,21 @@ test('normalizeRankId normalizes legacy and unknown rank strings', () => {
   assert.equal(normalizeRankId('unknown'), 'wolf-spider');
   assert.equal(normalizeRankId(undefined), 'wolf-spider');
 });
+
+test('surrender and forfeit penalties compute expected rating adjustments for both winner and loser', () => {
+  // Tier 1 player forfeiting vs Tier 1 player: loser loses 10 rating, winner gains 25 rating
+  const p1Forfeit = calculateRatingChange(100, false);
+  const p2Winner = calculateRatingChange(100, true);
+  assert.equal(p1Forfeit.delta, -10);
+  assert.equal(p1Forfeit.newRating, 90);
+  assert.equal(p2Winner.delta, 25);
+  assert.equal(p2Winner.newRating, 125);
+
+  // Brown widow tier forfeit: loser loses 20 rating, winner gains 15 rating
+  const bwForfeit = calculateRatingChange(1800, false);
+  const bwWinner = calculateRatingChange(1800, true);
+  assert.equal(bwForfeit.delta, -20);
+  assert.equal(bwForfeit.newRating, 1780);
+  assert.equal(bwWinner.delta, 15);
+  assert.equal(bwWinner.newRating, 1815);
+});

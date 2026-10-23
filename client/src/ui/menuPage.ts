@@ -62,6 +62,10 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
   sound.music.arm('ambient');
 
   function render() {
+    const optionsCol = container.querySelector<HTMLElement>('.custom-options-column');
+    const savedOptionsScroll = optionsCol ? optionsCol.scrollTop : 0;
+    const savedWinScroll = typeof window !== 'undefined' ? window.scrollY : 0;
+
     cleanupMainDemo?.();
     cleanupMainDemo = null;
     cleanupLearnDemo?.();
@@ -173,6 +177,16 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
     `;
 
     bindEvents();
+
+    if (savedOptionsScroll > 0) {
+      const restoredCol = container.querySelector<HTMLElement>('.custom-options-column');
+      if (restoredCol) {
+        restoredCol.scrollTop = savedOptionsScroll;
+      }
+    }
+    if (savedWinScroll > 0 && typeof window !== 'undefined') {
+      window.scrollTo(0, savedWinScroll);
+    }
   }
 
   function renderActiveTab(): string {

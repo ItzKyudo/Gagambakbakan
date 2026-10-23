@@ -4,6 +4,7 @@ import { getColor, getLevel, getLooks, getProgress, getSettings, getUnlockedIds,
 import { network } from '../../network';
 import type { MenuStartOptions, MenuTab } from './menuTypes';
 import { mountDemoFightArena } from './demoArena';
+import { getPlayerRankTitle, getRankFromRating } from './rankTitle';
 
 interface MainMenuActions {
   navigate: (tab: Exclude<MenuTab, 'main'>) => void;
@@ -20,11 +21,20 @@ export function bindMainMenuEvents(container: HTMLElement, actions: MainMenuActi
   const pMain = container.querySelector('#pMain') as HTMLElement;
   const pPlay = container.querySelector('#pPlay') as HTMLElement;
   const pQuit = container.querySelector('#pQuit') as HTMLElement;
+  const playModeBtns = pPlay ? pPlay.querySelectorAll<HTMLButtonElement>('.mb:not(.quiet)') : [];
 
   let queueTimer: any = null;
   let queueSeconds = 0;
   let isQueueing = false;
   let isMatched = false;
+  let isRankedQueue = false;
+
+  const toggleRankCard = (showRank: boolean) => {
+    const spiderCard = container.querySelector<HTMLElement>('#showcaseSpiderCard');
+    const rankCard = container.querySelector<HTMLElement>('#showcaseRankCard');
+    if (spiderCard) spiderCard.style.display = showRank ? 'none' : 'flex';
+    if (rankCard) rankCard.style.display = showRank ? 'flex' : 'none';
+  };
 
   const cancelQueue = (tagNote?: string) => {
     if (!isQueueing && !isMatched) return;
@@ -37,42 +47,62 @@ export function bindMainMenuEvents(container: HTMLElement, actions: MainMenuActi
     queueSeconds = 0;
     network.leave();
 
-    const btn = container.querySelector('#btnModeOnline') as HTMLElement | null;
-    const label = container.querySelector('#onlineBtnLabel') as HTMLElement | null;
-    const tag = container.querySelector('#onlineBtnTag') as HTMLElement | null;
-    const side = container.querySelector('#onlineQueueSide') as HTMLElement | null;
-    const icon = btn?.querySelector('.ico') as HTMLElement | null;
+    const curProg = getProgress();
+    const rInfo = getRankFromRating(curProg.rating);
 
-    if (btn) {
-      btn.classList.remove('queueing', 'matched');
-      btn.title = '';
+    // Reset Online Quick Match button
+    const btnOnline = container.querySelector('#btnModeOnline') as HTMLElement | null;
+    const labelOnline = container.querySelector('#onlineBtnLabel') as HTMLElement | null;
+    const tagOnline = container.querySelector('#onlineBtnTag') as HTMLElement | null;
+    const sideOnline = container.querySelector('#onlineQueueSide') as HTMLElement | null;
+    const iconOnline = btnOnline?.querySelector('.ico') as HTMLElement | null;
+
+    if (btnOnline) {
+      btnOnline.classList.remove('queueing', 'matched');
+      btnOnline.title = '';
     }
-    if (icon) {
-      icon.classList.remove('queue-spin');
+    if (iconOnline) iconOnline.classList.remove('queue-spin');
+    if (labelOnline) labelOnline.innerHTML = 'Multiplayer Online';
+    if (tagOnline) {
+      tagOnline.style.display = 'inline';
+      tagOnline.textContent = !isRankedQueue && tagNote ? tagNote : 'Quick match';
     }
-    if (label) {
-      label.innerHTML = 'Multiplayer Online';
+    if (sideOnline) sideOnline.style.display = 'none';
+
+    // Reset Rank button
+    const btnRank = container.querySelector('#btnModeRank') as HTMLElement | null;
+    const labelRank = container.querySelector('#rankBtnLabel') as HTMLElement | null;
+    const tagRank = container.querySelector('#rankBtnTag') as HTMLElement | null;
+    const sideRank = container.querySelector('#rankQueueSide') as HTMLElement | null;
+    const iconRank = btnRank?.querySelector('.ico') as HTMLElement | null;
+
+    if (btnRank) {
+      btnRank.classList.remove('queueing', 'matched');
+      btnRank.title = '';
     }
-    if (tag) {
-      tag.style.display = 'inline';
-      tag.textContent = tagNote || 'Quick match';
+    if (iconRank) iconRank.classList.remove('queue-spin');
+    if (labelRank) labelRank.innerHTML = 'Rank';
+    if (tagRank) {
+      tagRank.style.display = 'inline';
+      tagRank.textContent = isRankedQueue && tagNote ? tagNote : `Strict same-rank • ${rInfo.title}`;
     }
-    if (side) {
-      side.style.display = 'none';
-    }
+    if (sideRank) sideRank.style.display = 'none';
+
+    isRankedQueue = false;
   };
 
-  const startQueue = async () => {
+  const startQueue = async (ranked: boolean = false) => {
     if (isQueueing || isMatched) return;
     isQueueing = true;
     isMatched = false;
+    isRankedQueue = ranked;
     queueSeconds = 0;
 
-    const btn = container.querySelector('#btnModeOnline') as HTMLElement | null;
-    const label = container.querySelector('#onlineBtnLabel') as HTMLElement | null;
-    const tag = container.querySelector('#onlineBtnTag') as HTMLElement | null;
-    const side = container.querySelector('#onlineQueueSide') as HTMLElement | null;
-    const timer = container.querySelector('#onlineQueueTimer') as HTMLElement | null;
+    const btn = (ranked ? container.querySelector('#btnModeRank') : container.querySelector('#btnModeOnline')) as HTMLElement | null;
+    const label = (ranked ? container.querySelector('#rankBtnLabel') : container.querySelector('#onlineBtnLabel')) as HTMLElement | null;
+    const tag = (ranked ? container.querySelector('#rankBtnTag') : container.querySelector('#onlineBtnTag')) as HTMLElement | null;
+    const side = (ranked ? container.querySelector('#rankQueueSide') : container.querySelector('#onlineQueueSide')) as HTMLElement | null;
+    const timer = (ranked ? container.querySelector('#rankQueueTimer') : container.querySelector('#onlineQueueTimer')) as HTMLElement | null;
     const icon = btn?.querySelector('.ico') as HTMLElement | null;
 
     sound.playTone(600, 0.1, 'triangle', 0.05, 200);
@@ -95,12 +125,16 @@ export function bindMainMenuEvents(container: HTMLElement, actions: MainMenuActi
       timer.textContent = '00:00';
     }
     if (label) {
-      label.innerHTML = '<span class="queue-main-title">Queueing...</span>';
+      const currentProg = getProgress();
+      const rankTitle = getPlayerRankTitle(currentProg.rating);
+      label.innerHTML = ranked
+        ? `<span class="queue-main-title">Searching ${rankTitle}...</span>`
+        : `<span class="queue-main-title">Queueing (${rankTitle})...</span>`;
     }
 
     queueTimer = setInterval(() => {
       queueSeconds++;
-      const currentTimer = container.querySelector('#onlineQueueTimer');
+      const currentTimer = ranked ? container.querySelector('#rankQueueTimer') : container.querySelector('#onlineQueueTimer');
       if (currentTimer) currentTimer.textContent = formatQueueTime(queueSeconds);
     }, 1000);
 
@@ -132,6 +166,7 @@ export function bindMainMenuEvents(container: HTMLElement, actions: MainMenuActi
         const col = getColor(lks.p1.color);
         actions.start({
           mode: 'online',
+          isRanked: ranked,
           diff: st.diff,
           playerName: lks.p1.name,
           playerColor: { main: col.main, light: col.light, dark: col.dark },
@@ -156,6 +191,9 @@ export function bindMainMenuEvents(container: HTMLElement, actions: MainMenuActi
         customPattern: looks.p1.customPattern || '',
         acc: looks.p1.acc || 'none',
         level: myLvl,
+        rank: prog.rank || 'wolf-spider',
+        rating: Number.isFinite(prog.rating) ? prog.rating : 0,
+        isRanked: ranked,
         unlockedSkills: getUnlockedIds(prog)
       };
 
@@ -209,6 +247,19 @@ export function bindMainMenuEvents(container: HTMLElement, actions: MainMenuActi
     pMain.hidden = true;
     pPlay.hidden = false;
     pQuit.hidden = true;
+    toggleRankCard(true);
+    playModeBtns.forEach(b => b.classList.remove('selected'));
+    const rankBtn = container.querySelector<HTMLButtonElement>('#btnModeRank');
+    if (rankBtn) {
+      rankBtn.classList.add('selected');
+      rankBtn.focus();
+    }
+  });
+
+  container.querySelector('#btnGoLeaderboard')?.addEventListener('click', () => {
+    cancelQueue();
+    sound.playTone(520, 0.08, 'triangle', 0.05, 200);
+    actions.navigate('leaderboard');
   });
 
   container.querySelector('#btnGoLearn')?.addEventListener('click', () => {
@@ -221,13 +272,6 @@ export function bindMainMenuEvents(container: HTMLElement, actions: MainMenuActi
     cancelQueue();
     sound.playTone(520, 0.08, 'triangle', 0.05, 200);
     actions.navigate('about');
-  });
-
-  container.querySelector('#btnGoAccount')?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    cancelQueue();
-    sound.playTone(520, 0.08, 'triangle', 0.05, 200);
-    actions.navigate('account');
   });
 
   container.querySelector('#btnGoAbilities')?.addEventListener('click', () => {
@@ -255,6 +299,7 @@ export function bindMainMenuEvents(container: HTMLElement, actions: MainMenuActi
     sound.playTone(440, 0.08, 'triangle', 0.04, -100);
     pMain.hidden = false;
     pPlay.hidden = true;
+    toggleRankCard(false);
   });
 
   container.querySelector('#btnQuitBack')?.addEventListener('click', () => {
@@ -262,6 +307,7 @@ export function bindMainMenuEvents(container: HTMLElement, actions: MainMenuActi
     sound.playTone(440, 0.08, 'triangle', 0.04, -100);
     pMain.hidden = false;
     pQuit.hidden = true;
+    toggleRankCard(false);
   });
 
   // Quick customize from character display
@@ -272,7 +318,18 @@ export function bindMainMenuEvents(container: HTMLElement, actions: MainMenuActi
   };
   container.querySelector('#showcaseStage')?.addEventListener('click', openCustomize);
   container.querySelector('#btnQuickCustomize')?.addEventListener('click', openCustomize);
-  container.querySelector('#badgeQuickCustomize')?.addEventListener('click', openCustomize);
+
+  // View profile from character card
+  const openProfile = () => {
+    cancelQueue();
+    sound.playTone(520, 0.08, 'triangle', 0.05, 200);
+    actions.navigate('profile');
+  };
+  container.querySelector('#badgeViewProfile')?.addEventListener('click', openProfile);
+  container.querySelector('#btnViewProfile')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openProfile();
+  });
 
   // Level card opens abilities
   container.querySelector('.menu-level-card')?.addEventListener('click', () => {
@@ -282,6 +339,16 @@ export function bindMainMenuEvents(container: HTMLElement, actions: MainMenuActi
   });
 
   // Play Modes
+  playModeBtns.forEach(btn => {
+    btn.addEventListener('mouseenter', () => {
+      playModeBtns.forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+    });
+    btn.addEventListener('focus', () => {
+      playModeBtns.forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+    });
+  });
   container.querySelector('#btnModeCpu')?.addEventListener('click', () => {
     cancelQueue();
     if (!getAuthUser()) {
@@ -326,18 +393,39 @@ export function bindMainMenuEvents(container: HTMLElement, actions: MainMenuActi
     });
   });
 
-  // Online Multiplayer Button
+  // Ranked Match Button (Strict Same-Rank Pairing)
+  container.querySelector('#btnModeRank')?.addEventListener('click', () => {
+    if (!getAuthUser()) {
+      actions.navigate('account');
+      return;
+    }
+    if (isQueueing) {
+      sound.playTone(440, 0.08, 'triangle', 0.04, -100);
+      cancelQueue();
+    } else if (!isMatched) {
+      startQueue(true);
+    }
+  });
+
+  container.querySelector('#btnCancelRankQueue')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (isQueueing) {
+      sound.playTone(440, 0.08, 'triangle', 0.04, -100);
+      cancelQueue();
+    }
+  });
+
+  // Online Multiplayer Quick Match Button
   container.querySelector('#btnModeOnline')?.addEventListener('click', () => {
     if (!getAuthUser()) {
       actions.navigate('account');
       return;
     }
     if (isQueueing) {
-      // Clicking button while queueing cancels the queue
       sound.playTone(440, 0.08, 'triangle', 0.04, -100);
       cancelQueue();
     } else if (!isMatched) {
-      startQueue();
+      startQueue(false);
     }
   });
 

@@ -1,10 +1,14 @@
-import { getColor, getLooks } from '../../gb';
+import { getColor, getLooks, getBattlefieldsData } from '../../gb';
+import { getRankFromRating, renderRankBadgeSVG, RANK_RATING_LABEL } from './rankTitle';
 import { network } from '../../network';
 import type { MenuStartOptions } from './menuTypes';
 
 export function renderOnlineModal(isOpen: boolean): string {
   if (!isOpen) return '';
   const serverHost = network.serverUrl.replace(/^https?:\/\//, '').replace(/^wss?:\/\//, '').replace(/\/.*$/, '');
+  const stats = getBattlefieldsData();
+  const rank = getRankFromRating(stats.rating);
+
   return `
     <div class="pick" style="z-index:90; padding:20px;" role="dialog" aria-modal="true">
       <div class="pick-in" style="max-width:440px; margin:auto; background:var(--surface); border:2px solid var(--line); border-radius:12px; padding:24px; gap:16px;">
@@ -15,10 +19,28 @@ export function renderOnlineModal(isOpen: boolean): string {
             <span>Online</span>
           </div>
         </div>
-        <p class="note" style="margin:0;">Duel players worldwide with automatic matchmaking.</p>
+
+        <!-- RANK & BATTLEFIELDS TIER INFO -->
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:8px;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            ${renderRankBadgeSVG(rank.id, 42)}
+            <div>
+              <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em;">Your Rank Tier</div>
+              <div style="font-size:15px; font-weight:700; color:${rank.badgeCol};">${rank.title}</div>
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em;">Rating &amp; Win Rate</div>
+            <div style="font-size:13px; font-weight:700; color:var(--fg);">${stats.rating} ${RANK_RATING_LABEL} &bull; ${stats.winRate}%</div>
+          </div>
+        </div>
+
+        <p class="note" style="margin:0; font-size:12px;">
+          Matchmaking pairs you <strong>strictly with players of the same rank</strong> (${rank.title}). EXP earned unlocks skills on the Abilities Web.
+        </p>
 
         <div style="display:grid; gap:10px;">
-          <button type="button" class="btn primary" id="btnOnlineQuick">Quick Match</button>
+          <button type="button" class="btn primary" id="btnOnlineQuick">Enter Matchmaking (${rank.title})</button>
         </div>
 
         <div style="font-size:11px; color:var(--muted); text-align:center; opacity:0.85;">

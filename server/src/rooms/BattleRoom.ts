@@ -27,6 +27,9 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
   private rematchVotes: Set<string> = new Set();
 
   onCreate(options: any) {
+    const roomRank = typeof options?.rank === 'string' ? options.rank : 'wolf-spider';
+    const isRanked = Boolean(options?.isRanked);
+    this.setMetadata({ rank: roomRank, isRanked });
     this.battleState = {
       mode: 'pvp',
       status: 'waiting',
@@ -121,6 +124,8 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
     s.customPattern = s.customPattern || '';
     s.acc = s.acc || 'none';
     s.level = s.level || 1;
+    s.rank = s.rank || 'wolf-spider';
+    s.rating = Number.isFinite(s.rating) ? s.rating : 0;
     s.connected = false;
     s.sessionId = s.sessionId || '';
     s.skill1 = s.skill1 || 'dash';
@@ -144,6 +149,13 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
     
     const lvl = Math.max(1, Math.min(100, parseInt(options.level, 10) || 1));
     player.level = lvl;
+    if (typeof options.rank === 'string' && ['wolf-spider', 'huntsman-spider', 'philippine-tarantula', 'brown-widow', 'novice', 'brawler', 'striker', 'weaver', 'duelist', 'master', 'grandmaster'].includes(options.rank)) {
+      player.rank = options.rank;
+    }
+    if (Number.isFinite(options.rating)) {
+      player.rating = Number(options.rating);
+    }
+    player.isRanked = Boolean(options.isRanked);
     player.unlockedSkills = validateUnlockedSkills(options.unlockedSkills, lvl);
 
     this.playerInputs.set(client.sessionId, {

@@ -1,11 +1,17 @@
 import { sound } from '../../audio';
-import { ACCS, COLORS, PATTERNS, accessorySVG, getLooks, spiderSVG } from '../../gb';
+import { ACCS, COLORS, PATTERNS, accessorySVG, getBattlefieldsData, getLooks, getProgress, spiderSVG } from '../../gb';
+import { getRankFromRating, getRankProgress, renderRankBadgeSVG, RANK_RATING_LABEL } from './rankTitle';
 
 export function renderCustomizeView(customizePlayer: 'p1' | 'p2', drawColor: string): string {
   const looks = getLooks();
   const lk = looks[customizePlayer];
+  const name = lk.name.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]!));
   const patternLabel = PATTERNS.find(([id]) => id === lk.pattern)?.[1];
   const accessoryLabel = ACCS.find(([id]) => id === lk.acc)?.[1];
+  const prog = getProgress();
+  const stats = getBattlefieldsData(prog);
+  const rankInfo = getRankFromRating(stats.rating);
+  const rankProgress = getRankProgress(stats.rating);
 
   return `
     <div class="page customize-page">
@@ -18,6 +24,21 @@ export function renderCustomizeView(customizePlayer: 'p1' | 'p2', drawColor: str
       </header>
       <p class="note">Build your fighter. Every change saves automatically and carries into battle.</p>
 
+      <div class="customize-rank-banner" style="display:flex; align-items:center; gap:16px; background:rgba(16,28,27,0.85); border:1.5px solid rgba(255,255,255,0.08); border-radius:12px; padding:10px 16px; margin: 0 0 16px 0; max-width:860px; box-shadow: 0 4px 16px rgba(0,0,0,0.3);">
+        <div style="flex-shrink:0; display:flex; align-items:center;">
+          ${renderRankBadgeSVG(rankInfo.id, 46)}
+        </div>
+        <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:5px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; font-family:var(--label); font-size:12px;">
+            <span style="font-weight:800; color:${rankInfo.badgeCol}; text-transform:uppercase; letter-spacing:0.06em;">${rankInfo.species} &mdash; ${rankInfo.title} &bull; ${stats.rating} ${RANK_RATING_LABEL}</span>
+            <span style="font-size:11px; color:var(--muted);">${rankProgress.nextRank ? `${rankProgress.ratingInTier} / ${rankProgress.ratingForTier} ${RANK_RATING_LABEL} to ${rankProgress.nextRank.title}` : 'Peak Tier'}</span>
+          </div>
+          <div style="width:100%; height:7px; background:rgba(0,0,0,0.45); border-radius:5px; overflow:hidden; border:1px solid rgba(255,255,255,0.08);">
+            <div style="height:100%; width:${rankProgress.progressPct}%; background:${rankInfo.badgeCol}; border-radius:5px; box-shadow:0 0 8px rgba(242,163,58,0.3);"></div>
+          </div>
+        </div>
+      </div>
+
       <section class="custom" aria-label="Customize your spider">
         <div class="tabs" role="group" aria-label="Which player">
           <button type="button" id="tabP1" aria-selected="${customizePlayer === 'p1'}">Player 1</button>
@@ -25,17 +46,17 @@ export function renderCustomizeView(customizePlayer: 'p1' | 'p2', drawColor: str
         </div>
 
         <div class="custom-preview-column">
-          <div class="preview ${lk.pattern === 'custom' ? 'pattern-editing' : ''}" id="preview" role="img" aria-label="${lk.name}, ${patternLabel} pattern, ${accessoryLabel} accessory" ${lk.pattern === 'custom' ? 'aria-describedby="patternHelp"' : ''}>
+          <div class="preview ${lk.pattern === 'custom' ? 'pattern-editing' : ''}" id="preview" role="img" aria-label="${name}, ${patternLabel} pattern, ${accessoryLabel} accessory" ${lk.pattern === 'custom' ? 'aria-describedby="patternHelp"' : ''}>
             ${spiderSVG(lk, '-cust')}
             <div class="preview-caption" aria-hidden="true">
-              <strong>${lk.name}</strong>
+              <strong>${name}</strong>
               <span>${patternLabel} &middot; ${accessoryLabel}</span>
             </div>
           </div>
 
           <div class="field">
             <label class="lbl" for="nm">Fighter name</label>
-            <input type="text" id="nm" value="${lk.name}" maxlength="10" autocomplete="off" spellcheck="false">
+            <input type="text" id="nm" value="${name}" maxlength="10" autocomplete="off" spellcheck="false">
           </div>
 
           <fieldset class="field">

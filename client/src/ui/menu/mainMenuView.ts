@@ -1,7 +1,7 @@
-import { createElement, BookOpen, GraduationCap, Settings, User, LogIn, type IconNode } from 'lucide';
-import { getColor, getExpProgress, getLooks, getProgress, getSettings, getUnlockedIds, spiderSVG } from '../../gb';
+import { createElement, BookOpen, GraduationCap, Settings, LogIn, type IconNode } from 'lucide';
+import { getColor, getExpProgress, getLooks, getProgress, getSettings, getUnlockedIds, spiderSVG, getBattlefieldsData } from '../../gb';
 import { SKILLS_LIST } from '../../game/abilities';
-import { getPlayerRankTitle } from './rankTitle';
+import { getRankFromRating, getRankProgress, renderRankBadgeSVG, RANK_RATING_LABEL } from './rankTitle';
 import { getAuthUser } from '../../auth';
 
 function icon(node: IconNode, attrs: Record<string, string | number> = {}): string {
@@ -19,17 +19,19 @@ export function renderMainMenuView(): string {
   const expInfo = getExpProgress(prog.onlineExp);
   const unlockedCount = getUnlockedIds(prog).length;
 
-  const onlineWins = prog.onlineWins || 0;
-  const onlinePlayed = prog.onlinePlayed || 0;
-  const onlineLosses = Math.max(0, onlinePlayed - onlineWins);
-  const offlineWins = prog.wins || 0;
-  const offlinePlayed = prog.played || 0;
-  const offlineLosses = Math.max(0, offlinePlayed - offlineWins);
+  const stats = getBattlefieldsData(prog);
+  const rankInfo = getRankFromRating(stats.rating);
+  const rankProgress = getRankProgress(stats.rating);
 
-  const totalWins = onlineWins + offlineWins;
-  const totalPlayed = onlinePlayed + offlinePlayed;
-  const totalLosses = onlineLosses + offlineLosses;
-  const winRate = totalPlayed > 0 ? Math.round((totalWins / totalPlayed) * 100) : 0;
+
+
+
+
+
+
+
+
+
 
   return `
     <!-- TOP CENTER TITLE WITH NO CONTAINER -->
@@ -64,6 +66,11 @@ export function renderMainMenuView(): string {
               <small id="abCount">Level ${expInfo.level} &middot; ${unlockedCount} of ${SKILLS_LIST.length} unlocked</small>
             </button>
           ` : ''}
+          <button type="button" class="mb" id="btnGoLeaderboard">
+            <span class="mi"><svg class="ico" aria-hidden="true"><use href="#ic-rank"/></svg></span>
+            <span class="ml">Leaderboard</span>
+            <small>Highest level &amp; rank</small>
+          </button>
           <button type="button" class="mb" id="btnGoLearn">
             <span class="mi">${icon(GraduationCap, { class: 'ico', width: 20, height: 20, 'stroke-width': 2.1 })}</span>
             <span class="ml">Learn</span>
@@ -83,7 +90,16 @@ export function renderMainMenuView(): string {
 
         <nav class="panel" id="pPlay" aria-label="Choose a mode" hidden>
           <h2>Play</h2>
-          <button type="button" class="mb primary" id="btnModeCpu">
+          <button type="button" class="mb selected" id="btnModeRank">
+            <span class="mi"><svg class="ico"><use href="#ic-rank"/></svg></span>
+            <span class="ml" id="rankBtnLabel">Rank</span>
+            <small id="rankBtnTag">Strict same-rank &bull; ${rankInfo.title}</small>
+            <div class="online-queue-side" id="rankQueueSide" style="display:none;">
+              <span class="queue-timer-val" id="rankQueueTimer">00:00</span>
+              <span class="queue-cancel-x" id="btnCancelRankQueue" title="Cancel Queue" aria-label="Cancel queue">✕</span>
+            </div>
+          </button>
+          <button type="button" class="mb" id="btnModeCpu">
             <span class="mi"><svg class="ico"><use href="#ic-cpu"/></svg></span>
             <span class="ml">vs AI</span>
             <small id="diffNote">${st.diff.charAt(0).toUpperCase() + st.diff.slice(1)} diff</small>
@@ -121,20 +137,17 @@ export function renderMainMenuView(): string {
       <!-- FAR RIGHT: CHARACTER DISPLAY (ONLY WHEN LOGGED IN) -->
       ${user ? `
         <aside class="showcase menu-right-col" aria-label="Your spider">
-          <div class="showcase-card">
-            <!-- 1. SPIDER NAME & IDENTITY (MOVED ABOVE SPIDER DISPLAY) -->
-            <div class="showcase-id-badge" id="badgeQuickCustomize" role="button" tabindex="0" title="Click to customize your spider" style="--badge-c:${getColor(looks.p1.color).main};">
+          <div class="showcase-card" id="showcaseSpiderCard">
+            <!-- 1. SPIDER NAME & IDENTITY (OPENS PROFILE) -->
+            <div class="showcase-id-badge" id="badgeViewProfile" role="button" tabindex="0" title="Click to view profile &amp; battle history" style="--badge-c:${getColor(looks.p1.color).main};">
               <div class="sib-header">
                 <i class="sib-dot" style="background:${getColor(looks.p1.color).main}; box-shadow: 0 0 10px ${getColor(looks.p1.color).main};"></i>
                 <span class="sib-name" id="showcaseName">${looks.p1.name}</span>
+                <button type="button" class="sib-view-profile" id="btnViewProfile" title="View profile &amp; battle stats">View Profile &rsaquo;</button>
                 <span class="sib-lvl-badge">LVL ${expInfo.level}</span>
-                <button type="button" class="btn ghost btn-account-pill" id="btnGoAccount" title="Account" style="margin-left:auto; padding:2px 8px; font-size:11px; height:24px; border-radius:12px; gap:4px; border-color:rgba(76,199,178,0.3); color:var(--jade);">
-                  ${icon(User, { width: 12, height: 12, 'stroke-width': 2.5 })}
-                  <span>Account</span>
-                </button>
               </div>
               <div class="sib-sub">
-                <span class="sib-rank">${getPlayerRankTitle(expInfo.level)}</span>
+                <span class="sib-rank" style="color:${rankInfo.badgeCol};">${rankInfo.species} &bull; ${rankInfo.title} (${stats.rating} ${RANK_RATING_LABEL})</span>
                 <span class="sib-color-label" style="color:${getColor(looks.p1.color).light};">${getColor(looks.p1.color).label}</span>
               </div>
             </div>
@@ -153,21 +166,21 @@ export function renderMainMenuView(): string {
             </div>
 
             <!-- 3. WINS & LOST STATS (BELOW SPIDER CHARACTER DISPLAY) -->
-            <div class="showcase-stats-card" title="Total Matches: ${totalPlayed} (${onlinePlayed} Online, ${offlinePlayed} Offline)">
+            <div class="showcase-stats-card" title="Battlefield Stats: ${stats.played} Matches (${stats.wins}W - ${stats.losses}L)">
               <div class="ssc-main">
                 <div class="ssc-stat ssc-wins">
                   <span class="ssc-label">Wins</span>
-                  <span class="ssc-val wins-val">${totalWins}</span>
+                  <span class="ssc-val wins-val">${stats.wins}</span>
                 </div>
                 <div class="ssc-divider"></div>
                 <div class="ssc-stat ssc-lost">
                   <span class="ssc-label">Lost</span>
-                  <span class="ssc-val lost-val">${totalLosses}</span>
+                  <span class="ssc-val lost-val">${stats.losses}</span>
                 </div>
                 <div class="ssc-divider"></div>
                 <div class="ssc-stat ssc-winrate">
                   <span class="ssc-label">Win Rate</span>
-                  <span class="ssc-val rate-val">${winRate}%</span>
+                  <span class="ssc-val rate-val">${stats.winRate}%</span>
                 </div>
               </div>
             </div>
@@ -184,6 +197,56 @@ export function renderMainMenuView(): string {
               <div class="mlc-sub">
                 <span class="mlc-prog-label">Skill Mastery</span>
                 <span class="mlc-skills-count">${unlockedCount} / ${SKILLS_LIST.length} Unlocked &rsaquo;</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="showcase-card rank-showcase-card" id="showcaseRankCard" style="display:none;">
+            <!-- 1. RANK CARD HEADER -->
+            <div class="rank-card-header">
+              <span class="rch-badge" style="background:${rankInfo.badgeCol};">CURRENT RANK</span>
+              <h2 class="rch-title" style="color:${rankInfo.badgeCol};">${rankInfo.title}</h2>
+              <span class="rch-mmr">${stats.rating} ${RANK_RATING_LABEL} &bull; ${rankInfo.species}</span>
+            </div>
+
+            <!-- 2. RANK BADGE EMBLEM -->
+            <div class="rank-emblem-wrap">
+              <div class="rank-emblem-glow" style="background:${rankInfo.badgeCol};"></div>
+              ${renderRankBadgeSVG(rankInfo.id, 120)}
+            </div>
+
+            <!-- 3. RANK PROGRESSION TOWARDS NEXT TIER -->
+            <div class="rank-progress-card">
+              <div class="rpc-header">
+                <span class="rpc-label">Rank Progress</span>
+                <span class="rpc-val">${rankProgress.nextRank ? `${rankProgress.ratingInTier} / ${rankProgress.ratingForTier} ${RANK_RATING_LABEL}` : 'MAX RANK'}</span>
+              </div>
+              <div class="rpc-track">
+                <div class="rpc-fill" style="width:${rankProgress.progressPct}%; background:${rankInfo.badgeCol};"></div>
+              </div>
+              <div class="rpc-sub">
+                <span>${rankInfo.title}</span>
+                <span>${rankProgress.nextRank ? rankProgress.nextRank.title : "Death's Empress"}</span>
+              </div>
+            </div>
+
+            <!-- 4. BATTLEFIELDS RECORD (WINS, LOSSES, WIN RATE) -->
+            <div class="showcase-stats-card" title="Battlefield Stats: ${stats.played} Matches (${stats.wins}W - ${stats.losses}L)">
+              <div class="ssc-main">
+                <div class="ssc-stat ssc-wins">
+                  <span class="ssc-label">Wins</span>
+                  <span class="ssc-val wins-val">${stats.wins}</span>
+                </div>
+                <div class="ssc-divider"></div>
+                <div class="ssc-stat ssc-lost">
+                  <span class="ssc-label">Lost</span>
+                  <span class="ssc-val lost-val">${stats.losses}</span>
+                </div>
+                <div class="ssc-divider"></div>
+                <div class="ssc-stat ssc-winrate">
+                  <span class="ssc-label">Win Rate</span>
+                  <span class="ssc-val rate-val">${stats.winRate}%</span>
+                </div>
               </div>
             </div>
           </div>

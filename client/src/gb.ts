@@ -5,6 +5,7 @@ import {
   type AbilityId,
   shuffle
 } from './game/abilities';
+import { calculateRatingDelta, getRankFromRating, type SpiderRankId } from './ui/menu/rankTitle';
 import { decodePatternArt } from './patternArt';
 import bgMusicMenuUrl from './assets/musics/bg-music-menu.mp3';
 import bgMusicGameplayUrl from './assets/musics/bg-music-gameplay.mp3';
@@ -53,14 +54,34 @@ export interface PlayerKeys {
   p2: KeyBindings;
 }
 
+export interface BattlefieldStats {
+  played: number;
+  wins: number;
+  losses: number;
+  winRate: number;
+  rating: number;
+  rank: SpiderRankId;
+  rankTitle: string;
+}
+
 export interface ProgressData {
   played: number;
   wins: number;
+  losses: number;
+  winRate: number;
+  rating: number;
+  rank: SpiderRankId;
+  onlineLosses: number;
   unlockAll: boolean;
   onlineExp: number;
   onlinePlayed: number;
   onlineWins: number;
   unlockedSkills?: string[];
+}
+
+let onDataPersistHook: (() => void) | null = null;
+export function registerDataPersistHook(fn: () => void): void {
+  onDataPersistHook = fn;
 }
 
 const PFX = 'gb-';
@@ -249,6 +270,7 @@ export function getLooks(): { p1: SpiderLook; p2: SpiderLook } {
 
 export function saveLooks(l: { p1: SpiderLook; p2: SpiderLook }): void {
   lsSet('looks', l);
+  onDataPersistHook?.();
 }
 
 export function randomLook(): SpiderLook {
@@ -661,6 +683,13 @@ export function getProgress(): ProgressData {
       }
     }
   }
+  const played = Math.max(0, (p.played ?? p.onlinePlayed) | 0);
+  const wins = Math.max(0, (p.wins ?? p.onlineWins) | 0);
+  const losses = Math.max(0, (p.losses ?? Math.max(0, played - wins)) | 0);
+  const winRate = played > 0 ? Math.round((wins / played) * 100) : 0;
+  const rating = Number.isFinite(p.rating) ? Math.max(0, p.rating) : 0;
+  const rank = getRankFromRating(rating).id;
+
   if (unlockedSkills.length === 1) {
     (['web', 'surge'] as AbilityId[]).forEach(d => {
       if (unlockedSkills.length < maxSkills && isNodeAvailableToUnlock(d, unlockedSkills as AbilityId[])) {
@@ -670,8 +699,13 @@ export function getProgress(): ProgressData {
   }
 
   return {
-    played: Math.max(0, p.played | 0),
-    wins: Math.max(0, p.wins | 0),
+    played,
+    wins,
+    losses,
+    winRate,
+    rating,
+    rank,
+    onlineLosses: Math.max(0, (p.onlineLosses ?? Math.max(0, (p.onlinePlayed | 0) - (p.onlineWins | 0))) | 0),
     unlockAll: !!p.unlockAll,
     onlineExp,
     onlinePlayed: Math.max(0, p.onlinePlayed | 0),
@@ -682,6 +716,7 @@ export function getProgress(): ProgressData {
 
 export function saveProgress(p: ProgressData): void {
   lsSet('progress', p);
+  onDataPersistHook?.();
 }
 
 export function getAbilityPoints(p?: ProgressData): { total: number; spent: number; available: number } {
@@ -748,10 +783,29 @@ export function respecWeb(): void {
   saveProgress(p);
 }
 
+export function getBattlefieldsData(p?: ProgressData): BattlefieldStats {
+  p = p || getProgress();
+  const rank = getRankFromRating(p.rating);
+  return {
+    played: p.played,
+    wins: p.wins,
+    losses: p.losses,
+    winRate: p.winRate,
+    rating: p.rating,
+    rank: rank.id,
+    rankTitle: rank.title
+  };
+}
+
 export function recordMatch(won: boolean): void {
   const p = getProgress();
   p.played++;
-  if (won) p.wins++;
+  if (won) {
+    p.wins++;
+  } else {
+    p.losses++;
+  }
+  p.winRate = p.played > 0 ? Math.round((p.wins / p.played) * 100) : 0;
   saveProgress(p);
 }
 
@@ -765,6 +819,15 @@ export interface OnlineMatchReward {
   leveledUp: boolean;
   pointsGained: number;
   progress: ExpProgressInfo;
+  oldRating: number;
+  newRating: number;
+  ratingChange: number;
+  rank: SpiderRankId;
+  rankTitle: string;
+  totalPlayed: number;
+  totalWins: number;
+  totalLosses: number;
+  winRate: number;
 }
 
 export function recordOnlineMatch(won: boolean, myRoundsWon: number): OnlineMatchReward {
@@ -779,7 +842,24 @@ export function recordOnlineMatch(won: boolean, myRoundsWon: number): OnlineMatc
 
   p.onlineExp += expGained;
   p.onlinePlayed++;
-  if (won) p.onlineWins++;
+  p.played++;
+  if (won) {
+    p.onlineWins++;
+    p.wins++;
+  } else {
+    p.onlineLosses++;
+    p.losses++;
+  }
+  p.winRate = p.played > 0 ? Math.round((p.wins / p.played) * 100) : 0;
+
+  // Competitive rank rating calculation (separate from ability unlocking EXP)
+  const oldRating = Number.isFinite(p.rating) ? Math.max(0, p.rating) : 0;
+  const { newRating, delta: ratingChange } = calculateRatingDelta(oldRating, won);
+
+
+  p.rating = newRating;
+  const currentRank = getRankFromRating(newRating);
+  p.rank = currentRank.id;
   saveProgress(p);
 
   const newLevel = getLevel(p.onlineExp);
@@ -795,7 +875,16 @@ export function recordOnlineMatch(won: boolean, myRoundsWon: number): OnlineMatc
     newLevel,
     leveledUp,
     pointsGained,
-    progress: getExpProgress(p.onlineExp)
+    progress: getExpProgress(p.onlineExp),
+    oldRating,
+    newRating,
+    ratingChange,
+    rank: currentRank.id,
+    rankTitle: currentRank.title,
+    totalPlayed: p.played,
+    totalWins: p.wins,
+    totalLosses: p.losses,
+    winRate: p.winRate
   };
 }
 

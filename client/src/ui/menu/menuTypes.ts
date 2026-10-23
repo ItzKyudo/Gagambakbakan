@@ -1,4 +1,4 @@
-export type MenuTab = 'main' | 'customize' | 'abilities' | 'settings' | 'about' | 'learn' | 'account';
+export type MenuTab = 'main' | 'customize' | 'abilities' | 'settings' | 'about' | 'learn' | 'account' | 'leaderboard' | 'profile';
 
 export interface MenuStartOptions {
   mode: 'online' | 'cpu' | '2p';
@@ -12,5 +12,6 @@ export interface MenuStartOptions {
   playerPattern?: string;
   playerCustomPattern?: string;
   playerAcc?: string;
+  isRanked?: boolean;
 }
 

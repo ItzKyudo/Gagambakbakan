@@ -17,6 +17,8 @@ import { bindLearnDemo, renderLearnView } from './menu/learnView';
 import { renderAccountView } from './menu/accountView';
 import { bindAccountEvents, createAccountState } from './menu/accountController';
 import { getAuthUser, initAuth, subscribeAuth } from '../auth';
+import { renderLeaderboardView, bindLeaderboardEvents } from './menu/leaderboardView';
+import { renderProfileView, bindProfileEvents } from './menu/profileView';
 
 export type { MenuStartOptions } from './menu/menuTypes';
 
@@ -89,6 +91,7 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
           <symbol id="ic-gem" viewBox="0 0 24 24"><path d="M12 2.5l8.5 5v9l-8.5 5-8.5-5v-9z"/><path d="M12 8l3.5 2v4L12 16l-3.5-2v-4z"/></symbol>
           <symbol id="ic-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1"/></symbol>
           <symbol id="ic-quit" viewBox="0 0 24 24"><path d="M12 3v8"/><path d="M6.3 6.8a8 8 0 1011.4 0"/></symbol>
+          <symbol id="ic-rank" viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 010-5H6M18 9h1.5a2.5 2.5 0 000-5H18M4 22h16M10 14.66V17c0 .55-.45 1-1 1H8c-.55 0-1 .45-1 1v1c0 .55.45 1 1 1h8c.55 0 1-.45 1-1v-1c0-.55-.45-1-1-1h-1c-.55 0-1-.45-1-1v-2.34M18 4H6v7a6 6 0 0012 0V4z"/></symbol>
           <symbol id="ic-cpu" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5"/><path d="M9 2.5v3.5M15 2.5v3.5M9 18v3.5M15 18v3.5M2.5 9h3.5M2.5 15h3.5M18 9h3.5M18 15h3.5"/></symbol>
           <symbol id="ic-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></symbol>
           <symbol id="ic-versus" viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"/><circle cx="16.5" cy="8" r="3"/><path d="M2.5 20c0-3.5 2.5-6 5.5-6s5.5 2.5 5.5 6M12.5 20c0-3.5 2-6 4.5-6s4.5 2.5 4.5 6"/></symbol>
@@ -195,6 +198,8 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
     }
 
     switch (activeTab) {
+      case 'profile':
+        return renderProfileView(customizeState.player);
       case 'customize':
         return renderCustomizeView(customizeState.player, customizeState.drawColor);
       case 'abilities':
@@ -210,6 +215,8 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
         return renderSettingsView(settingsState.listeningKey);
       case 'learn':
         return renderLearnView();
+      case 'leaderboard':
+        return renderLeaderboardView();
       case 'about':
         return renderAboutView();
       case 'account':
@@ -315,6 +322,18 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
         start: onStart
       });
     }
+
+    if (activeTab === 'leaderboard') bindLeaderboardEvents(container);
+    if (activeTab === 'profile') bindProfileEvents(container, customizeState.player);
+    container.querySelector('#btnViewProfile')?.addEventListener('click', () => {
+      activeTab = 'profile';
+      render();
+    });
+    container.querySelector('#btnProfileBack')?.addEventListener('click', () => {
+      activeTab = 'main';
+      render();
+      container.querySelector<HTMLElement>('#btnViewProfile')?.focus();
+    });
 
     if (activeTab === 'customize') bindCustomizeEvents(container, customizeState, render);
 

@@ -10,6 +10,9 @@ export interface PlayerStateData {
   customPattern: string;
   acc: string;          // 'none' | 'band' | 'crown' | 'horns'
   level: number;        // Player online level
+  rank?: string;        // Competitive rank tier
+  rating?: number;      // Competitive rating/MMR
+  isRanked?: boolean;
   unlockedSkills?: string[]; // Player unlocked ability web skills
   
   // Position & movement

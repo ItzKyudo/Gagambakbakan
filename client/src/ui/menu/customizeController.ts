@@ -28,6 +28,8 @@ export function bindCustomizeEvents(container: HTMLElement, state: CustomizeStat
       lk.name = nmInput.value.replace(/[<>&"]/g, '').trim().slice(0, 10) || getColor(lk.color).label;
       looks[state.player] = lk;
       saveLooks(looks);
+      const capStrong = container.querySelector('.preview-caption strong');
+      if (capStrong) capStrong.textContent = lk.name;
     });
   }
 

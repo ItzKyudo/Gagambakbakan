@@ -14,7 +14,9 @@ import { LocalGameEngine, type InputState } from './game/localGame';
 import { network } from './network';
 import { sound } from './audio';
 import { getKeys, getLooks, getColor, getProgress, getLevel, getUnlockedIds, recordOnlineMatch, applyQualityClass, type PlayerKeys } from './gb';
-import { getAuthUser } from './auth';
+import { getAuthUser, syncBattleResultToDatabase } from './auth';
+import { RANK_RATING_LABEL } from './ui/menu/rankTitle';
+import { saveMatchHistory } from './matchHistory';
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
 
@@ -262,7 +264,7 @@ async function startOnlineGame(opts: MenuStartOptions) {
 
   // If match was already found via menu queue, start directly without modal delay
   if (network.room) {
-    network.setCallbacks(getNetworkCallbacks());
+    network.setCallbacks(getNetworkCallbacks(Boolean(opts.isRanked)));
     if (network.myPlayerId >= 0) {
       currentScene.myPlayerId = network.myPlayerId;
       gamePage.setLabels('online', 'normal', network.myPlayerId);
@@ -317,10 +319,13 @@ async function startOnlineGame(opts: MenuStartOptions) {
       customPattern: opts.playerCustomPattern || '',
       acc: opts.playerAcc || 'none',
       level: myLvl,
+      rank: prog.rank || 'wolf-spider',
+      rating: Number.isFinite(prog.rating) ? prog.rating : 0,
+      isRanked: Boolean(opts.isRanked),
       unlockedSkills: getUnlockedIds(prog)
     };
 
-    const room = await network.quickMatch(profile, getNetworkCallbacks());
+    const room = await network.quickMatch(profile, getNetworkCallbacks(Boolean(opts.isRanked)));
 
     if (gamePage !== page || currentScene !== scene) {
       room.leave();
@@ -357,7 +362,8 @@ async function startOnlineGame(opts: MenuStartOptions) {
   }
 }
 
-function getNetworkCallbacks() {
+function getNetworkCallbacks(isRanked: boolean) {
+  let matchRecorded = false;
   return {
     onAssigned: (data: { id: number; name: string }) => {
       if (currentScene) currentScene.myPlayerId = data.id;
@@ -423,6 +429,8 @@ function getNetworkCallbacks() {
       // Gameplay music continues until match end
     },
     onMatchEnd: (data: { winner: number; winnerName: string; p1Wins: number; p2Wins: number; forfeit?: boolean; isTimeOut?: boolean }) => {
+      if (matchRecorded) return;
+      matchRecorded = true;
       sound.music.play('ambient');
       onlineDraftSubmitted = false;
       if (gamePage) {
@@ -430,9 +438,17 @@ function getNetworkCallbacks() {
         const myId = network.myPlayerId >= 0 ? network.myPlayerId : (currentScene ? currentScene.myPlayerId : 0);
         const isMe = myId === data.winner;
         const myWins = myId === 0 ? data.p1Wins : data.p2Wins;
+        void saveMatchHistory([{
+          player_slot: 'p1', mode: isRanked ? 'ranked' : 'online', won: isMe,
+          opponent: (myId === 0 ? currentScene?.gameState?.p2.name : currentScene?.gameState?.p1.name) || 'Opponent',
+          rounds_won: myWins, rounds_lost: myId === 0 ? data.p2Wins : data.p1Wins
+        }]);
 
         // EXP and level reward specifically for online matches
         const reward = recordOnlineMatch(isMe, myWins);
+        // Sync battlefield results, rating, rank, and EXP to database
+        syncBattleResultToDatabase(reward, getLooks());
+
         if (reward.leveledUp) {
           sound.play('power_up');
         }
@@ -444,6 +460,17 @@ function getNetworkCallbacks() {
 
         const rewardHtml = `
           <div class="online-exp-reward-box">
+            <div class="rank-result-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; padding:8px 12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:8px;">
+              <div>
+                <span style="font-weight:700; color:${reward.ratingChange >= 0 ? '#4cc7b2' : '#e4584f'}; font-size:14px;">
+                  ${reward.ratingChange >= 0 ? '▲ +' : '▼ '}${reward.ratingChange} ${RANK_RATING_LABEL}
+                </span>
+                <span style="font-size:12px; color:var(--fg); opacity:0.8; margin-left:6px;">(${reward.newRating} ${RANK_RATING_LABEL})</span>
+              </div>
+              <div style="font-weight:700; font-size:12px; color:var(--amber); text-transform:uppercase; letter-spacing:0.04em;">
+                ${reward.rankTitle}
+              </div>
+            </div>
             <div class="exp-badge-row">
               <span class="exp-plus-tag">+${reward.expGained} EXP</span>
               <span class="exp-breakdown-text">(${isMe ? 'Victory +100, ' : ''}Match +${reward.matchExp}${reward.roundExp > 0 ? `, Rounds +${reward.roundExp}` : ''})</span>
@@ -454,6 +481,9 @@ function getNetworkCallbacks() {
             </div>
             <div class="exp-progress-track">
               <div class="exp-progress-fill" style="width:${reward.progress.progressPct}%;"></div>
+            </div>
+            <div style="margin-top:12px; padding:6px 10px; background:rgba(0,0,0,0.2); border-radius:6px; font-size:12px; color:var(--muted); text-align:center;">
+              Battlefields Record: <strong style="color:var(--jade);">${reward.totalWins}W</strong> - <strong style="color:var(--coral);">${reward.totalLosses}L</strong> (${reward.winRate}% Win Rate)
             </div>
             ${reward.leveledUp ? `
               <div class="level-up-alert">
@@ -550,6 +580,13 @@ function startLocalGame(opts: MenuStartOptions) {
     if (currentScene) currentScene.addShake(shake.amount);
   };
   localEngine.onMatchEnd = (data) => {
+    void saveMatchHistory([
+      { player_slot: 'p1', mode: opts.mode === 'cpu' ? 'cpu' : '2p', opponent: cpuName,
+        won: data.winner === 0, rounds_won: data.p1Wins, rounds_lost: data.p2Wins },
+      ...(opts.mode === '2p' ? [{ player_slot: 'p2' as const, mode: '2p' as const,
+        opponent: opts.playerName || lks.p1.name, won: data.winner === 1,
+        rounds_won: data.p2Wins, rounds_lost: data.p1Wins }] : [])
+    ]);
     sound.music.play('ambient');
     if (gamePage) {
       if (gamePage.isDraftOpen) gamePage.hideDraftModal();

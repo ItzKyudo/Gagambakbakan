@@ -26,6 +26,9 @@ export interface PlayerProfile {
   customPattern?: string;
   acc?: string;
   level?: number;
+  rank?: string;
+  rating?: number;
+  isRanked?: boolean;
   unlockedSkills?: string[];
 }
 
@@ -137,7 +140,9 @@ export class NetworkManager {
       this.callbacks = callbacks;
     }
     const client = this.initClient(callbacks);
-    const opts = typeof profile === 'string' ? { name: profile } : { ...profile };
+    const opts = typeof profile === 'string' ? { name: profile, rank: 'wolf-spider', rating: 0, isRanked: false } : { rank: 'wolf-spider', rating: 0, isRanked: false, ...profile };
+    opts.rank = opts.rank || 'wolf-spider';
+    opts.isRanked = Boolean(opts.isRanked);
     const room = await client.joinOrCreate('battle', opts);
     if (this.client === client) this.room = room;
     return room;

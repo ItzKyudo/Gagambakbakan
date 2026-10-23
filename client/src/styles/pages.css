@@ -109,6 +109,22 @@ body:has(#pick:not([hidden])) .rail { display: none !important; }
 .mb:hover { border-color: var(--fg); }
 .mb.primary { background: var(--amber); border-color: var(--amber); color: #2a1a05; }
 .mb.primary small { color: #5a3a10; }
+.mb.selected:not(.primary),
+.mb:not(.primary):focus-visible {
+  border-color: var(--amber);
+  background: rgba(242, 163, 58, 0.1);
+  box-shadow: 0 0 16px rgba(242, 163, 58, 0.22);
+  outline: none;
+}
+.mb.selected:not(.primary) .mi,
+.mb:not(.primary):focus-visible .mi {
+  background: rgba(242, 163, 58, 0.18);
+  color: var(--amber);
+}
+.mb.selected:not(.primary) small,
+.mb:not(.primary):focus-visible small {
+  color: #ffd694;
+}
 .mb:disabled { opacity: .5; cursor: not-allowed; border-style: dashed; }
 .mb:disabled:hover { border-color: var(--line); }
 .mb.quiet { background: transparent; font-size: 18px; min-height: 46px; }

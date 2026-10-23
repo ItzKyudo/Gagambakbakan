@@ -1,0 +1,113 @@
+{
+  "schema": "codeart2d.codeart_meta.v1",
+  "art_source": "code",
+  "placeholder": false,
+  "disclosure": "code-drawn, no image model",
+  "generator": "svg_render.py",
+  "spec_sha256": "9ae08ba2df7ecf1d76324339390af2315b25eaa997c54cc4582db291c85061e8",
+  "renderer": {
+    "backend": "chrome",
+    "name": "chrome",
+    "version": "156.0.8078.47",
+    "zoom": 1,
+    "size": [
+      256,
+      256
+    ]
+  },
+  "palette": {
+    "colors": {
+      "0": "#e6b75a",
+      "1": "#fff0bb",
+      "2": "#8e642e",
+      "3": "#401f2d",
+      "4": "#0d1c22",
+      "5": "#ff8e95"
+    },
+    "variants": {}
+  },
+  "outputs": [
+    {
+      "path": "base/rank-1.svg",
+      "sha256": "687f85c2f919f4474ff3b04996bb77b4e924d34ff87a20e5411c4c6e1a371d44",
+      "bytes": 1956
+    },
+    {
+      "path": "base/rank-1.png",
+      "sha256": "dee82641f35cfa73a782be4553220fc5b6bbd673c15b963ec1bec5f6d79bdaf0",
+      "bytes": 18961
+    }
+  ],
+  "qa": {
+    "status": "pass",
+    "method": "svg_render.py render: every variant's compiled SVG passed codeart_core.lint_portable_svg (portable profile) before rasterizing",
+    "notProven": [
+      "Appearance, readability and appeal; look at the PNGs at game size.",
+      "Agreement with other renderers on this machine; run svg_render.py doctor (renders are bit-exact only for the recorded renderer version).",
+      "That the art matches the brief and the intent of the SVG.",
+      "Pixel gates: vector renders are anti-aliased by design, so partial alpha and colours outside the palette are expected and not checked (render with --crisp for pixel art)."
+    ],
+    "checks": [
+      {
+        "id": "lint",
+        "status": "pass",
+        "value": 0,
+        "threshold": 0,
+        "profile": "portable"
+      }
+    ],
+    "inputs": [
+      {
+        "path": "../../../client/public/leaderboard-badges/rank-1.svg",
+        "sha256": "9ae08ba2df7ecf1d76324339390af2315b25eaa997c54cc4582db291c85061e8",
+        "bytes": 1935
+      }
+    ],
+    "outputs": [
+      {
+        "path": "base/rank-1.svg",
+        "sha256": "687f85c2f919f4474ff3b04996bb77b4e924d34ff87a20e5411c4c6e1a371d44",
+        "bytes": 1956
+      },
+      {
+        "path": "base/rank-1.png",
+        "sha256": "dee82641f35cfa73a782be4553220fc5b6bbd673c15b963ec1bec5f6d79bdaf0",
+        "bytes": 18961
+      }
+    ],
+    "tool": {
+      "name": "svg_render.py render",
+      "version": "0.4.0"
+    }
+  },
+  "svg": {
+    "mode": "vector",
+    "profile": "portable",
+    "zoom": 1,
+    "canvas": [
+      256,
+      256
+    ],
+    "anchor_px": null,
+    "palette_source": "svg-colours",
+    "variants": {
+      "base": "base"
+    },
+    "images": [
+      {
+        "variant": "base",
+        "file": "base/rank-1.png",
+        "scale": 1,
+        "size": [
+          256,
+          256
+        ],
+        "anchor_px": null,
+        "visible": 33372,
+        "partial_alpha": 908,
+        "off_palette": 3654,
+        "colors": 1060
+      }
+    ]
+  }
+}

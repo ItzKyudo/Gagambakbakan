@@ -240,11 +240,14 @@ export async function initAuth(): Promise<void> {
 
   supabase.auth.onAuthStateChange(async (event, session) => {
     const newUser = session?.user || null;
-    const sameUser = Boolean(currentUser?.id && newUser?.id && currentUser.id === newUser.id);
+    const sameUser = Boolean(
+      (!currentUser && !newUser) ||
+      (currentUser?.id && newUser?.id && currentUser.id === newUser.id)
+    );
 
-    if (event === 'TOKEN_REFRESHED' && sameUser) {
-      // Token refreshed silently in background; session user hasn't changed.
-      // Do not re-fetch profile or trigger UI re-renders on window blur/focus.
+    if (sameUser && event !== 'USER_UPDATED') {
+      // User identity has not changed (e.g. tab switch, window focus, token refresh, internal recovery).
+      // Keep currentUser reference updated without querying database or triggering UI re-renders.
       currentUser = newUser;
       return;
     }

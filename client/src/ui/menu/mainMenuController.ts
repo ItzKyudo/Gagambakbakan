@@ -7,7 +7,7 @@ import { mountDemoFightArena } from './demoArena';
 import { getPlayerRankTitle, getRankFromRating } from './rankTitle';
 
 interface MainMenuActions {
-  navigate: (tab: Exclude<MenuTab, 'main'>) => void;
+  navigate: (tab: MenuTab) => void;
   start: (options: MenuStartOptions) => void;
 }
 
@@ -236,6 +236,15 @@ export function bindMainMenuEvents(container: HTMLElement, actions: MainMenuActi
     }
   };
 
+  if (!pPlay.hidden) {
+    toggleRankCard(true);
+    playModeBtns.forEach(b => b.classList.remove('selected'));
+    const rankBtn = container.querySelector<HTMLButtonElement>('#btnModeRank');
+    if (rankBtn) {
+      rankBtn.classList.add('selected');
+    }
+  }
+
   container.querySelector('#btnGoPlay')?.addEventListener('click', () => {
     cancelQueue();
     if (!getAuthUser()) {
@@ -244,16 +253,7 @@ export function bindMainMenuEvents(container: HTMLElement, actions: MainMenuActi
       return;
     }
     sound.playTone(520, 0.08, 'triangle', 0.05, 200);
-    pMain.hidden = true;
-    pPlay.hidden = false;
-    pQuit.hidden = true;
-    toggleRankCard(true);
-    playModeBtns.forEach(b => b.classList.remove('selected'));
-    const rankBtn = container.querySelector<HTMLButtonElement>('#btnModeRank');
-    if (rankBtn) {
-      rankBtn.classList.add('selected');
-      rankBtn.focus();
-    }
+    actions.navigate('play');
   });
 
   container.querySelector('#btnGoLeaderboard')?.addEventListener('click', () => {
@@ -297,9 +297,7 @@ export function bindMainMenuEvents(container: HTMLElement, actions: MainMenuActi
   container.querySelector('#btnPlayBack')?.addEventListener('click', () => {
     cancelQueue();
     sound.playTone(440, 0.08, 'triangle', 0.04, -100);
-    pMain.hidden = false;
-    pPlay.hidden = true;
-    toggleRankCard(false);
+    actions.navigate('main');
   });
 
   container.querySelector('#btnQuitBack')?.addEventListener('click', () => {

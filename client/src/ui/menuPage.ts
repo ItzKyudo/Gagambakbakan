@@ -19,13 +19,14 @@ import { bindAccountEvents, createAccountState } from './menu/accountController'
 import { getAuthUser, initAuth, subscribeAuth } from '../auth';
 import { renderLeaderboardView, bindLeaderboardEvents } from './menu/leaderboardView';
 import { renderProfileView, bindProfileEvents } from './menu/profileView';
+import { getRoute, setRoute } from '../router';
 
 export type { MenuStartOptions } from './menu/menuTypes';
 
 
-export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuStartOptions) => void): () => void {
+export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuStartOptions) => void, initialTab: MenuTab = 'main'): () => void {
   let isDestroyed = false;
-  let activeTab: MenuTab = 'main';
+  let activeTab: MenuTab = initialTab;
   const customizeState: CustomizeState = { player: 'p1', drawColor: '#e8593f' };
   const settingsState: SettingsState = { listeningKey: null };
   let spiderLookFrame = 0;
@@ -36,25 +37,37 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
   const accountState = createAccountState();
   let lastAuthUserId = getAuthUser()?.id;
 
-  initAuth();
-  const unsubscribeAuth = subscribeAuth((event) => {
+  function navigateToTab(tab: MenuTab) {
     if (isDestroyed) return;
-    if (event === 'TOKEN_REFRESHED') return;
+    activeTab = tab;
+    setRoute(tab === 'main' ? 'main' : tab);
+    render();
+  }
 
-    const currentUserId = getAuthUser()?.id;
-
-    if (activeTab === 'account' && getAuthUser()) {
-      lastAuthUserId = currentUserId;
-      activeTab = 'main';
+  function onHashChange() {
+    if (isDestroyed) return;
+    const r = getRoute();
+    if (r !== 'game' && r !== 'match' && r !== activeTab) {
+      activeTab = r;
       render();
+    }
+  }
+  window.addEventListener('hashchange', onHashChange);
+
+  initAuth();
+  const unsubscribeAuth = subscribeAuth((_event) => {
+    if (isDestroyed) return;
+    const currentUserId = getAuthUser()?.id;
+    if (currentUserId === lastAuthUserId) return;
+
+    lastAuthUserId = currentUserId;
+    if (activeTab === 'account' && getAuthUser()) {
+      navigateToTab('main');
       return;
     }
 
-    if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED' || lastAuthUserId !== currentUserId) {
-      lastAuthUserId = currentUserId;
-      if (activeTab === 'main' || activeTab === 'account') {
-        render();
-      }
+    if (activeTab === 'main' || activeTab === 'play' || activeTab === 'account') {
+      render();
     }
   });
 
@@ -63,6 +76,7 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
     isDestroyed = true;
     unsubscribeAuth();
     window.removeEventListener('keydown', onWindowKeyDown);
+    window.removeEventListener('hashchange', onHashChange);
     cleanupMainDemo?.();
     cleanupMainDemo = null;
     cleanupLearnDemo?.();
@@ -262,8 +276,10 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
         return renderAboutView();
       case 'account':
         return renderAccountView(accountState);
+      case 'play':
+        return renderMainMenuView('play');
       default:
-        return renderMainMenuView();
+        return renderMainMenuView('main');
     }
   }
 
@@ -327,8 +343,7 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
     container.querySelectorAll('#btnBackToMain').forEach(btn => {
       btn.addEventListener('click', () => {
         sound.playTone(440, 0.08, 'triangle', 0.04, -100);
-        activeTab = 'main';
-        render();
+        navigateToTab('main');
       });
     });
 
@@ -354,11 +369,10 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
       render();
     });
 
-    if (activeTab === 'main') {
+    if (activeTab === 'main' || activeTab === 'play') {
       cleanupMainDemo = bindMainMenuEvents(container, {
         navigate: tab => {
-          activeTab = tab;
-          render();
+          navigateToTab(tab);
         },
         start: onStart
       });
@@ -367,12 +381,10 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
     if (activeTab === 'leaderboard') bindLeaderboardEvents(container);
     if (activeTab === 'profile') bindProfileEvents(container, customizeState.player);
     container.querySelector('#btnViewProfile')?.addEventListener('click', () => {
-      activeTab = 'profile';
-      render();
+      navigateToTab('profile');
     });
     container.querySelector('#btnProfileBack')?.addEventListener('click', () => {
-      activeTab = 'main';
-      render();
+      navigateToTab('main');
       container.querySelector<HTMLElement>('#btnViewProfile')?.focus();
     });
 
@@ -433,6 +445,7 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
 
   window.addEventListener('keydown', onWindowKeyDown);
 
+  setRoute(activeTab === 'main' ? 'main' : activeTab);
   render();
 
   return cleanup;

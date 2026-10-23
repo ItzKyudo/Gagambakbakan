@@ -17,6 +17,8 @@ import { getKeys, getLooks, getColor, getProgress, getLevel, getUnlockedIds, rec
 import { getAuthUser, syncBattleResultToDatabase } from './auth';
 import { RANK_RATING_LABEL } from './ui/menu/rankTitle';
 import { saveMatchHistory } from './matchHistory';
+import { getRoute, setRoute } from './router';
+import type { MenuTab } from './ui/menu/menuTypes';
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
 
@@ -47,6 +49,24 @@ function isMobileOrTablet(): boolean {
   return isMobileUA || isIPadOS || isCoarseNoHover || (isTouchDevice && isSmallScreen);
 }
 
+function bootApp() {
+  const currentRoute = getRoute();
+  if (currentRoute === 'game' || currentRoute === 'match') {
+    let saved: MenuStartOptions | null = null;
+    try {
+      const raw = sessionStorage.getItem('gb_active_game');
+      if (raw) saved = JSON.parse(raw);
+    } catch {}
+    if (saved && saved.mode) {
+      startGame(saved);
+      return;
+    }
+    showMainMenu('play');
+    return;
+  }
+  showMainMenu(currentRoute);
+}
+
 function syncDeviceAvailability() {
   const blocked = isMobileOrTablet();
   isBlockedByDevice = blocked;
@@ -66,7 +86,7 @@ function syncDeviceAvailability() {
     }
   } else if (!hasBooted) {
     hasBooted = true;
-    showMainMenu();
+    bootApp();
   }
 }
 
@@ -180,7 +200,7 @@ function clearInputs() {
 
 let currentMenuCleanup: (() => void) | null = null;
 
-function showMainMenu() {
+function showMainMenu(initialTab?: MenuTab) {
   if (animationFrameId) {
     cancelAnimationFrame(animationFrameId);
     animationFrameId = null;
@@ -206,24 +226,36 @@ function showMainMenu() {
 
   sound.music.play('ambient');
 
+  const currentRoute = getRoute();
+  const tab: MenuTab = initialTab || (currentRoute !== 'game' && currentRoute !== 'match' ? currentRoute : 'main');
+  setRoute(tab === 'main' ? 'main' : tab);
+
   currentMenuCleanup = renderMenuPage(app, (opts) => {
     currentMenuCleanup = null;
     startGame(opts);
-  });
+  }, tab);
 }
 
 async function startGame(opts: MenuStartOptions) {
   if (!getAuthUser()) {
-    showMainMenu();
+    showMainMenu('account');
     return;
   }
   currentMenuCleanup?.();
   currentMenuCleanup = null;
+  setRoute('game');
+
+  try {
+    sessionStorage.setItem('gb_active_game', JSON.stringify(opts));
+  } catch {}
 
   app.innerHTML = '';
 
   gamePage = new GamePage(app, {
-    onBackToMenu: () => showMainMenu(),
+    onBackToMenu: () => {
+      try { sessionStorage.removeItem('gb_active_game'); } catch {}
+      showMainMenu('play');
+    },
     onSurrender: () => {
       if (opts.mode === 'online') {
         network.sendSurrender();
@@ -319,7 +351,10 @@ async function startOnlineGame(opts: MenuStartOptions) {
 
   const serverHost = network.serverUrl.replace(/^https?:\/\//, '').replace(/^wss?:\/\//, '').replace(/\/.*$/, '');
   gamePage.showModal('Connecting...', `Connecting to Gagambakbakan Battle Server (${serverHost})...\n\nNote: If the server was idle, Render free tier takes ~30-50s to wake up.`, [
-    { label: 'Cancel', onClick: () => showMainMenu() }
+    { label: 'Cancel', onClick: () => {
+      try { sessionStorage.removeItem('gb_active_game'); } catch {}
+      showMainMenu('play');
+    } }
   ]);
 
   try {
@@ -349,7 +384,10 @@ async function startOnlineGame(opts: MenuStartOptions) {
 
     if (room && (!currentScene.gameState || currentScene.gameState.status === 'waiting')) {
       gamePage.showModal('Waiting for Opponent', 'Waiting for another player to join...', [
-        { label: 'Leave', onClick: () => showMainMenu() }
+        { label: 'Leave', onClick: () => {
+          try { sessionStorage.removeItem('gb_active_game'); } catch {}
+          showMainMenu('play');
+        } }
       ]);
     }
 
@@ -372,7 +410,10 @@ async function startOnlineGame(opts: MenuStartOptions) {
     gamePage.showModal('Connection Issue', errText, [
       { label: 'Try Again', primary: true, onClick: () => startOnlineGame(opts) },
       { label: 'Play vs CPU', onClick: () => startGame({ mode: 'cpu', diff: 'normal' }) },
-      { label: 'Menu', onClick: () => showMainMenu() }
+      { label: 'Menu', onClick: () => {
+        try { sessionStorage.removeItem('gb_active_game'); } catch {}
+        showMainMenu('play');
+      } }
     ]);
   }
 }
@@ -524,7 +565,10 @@ function getNetworkCallbacks(isRanked: boolean) {
 
         gamePage.showModal(title, sub, [
           { label: 'Rematch', primary: true, onClick: () => network.sendRestart() },
-          { label: 'Menu', onClick: () => showMainMenu() }
+          { label: 'Menu', onClick: () => {
+            try { sessionStorage.removeItem('gb_active_game'); } catch {}
+            showMainMenu('play');
+          } }
         ], rewardHtml);
       }
     },
@@ -542,7 +586,10 @@ function getNetworkCallbacks(isRanked: boolean) {
         if (gamePage.isDraftOpen) gamePage.hideDraftModal();
         gamePage.closeInGameMenu();
         gamePage.showModal('Opponent Left', 'Your opponent disconnected from the match.', [
-          { label: 'Menu', primary: true, onClick: () => showMainMenu() }
+          { label: 'Menu', primary: true, onClick: () => {
+            try { sessionStorage.removeItem('gb_active_game'); } catch {}
+            showMainMenu('play');
+          } }
         ]);
       }
     },
@@ -554,7 +601,10 @@ function getNetworkCallbacks(isRanked: boolean) {
         if (gamePage.isDraftOpen) gamePage.hideDraftModal();
         gamePage.closeInGameMenu();
         gamePage.showModal('Disconnected', 'Lost connection to game server.', [
-          { label: 'Menu', primary: true, onClick: () => showMainMenu() }
+          { label: 'Menu', primary: true, onClick: () => {
+            try { sessionStorage.removeItem('gb_active_game'); } catch {}
+            showMainMenu('play');
+          } }
         ]);
       }
     }
@@ -621,7 +671,10 @@ function startLocalGame(opts: MenuStartOptions) {
       const sub = `${data.winnerName} won the match (${data.p1Wins} - ${data.p2Wins})! Run it back?`;
       gamePage.showModal(`${data.winnerName} Takes It!`, sub, [
         { label: 'Rematch', primary: true, onClick: () => { localEngine?.startMatch(); gamePage?.hideModal(); } },
-        { label: 'Menu', onClick: () => showMainMenu() }
+        { label: 'Menu', onClick: () => {
+          try { sessionStorage.removeItem('gb_active_game'); } catch {}
+          showMainMenu('play');
+        } }
       ]);
     }
   };
@@ -681,6 +734,28 @@ function startLocalGame(opts: MenuStartOptions) {
   }
   animationFrameId = requestAnimationFrame(loop);
 }
+
+// Global URL routing listener
+window.addEventListener('hashchange', () => {
+  const r = getRoute();
+  if (r === 'game' || r === 'match') {
+    if (!currentGame && !localEngine && !gamePage) {
+      let saved: MenuStartOptions | null = null;
+      try {
+        const raw = sessionStorage.getItem('gb_active_game');
+        if (raw) saved = JSON.parse(raw);
+      } catch {}
+      if (saved && saved.mode) {
+        startGame(saved);
+      } else {
+        showMainMenu('play');
+      }
+    }
+  } else if (currentGame || localEngine || gamePage) {
+    try { sessionStorage.removeItem('gb_active_game'); } catch {}
+    showMainMenu(r);
+  }
+});
 
 // Initial Boot
 applyQualityClass();

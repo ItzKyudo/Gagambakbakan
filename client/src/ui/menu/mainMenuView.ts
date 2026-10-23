@@ -11,7 +11,7 @@ function icon(node: IconNode, attrs: Record<string, string | number> = {}): stri
 /* ====================================================
    1. MAIN MENU VIEW (Matching menu.html)
    ==================================================== */
-export function renderMainMenuView(): string {
+export function renderMainMenuView(activePanel: 'main' | 'play' = 'main'): string {
   const user = getAuthUser();
   const looks = getLooks();
   const st = getSettings();
@@ -53,7 +53,7 @@ export function renderMainMenuView(): string {
     <!-- SPLIT BODY: BUTTONS FAR LEFT, CHARACTER DISPLAY FAR RIGHT -->
     <main class="menu-split-body">
       <div class="menu-left-col">
-        <nav class="panel" id="pMain" aria-label="Main menu">
+        <nav class="panel" id="pMain" aria-label="Main menu" ${activePanel === 'play' ? 'hidden' : ''}>
           <button type="button" class="mb primary" id="btnGoPlay">
             <span class="mi">${user ? '<svg class="ico"><use href="#ic-play"/></svg>' : icon(LogIn, { class: 'ico', width: 20, height: 20, 'stroke-width': 2.1 })}</span>
             <span class="ml">${user ? 'Play' : 'Log In'}</span>
@@ -88,7 +88,7 @@ export function renderMainMenuView(): string {
           </button>
         </nav>
 
-        <nav class="panel" id="pPlay" aria-label="Choose a mode" hidden>
+        <nav class="panel" id="pPlay" aria-label="Choose a mode" ${activePanel === 'play' ? '' : 'hidden'}>
           <h2>Play</h2>
           <button type="button" class="mb selected" id="btnModeRank">
             <span class="mi"><svg class="ico"><use href="#ic-rank"/></svg></span>

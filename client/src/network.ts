@@ -11,9 +11,11 @@ export interface NetworkCallbacks {
   onDraftStart?: (data: { choicesP1: string[]; choicesP2: string[] }) => void;
   onPlayerDrafted?: (data: { id: number; skill1: string; skill2: string }) => void;
   onRoundWon?: (data: { winner: number; round: number; p1Wins: number; p2Wins: number }) => void;
-  onMatchEnd?: (data: { winner: number; winnerName: string; p1Wins: number; p2Wins: number; forfeit?: boolean }) => void;
+  onMatchEnd?: (data: { winner: number; winnerName: string; p1Wins: number; p2Wins: number; forfeit?: boolean; disconnectForfeit?: boolean; isTimeOut?: boolean }) => void;
   onRematchVote?: (data: { count: number; ready: boolean }) => void;
   onPlayerLeft?: (data: { winner?: number; sessionId?: string }) => void;
+  onPlayerDisconnected?: (data: { id: number; name: string; timeoutSeconds: number }) => void;
+  onPlayerReconnected?: (data: { id: number; name: string }) => void;
   onError?: (err: any) => void;
   onDisconnect?: () => void;
 }
@@ -41,6 +43,7 @@ export class NetworkManager {
   public room: Room | null = null;
   public myPlayerId: number = -1; // 0 for Amber, 1 for Jade
   public serverUrl: string = PRODUCTION_SERVER_URL;
+  public reconnectionToken: string | null = null;
 
   constructor() {
     this.serverUrl = this.resolveServerUrl();
@@ -150,6 +153,11 @@ export class NetworkManager {
   }
 
   private setupRoom(room: Room) {
+    this.reconnectionToken = room.reconnectionToken || `${room.roomId}:${room.sessionId}`;
+    try {
+      sessionStorage.setItem('gb_reconnect_token', this.reconnectionToken!);
+    } catch {}
+
     room.onMessage('assigned', (data) => {
       this.myPlayerId = data.id;
       this.callbacks.onAssigned?.(data);
@@ -173,6 +181,8 @@ export class NetworkManager {
     room.onMessage('matchEnd', (data) => this.callbacks.onMatchEnd?.(data));
     room.onMessage('rematchVote', (data) => this.callbacks.onRematchVote?.(data));
     room.onMessage('playerLeft', (data) => this.callbacks.onPlayerLeft?.(data));
+    room.onMessage('playerDisconnected', (data) => this.callbacks.onPlayerDisconnected?.(data));
+    room.onMessage('playerReconnected', (data) => this.callbacks.onPlayerReconnected?.(data));
 
     room.onError((code, message) => {
       this.callbacks.onError?.({ code, message });
@@ -219,7 +229,28 @@ export class NetworkManager {
     }
   }
 
+  public async tryReconnect(callbacks?: NetworkCallbacks): Promise<Room | null> {
+    if (callbacks) {
+      this.callbacks = callbacks;
+    }
+    const token = this.reconnectionToken || (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('gb_reconnect_token') : null);
+    if (!token) return null;
+    try {
+      const client = this.initClient(this.callbacks);
+      const room = await client.reconnect(token);
+      this.room = room;
+      this.setupRoom(room);
+      return room;
+    } catch {
+      return null;
+    }
+  }
+
   public leave() {
+    this.reconnectionToken = null;
+    try {
+      sessionStorage.removeItem('gb_reconnect_token');
+    } catch {}
     this.callbacks = {};
     this.client = null;
     if (this.room) {

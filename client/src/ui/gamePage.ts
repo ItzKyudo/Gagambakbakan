@@ -84,6 +84,18 @@ export class GamePage {
   private draftTimerInterval: number | null = null;
   private draftTimeLeft: number = 15;
 
+  // Player Disconnected overlay (30s reconnect / surrender)
+  private disconnectOverlay!: HTMLElement;
+  private dcTitle!: HTMLElement;
+  private dcSub!: HTMLElement;
+  private dcTimerVal!: HTMLElement;
+  private dcTimerCircle!: HTMLElement;
+  private dcTimerLabel!: HTMLElement;
+  private dcTimerSub!: HTMLElement;
+  private btnDcSurrender!: HTMLButtonElement;
+  public isDisconnectPaused: boolean = false;
+  public myPlayerId: number = 0;
+
   private g1a!: HTMLElement;
   private g1b!: HTMLElement;
   private g2a!: HTMLElement;
@@ -253,6 +265,31 @@ export class GamePage {
             <div class="btns" id="ovBtns"></div>
           </div>
 
+          <!-- PLAYER DISCONNECTED OVERLAY (30s RECONNECT / WIN BY SURRENDER) -->
+          <div class="overlay disconnect-overlay" id="disconnectOverlay" hidden role="dialog" aria-modal="true" aria-labelledby="dcTitle">
+            <div class="disconnect-card">
+              <div class="disconnect-badge">
+                <span class="disconnect-pulse-dot"></span>
+                <span class="disconnect-status-text">MATCH PAUSED</span>
+              </div>
+              <h2 id="dcTitle">PLAYER DISCONNECTED</h2>
+              <p id="dcSub">Player disconnected from the match.</p>
+
+              <div class="disconnect-timer-container">
+                <div class="disconnect-timer-circle" id="dcTimerCircle">
+                  <span class="disconnect-timer-val" id="dcTimerVal">30</span>
+                  <span class="disconnect-timer-unit">SEC</span>
+                </div>
+                <div class="disconnect-timer-label" id="dcTimerLabel">Waiting for player to reconnect...</div>
+                <div class="disconnect-timer-sub" id="dcTimerSub">If the player fails to reconnect before time runs out, you will win by surrender.</div>
+              </div>
+
+              <div class="btns" id="dcBtns">
+                <button type="button" class="btn ghost danger" id="btnDcSurrender">Surrender &amp; Leave</button>
+              </div>
+            </div>
+          </div>
+
           <!-- IN-GAME MENU / SETTINGS MODAL -->
           <div class="in-game-menu-modal" id="inGameMenuModal" hidden role="dialog" aria-modal="true" aria-labelledby="igmTitle">
             <div class="igm-card">
@@ -367,6 +404,20 @@ export class GamePage {
     this.igmQualityToggle = container.querySelector('#igmQualityToggle') as HTMLButtonElement;
     this.igmBtnResume = container.querySelector('#igmBtnResume') as HTMLButtonElement;
     this.igmBtnQuit = container.querySelector('#igmBtnQuit') as HTMLButtonElement;
+
+    // Disconnect overlay elements
+    this.disconnectOverlay = container.querySelector('#disconnectOverlay') as HTMLElement;
+    this.dcTitle = container.querySelector('#dcTitle') as HTMLElement;
+    this.dcSub = container.querySelector('#dcSub') as HTMLElement;
+    this.dcTimerVal = container.querySelector('#dcTimerVal') as HTMLElement;
+    this.dcTimerCircle = container.querySelector('#dcTimerCircle') as HTMLElement;
+    this.dcTimerLabel = container.querySelector('#dcTimerLabel') as HTMLElement;
+    this.dcTimerSub = container.querySelector('#dcTimerSub') as HTMLElement;
+    this.btnDcSurrender = container.querySelector('#btnDcSurrender') as HTMLButtonElement;
+
+    this.btnDcSurrender?.addEventListener('click', () => {
+      this.showSurrenderConfirmModal();
+    });
 
     // Pick modal elements
     this.pickModal = container.querySelector('#pick') as HTMLElement;
@@ -906,8 +957,9 @@ export class GamePage {
   }
 
   /* ---------- LABELS AND ROOM BADGE ---------- */
-  public setLabels(mode: string, diff: string, _myId: number = 0) {
+  public setLabels(mode: string, diff: string, myId: number = 0) {
     this.gameMode = mode;
+    this.myPlayerId = myId;
     this.gemSeen = {};
     this.lastControlsKey = '';
     this.lastColor1 = '';
@@ -1155,11 +1207,64 @@ export class GamePage {
       this.hudTimer.classList.toggle('urgent', t <= 15);
       this.hudTimer.classList.toggle('critical', t <= 5);
     }
+
+    // Disconnect pause handling from server state
+    if (state.disconnectPause) {
+      const isMe = state.disconnectPause.playerId === this.myPlayerId;
+      if (!this.isDisconnectPaused) {
+        this.showDisconnectPause(state.disconnectPause.playerName, state.disconnectPause.remainingSeconds, isMe);
+      } else {
+        this.updateDisconnectTimer(state.disconnectPause.remainingSeconds);
+      }
+    } else if (this.isDisconnectPaused) {
+      this.hideDisconnectPause();
+    }
   }
 
   /* ---------- MODALS & OVERLAYS ---------- */
+  public showDisconnectPause(playerName: string, seconds: number, isMe: boolean = false) {
+    this.isDisconnectPaused = true;
+    if (this.inGameMenuModal) this.inGameMenuModal.hidden = true;
+    if (this.overlay) this.overlay.hidden = true;
+
+    if (isMe) {
+      this.dcTitle.textContent = 'YOU DISCONNECTED';
+      this.dcSub.textContent = 'Connection to the match was interrupted.';
+      this.dcTimerLabel.textContent = 'Attempting to reconnect...';
+      this.dcTimerSub.textContent = 'Reconnecting to battle server. If you cannot reconnect in time, you will forfeit by surrender.';
+    } else {
+      this.dcTitle.textContent = 'PLAYER DISCONNECTED';
+      this.dcSub.textContent = `${playerName} disconnected from the match.`;
+      this.dcTimerLabel.textContent = `Waiting for ${playerName} to reconnect...`;
+      this.dcTimerSub.textContent = 'The game screen is paused. If the player does not reconnect, you will win by surrender.';
+    }
+
+    this.updateDisconnectTimer(seconds);
+    this.disconnectOverlay.hidden = false;
+  }
+
+  public updateDisconnectTimer(seconds: number) {
+    const sec = Math.max(0, Math.ceil(seconds));
+    if (this.dcTimerVal) {
+      this.dcTimerVal.textContent = String(sec);
+    }
+    if (this.dcTimerCircle) {
+      this.dcTimerCircle.classList.toggle('urgent', sec <= 10);
+      this.dcTimerCircle.classList.toggle('critical', sec <= 5);
+    }
+  }
+
+  public hideDisconnectPause() {
+    this.isDisconnectPaused = false;
+    if (this.disconnectOverlay) {
+      this.disconnectOverlay.hidden = true;
+    }
+  }
+
   public showModal(title: string, sub: string, buttons: Array<{ label: string; primary?: boolean; danger?: boolean; onClick: () => void }>, extraHtml?: string) {
     if (this.inGameMenuModal) this.inGameMenuModal.hidden = true;
+    if (this.disconnectOverlay) this.disconnectOverlay.hidden = true;
+    this.isDisconnectPaused = false;
     this.ovTitle.textContent = title;
     this.ovSub.textContent = sub;
     if (extraHtml) {
@@ -1215,6 +1320,9 @@ export class GamePage {
 
   public hideModal() {
     this.overlay.hidden = true;
+    if (this.isDisconnectPaused && this.disconnectOverlay) {
+      this.disconnectOverlay.hidden = false;
+    }
   }
 
   public openInGameMenu() {

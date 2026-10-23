@@ -339,9 +339,11 @@ async function startOnlineGame(opts: MenuStartOptions) {
     }
 
     function loop() {
-      const inp = getPlayerInput(false);
-      network.sendInput(inp);
-      clearInputs();
+      if (!gamePage?.isDisconnectPaused) {
+        const inp = getPlayerInput(false);
+        network.sendInput(inp);
+        clearInputs();
+      }
 
       animationFrameId = requestAnimationFrame(loop);
     }
@@ -375,7 +377,11 @@ async function startOnlineGame(opts: MenuStartOptions) {
       unlockedSkills: getUnlockedIds(prog)
     };
 
-    const room = await network.quickMatch(profile, getNetworkCallbacks(Boolean(opts.isRanked)));
+    const callbacks = getNetworkCallbacks(Boolean(opts.isRanked));
+    let room = await network.tryReconnect(callbacks);
+    if (!room) {
+      room = await network.quickMatch(profile, callbacks);
+    }
 
     if (gamePage !== page || currentScene !== scene) {
       room.leave();
@@ -389,13 +395,20 @@ async function startOnlineGame(opts: MenuStartOptions) {
           showMainMenu('play');
         } }
       ]);
+    } else if (room && currentScene.gameState) {
+      gamePage.hideModal();
+      if (currentScene.gameState.status === 'ready' || currentScene.gameState.status === 'fight') {
+        sound.music.play('duel');
+      }
     }
 
     // Network loop
     function loop() {
-      const inp = getPlayerInput(false);
-      network.sendInput(inp);
-      clearInputs();
+      if (!gamePage?.isDisconnectPaused) {
+        const inp = getPlayerInput(false);
+        network.sendInput(inp);
+        clearInputs();
+      }
 
       animationFrameId = requestAnimationFrame(loop);
     }
@@ -425,6 +438,22 @@ function getNetworkCallbacks(isRanked: boolean) {
     onAssigned: (data: { id: number; name: string }) => {
       if (currentScene) currentScene.myPlayerId = data.id;
       if (gamePage) gamePage.setLabels('online', 'normal', data.id);
+    },
+    onPlayerDisconnected: (data: { id: number; name: string; timeoutSeconds: number }) => {
+      const myId = network.myPlayerId >= 0 ? network.myPlayerId : (currentScene ? currentScene.myPlayerId : 0);
+      const isMe = data.id === myId;
+      if (currentScene && !currentScene.scene.isPaused()) {
+        currentScene.scene.pause();
+      }
+      sound.music.stop();
+      gamePage?.showDisconnectPause(data.name, data.timeoutSeconds, isMe);
+    },
+    onPlayerReconnected: (_data: { id: number; name: string }) => {
+      if (currentScene && currentScene.scene.isPaused()) {
+        currentScene.scene.resume();
+      }
+      sound.music.play('duel');
+      gamePage?.hideDisconnectPause();
     },
     onDraftStart: () => {
       onlineDraftSubmitted = false;
@@ -494,14 +523,18 @@ function getNetworkCallbacks(isRanked: boolean) {
     onRoundWon: () => {
       // Gameplay music continues until match end
     },
-    onMatchEnd: (data: { winner: number; winnerName: string; p1Wins: number; p2Wins: number; forfeit?: boolean; isTimeOut?: boolean }) => {
+    onMatchEnd: (data: { winner: number; winnerName: string; p1Wins: number; p2Wins: number; forfeit?: boolean; disconnectForfeit?: boolean; isTimeOut?: boolean }) => {
       if (matchRecorded) return;
       matchRecorded = true;
       sound.music.play('ambient');
       onlineDraftSubmitted = false;
+      if (currentScene && currentScene.scene.isPaused()) {
+        currentScene.scene.resume();
+      }
       if (gamePage) {
         if (gamePage.isDraftOpen) gamePage.hideDraftModal();
         gamePage.closeInGameMenu();
+        gamePage.hideDisconnectPause();
         const myId = network.myPlayerId >= 0 ? network.myPlayerId : (currentScene ? currentScene.myPlayerId : 0);
         const isMe = myId === data.winner;
         const myWins = myId === 0 ? data.p1Wins : data.p2Wins;
@@ -520,9 +553,17 @@ function getNetworkCallbacks(isRanked: boolean) {
           sound.play('power_up');
         }
 
-        const title = isMe ? (data.forfeit ? 'VICTORY BY FORFEIT!' : 'VICTORY!') : (data.forfeit ? 'DEFEAT BY SURRENDER' : 'DEFEAT!');
+        const title = isMe
+          ? (data.disconnectForfeit ? 'WIN BY SURRENDER!' : (data.forfeit ? 'VICTORY BY SURRENDER!' : 'VICTORY!'))
+          : (data.disconnectForfeit ? 'DEFEAT BY DISCONNECT' : (data.forfeit ? 'DEFEAT BY SURRENDER' : 'DEFEAT!'));
         const sub = data.forfeit
-          ? (isMe ? 'Your opponent surrendered the match. Full victory awarded!' : 'You surrendered the match.')
+          ? (isMe
+              ? (data.disconnectForfeit
+                  ? 'Your opponent disconnected and did not return within 30s. Full victory awarded!'
+                  : 'Your opponent surrendered the match. Full victory awarded!')
+              : (data.disconnectForfeit
+                  ? 'You disconnected and failed to reconnect within 30 seconds. Match forfeited.'
+                  : 'You surrendered the match.'))
           : `${data.winnerName} won the match (${data.p1Wins} - ${data.p2Wins})!`;
 
         const rewardHtml = `
@@ -598,14 +639,66 @@ function getNetworkCallbacks(isRanked: boolean) {
     },
     onDisconnect: () => {
       if (gamePage && !matchRecorded && currentScene?.gameState?.status !== 'matchEnd') {
+        const isMatchActive = ['draft', 'ready', 'fight', 'roundEnd'].includes(currentScene?.gameState?.status || '');
+        if (!isMatchActive) {
+          if (gamePage.isDraftOpen) gamePage.hideDraftModal();
+          gamePage.closeInGameMenu();
+          gamePage.showModal('Disconnected', 'Lost connection to game server.', [
+            { label: 'Menu', primary: true, onClick: () => {
+              try { sessionStorage.removeItem('gb_active_game'); } catch {}
+              showMainMenu('play');
+            } }
+          ]);
+          return;
+        }
+
+        // Active match disconnected: pause game screen and attempt 30s reconnect
+        if (currentScene && !currentScene.scene.isPaused()) {
+          currentScene.scene.pause();
+        }
+        sound.music.stop();
         if (gamePage.isDraftOpen) gamePage.hideDraftModal();
         gamePage.closeInGameMenu();
-        gamePage.showModal('Disconnected', 'Lost connection to game server.', [
-          { label: 'Menu', primary: true, onClick: () => {
-            try { sessionStorage.removeItem('gb_active_game'); } catch {}
-            showMainMenu('play');
-          } }
-        ]);
+        gamePage.showDisconnectPause('You', 30, true);
+
+        let remainingSec = 30;
+        let isReconnecting = false;
+        const reconnectTimer = window.setInterval(async () => {
+          remainingSec -= 1;
+          gamePage?.updateDisconnectTimer(remainingSec);
+
+          if (remainingSec <= 0) {
+            window.clearInterval(reconnectTimer);
+            if (!matchRecorded) {
+              gamePage?.hideDisconnectPause();
+              gamePage?.showModal('Match Forfeited', 'Unable to reconnect to the match within 30 seconds. Match lost by surrender.', [
+                { label: 'Menu', primary: true, onClick: () => {
+                  try { sessionStorage.removeItem('gb_active_game'); } catch {}
+                  showMainMenu('play');
+                } }
+              ]);
+            }
+            return;
+          }
+
+          if (isReconnecting || matchRecorded) return;
+          isReconnecting = true;
+          try {
+            const reconnectedRoom = await network.tryReconnect(getNetworkCallbacks(isRanked));
+            if (reconnectedRoom) {
+              window.clearInterval(reconnectTimer);
+              gamePage?.hideDisconnectPause();
+              if (currentScene && currentScene.scene.isPaused()) {
+                currentScene.scene.resume();
+              }
+              sound.music.play('duel');
+            }
+          } catch {
+            // will retry next tick
+          } finally {
+            isReconnecting = false;
+          }
+        }, 1000);
       }
     }
   };

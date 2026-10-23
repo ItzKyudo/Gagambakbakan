@@ -6,7 +6,6 @@ import {
   COLORS,
   PATTERNS,
   accessorySVG,
-  getBattlefieldsData,
   getLevel,
   getLooks,
   getProgress,
@@ -14,7 +13,6 @@ import {
   spiderSVG
 } from '../../gb';
 import { getCachedPodiumChampionStatus } from '../../auth';
-import { getRankFromRating, getRankProgress, renderRankBadgeSVG, RANK_RATING_LABEL } from './rankTitle';
 import { renderPodiumBadge } from './leaderboardBadge';
 
 const LOCK_ICON = `<svg class="ico lock-ico" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`;
@@ -26,9 +24,6 @@ export function renderCustomizeView(customizePlayer: 'p1' | 'p2', drawColor: str
   const patternLabel = PATTERNS.find(([id]) => id === lk.pattern)?.[1];
   const accessoryLabel = ACCS.find(([id]) => id === lk.acc)?.[1];
   const prog = getProgress();
-  const stats = getBattlefieldsData(prog);
-  const rankInfo = getRankFromRating(stats.rating);
-  const rankProgress = getRankProgress(stats.rating);
   const playerLvl = getLevel(prog.onlineExp);
   const podium = getCachedPodiumChampionStatus();
 
@@ -42,21 +37,6 @@ export function renderCustomizeView(customizePlayer: 'p1' | 'p2', drawColor: str
         </div>
       </header>
       <p class="note customize-note">Build your fighter. Every change saves automatically and carries into battle.</p>
-
-      <div class="customize-rank-banner">
-        <div class="crb-badge">
-          ${renderRankBadgeSVG(rankInfo.id, 38)}
-        </div>
-        <div class="crb-info">
-          <div class="crb-header">
-            <span class="crb-title" style="color:${rankInfo.badgeCol}">${rankInfo.species} &mdash; ${rankInfo.title} &bull; ${stats.rating} ${RANK_RATING_LABEL}</span>
-            <span class="crb-sub">${rankProgress.nextRank ? `${rankProgress.ratingInTier} / ${rankProgress.ratingForTier} ${RANK_RATING_LABEL} to ${rankProgress.nextRank.title}` : 'Peak Tier'}</span>
-          </div>
-          <div class="crb-track">
-            <div class="crb-fill" style="width:${rankProgress.progressPct}%; background:${rankInfo.badgeCol};"></div>
-          </div>
-        </div>
-      </div>
 
       <section class="custom" aria-label="Customize your spider">
         <div class="tabs" role="group" aria-label="Which player">

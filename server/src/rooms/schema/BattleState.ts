@@ -90,6 +90,12 @@ export interface WebStateData {
   k: string;            // 'web' | 'spit' | 'hook'
 }
 
+export interface DisconnectPauseData {
+  playerId: number;
+  playerName: string;
+  remainingSeconds: number;
+}
+
 export interface BattleStateData {
   mode: string;         // 'pvp'
   status: 'waiting' | 'draft' | 'ready' | 'fight' | 'roundEnd' | 'matchEnd';
@@ -98,6 +104,8 @@ export interface BattleStateData {
   roundTimer: number;   // 60s countdown per round
   matchTimer?: number;
   winner: number;       // -1 = none, 0 = Amber, 1 = Jade
+  isPaused?: boolean;
+  disconnectPause?: DisconnectPauseData | null;
   
   // Ability drafting phase state
   draftChoicesP1: string[];

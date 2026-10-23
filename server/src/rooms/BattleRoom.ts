@@ -47,6 +47,8 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
       draftChoicesP2: [],
       p1Drafted: false,
       p2Drafted: false,
+      isPaused: false,
+      disconnectPause: null,
       p1: {} as PlayerStateData,
       p2: {} as PlayerStateData,
       webs: []
@@ -58,6 +60,7 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
 
     // Handle incoming inputs from players
     this.onMessage('input', (client, data: Partial<PlayerInput>) => {
+      if (this.battleState.isPaused || this.battleState.disconnectPause) return;
       const current = this.playerInputs.get(client.sessionId);
       if (!current || !data || typeof data !== 'object') return;
       if (typeof data.left === 'boolean') current.left = data.left;
@@ -203,13 +206,15 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
     }
   }
 
-  private handleForfeit(sessionId: string) {
+  private handleForfeit(sessionId: string, isDisconnect: boolean = false) {
     const isP1 = this.battleState.p1.sessionId === sessionId;
     const isP2 = this.battleState.p2.sessionId === sessionId;
     if (!isP1 && !isP2) return;
 
     const activeStatuses = ['draft', 'ready', 'fight', 'roundEnd'];
     if (activeStatuses.includes(this.battleState.status)) {
+      this.battleState.disconnectPause = null;
+      this.battleState.isPaused = false;
       const winner = isP1 ? this.battleState.p2 : this.battleState.p1;
       this.battleState.status = 'matchEnd';
       this.battleState.stateT = 0;
@@ -236,12 +241,13 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
         p2RatingChange: p2Delta.delta,
         p1NewRating: p1Delta.newRating,
         p2NewRating: p2Delta.newRating,
-        forfeit: true
+        forfeit: true,
+        disconnectForfeit: isDisconnect
       });
     }
   }
 
-  onLeave(client: Client) {
+  async onLeave(client: Client, code?: number) {
     const isP1 = this.battleState.p1.sessionId === client.sessionId;
     const isP2 = this.battleState.p2.sessionId === client.sessionId;
     if (isP1) this.battleState.p1.connected = false;
@@ -251,16 +257,84 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
 
     const activeStatuses = ['draft', 'ready', 'fight', 'roundEnd'];
     if (activeStatuses.includes(this.battleState.status)) {
-      this.handleForfeit(client.sessionId);
+      // Intentional consented leave
+      if (code === 4000) {
+        this.handleForfeit(client.sessionId, false);
+        return;
+      }
+
+      // If both players have left/disconnected, forfeit immediately
+      if (!this.battleState.p1.connected && !this.battleState.p2.connected) {
+        const forfeitSessionId = this.battleState.disconnectPause
+          ? (this.battleState.disconnectPause.playerId === 0 ? this.battleState.p1.sessionId : this.battleState.p2.sessionId)
+          : client.sessionId;
+        this.battleState.disconnectPause = null;
+        this.battleState.isPaused = false;
+        this.handleForfeit(forfeitSessionId, true);
+        return;
+      }
+
+      const leavingPlayer = isP1 ? this.battleState.p1 : this.battleState.p2;
+      await this.startDisconnectPause(leavingPlayer, client);
       return;
     }
 
     this.broadcast('playerLeft', { sessionId: client.sessionId });
   }
 
+  private async startDisconnectPause(leavingPlayer: PlayerStateData, client: Client) {
+    this.battleState.isPaused = true;
+    this.battleState.disconnectPause = {
+      playerId: leavingPlayer.id,
+      playerName: leavingPlayer.name,
+      remainingSeconds: 30
+    };
+
+    this.broadcast('playerDisconnected', {
+      id: leavingPlayer.id,
+      name: leavingPlayer.name,
+      timeoutSeconds: 30
+    });
+    this.broadcast('state', this.battleState);
+
+    try {
+      const reconnectedClient = await this.allowReconnection(client, 30);
+      leavingPlayer.connected = true;
+      leavingPlayer.sessionId = reconnectedClient.sessionId;
+      this.playerInputs.set(reconnectedClient.sessionId, {
+        left: false,
+        right: false,
+        strike: false,
+        heavy: false,
+        block: false,
+        reel: 0,
+        ab1: 0,
+        ab2: 0
+      });
+
+      this.battleState.isPaused = false;
+      this.battleState.disconnectPause = null;
+
+      reconnectedClient.send('assigned', { id: leavingPlayer.id, name: leavingPlayer.name });
+      this.broadcast('playerReconnected', {
+        id: leavingPlayer.id,
+        name: leavingPlayer.name
+      });
+      this.broadcast('state', this.battleState);
+    } catch (err) {
+      if (this.battleState.disconnectPause && this.battleState.disconnectPause.playerId === leavingPlayer.id) {
+        this.battleState.disconnectPause = null;
+        this.battleState.isPaused = false;
+        this.handleForfeit(leavingPlayer.sessionId, true);
+      }
+    }
+  }
+
   private startMatch() {
     this.lock(); // Lock room so third players cannot disrupt a 2-player match
     this.rematchVotes.clear();
+    this.battleState.isPaused = false;
+    this.battleState.disconnectPause = null;
     this.battleState.round = 1;
     this.battleState.winner = -1;
     this.battleState.p1.wins = 0;
@@ -370,6 +444,19 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
   }
 
   private update(dt: number) {
+    if (this.battleState.disconnectPause) {
+      const dp = this.battleState.disconnectPause;
+      dp.remainingSeconds = Math.max(0, dp.remainingSeconds - dt);
+      if (dp.remainingSeconds <= 0) {
+        const disconnectedId = dp.playerId;
+        const disconnectedSessionId = disconnectedId === 0 ? this.battleState.p1.sessionId : this.battleState.p2.sessionId;
+        this.battleState.disconnectPause = null;
+        this.battleState.isPaused = false;
+        this.handleForfeit(disconnectedSessionId, true);
+      }
+      return;
+    }
+
     this.battleState.stateT += dt;
 
     // 17s server timeout provides 2s grace over 15s client countdown to absorb network latency

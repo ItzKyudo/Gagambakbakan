@@ -2050,43 +2050,6 @@ export class GagambakbakanScene extends Phaser.Scene {
       ctx.roundRect(hx2 + f * 2 - 5, hy2 - 14.5, 10, 4.5, 1.5);
       ctx.fill();
       ctx.stroke();
-    } else if (acc === 'crown') {
-      // Royal Jewelled Crown with crimson velvet base, spires, pearls & gems
-      const cb = hy2 - 11;
-      ctx.fillStyle = '#ffd34d';
-      ctx.strokeStyle = COLORS.outline;
-      ctx.lineWidth = 1.6;
-      ctx.lineJoin = 'round';
-      ctx.beginPath();
-      ctx.moveTo(hx2 - 10, cb);
-      ctx.lineTo(hx2 - 11, cb - 11);
-      ctx.lineTo(hx2 - 5, cb - 5);
-      ctx.lineTo(hx2, cb - 14);
-      ctx.lineTo(hx2 + 5, cb - 5);
-      ctx.lineTo(hx2 + 11, cb - 11);
-      ctx.lineTo(hx2 + 10, cb);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-
-      // Velvet base band
-      ctx.fillStyle = '#c23616';
-      ctx.beginPath();
-      ctx.roundRect(hx2 - 10.5, cb - 2.5, 21, 3.2, 1.2);
-      ctx.fill();
-      ctx.stroke();
-
-      // Spire pearls & center ruby
-      ctx.fillStyle = '#fff9d2';
-      [[-11, -11.5, 1.5], [0, -14.8, 1.8], [11, -11.5, 1.5]].forEach(([ox, oy, r]) => {
-        ctx.beginPath();
-        ctx.arc(hx2 + ox, cb + oy, r, 0, Math.PI * 2);
-        ctx.fill();
-      });
-      ctx.fillStyle = '#e84118';
-      ctx.beginPath();
-      ctx.arc(hx2, cb - 5.5, 1.6, 0, Math.PI * 2);
-      ctx.fill();
     } else if (acc === 'horns') {
       // Curved segmented demon/oni horns with brow sockets
       const hb0 = hy2 - 10;
@@ -2472,6 +2435,86 @@ export class GagambakbakanScene extends Phaser.Scene {
         ctx.ellipse(hx2 + ox, hy2, 1.8, 3.4, 0, 0, Math.PI * 2);
         ctx.fill();
       });
+    } else if (acc === 'apex_crown') {
+      // Exclusive Leaderboard #1 Apex Champion Crown
+      const cb = hy2 - 11;
+      // Velvet cushion
+      ctx.fillStyle = '#991b1b';
+      ctx.beginPath();
+      ctx.roundRect(hx2 - 12, cb - 3, 24, 4, 1.5);
+      ctx.fill();
+
+      // Golden imperial spires
+      ctx.fillStyle = '#ffd34d';
+      ctx.strokeStyle = COLORS.outline;
+      ctx.lineWidth = 1.6;
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(hx2 - 12, cb);
+      ctx.lineTo(hx2 - 13, cb - 12);
+      ctx.lineTo(hx2 - 7, cb - 5);
+      ctx.lineTo(hx2, cb - 16);
+      ctx.lineTo(hx2 + 7, cb - 5);
+      ctx.lineTo(hx2 + 13, cb - 12);
+      ctx.lineTo(hx2 + 12, cb);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Golden brow band
+      ctx.fillStyle = '#e1b12c';
+      ctx.beginPath();
+      ctx.roundRect(hx2 - 12, cb - 1, 24, 3, 1);
+      ctx.fill();
+
+      // Spire pearls & apex diamond
+      ctx.fillStyle = '#fffdf0';
+      [[-13, -12.5, 1.6], [0, -16.5, 2.0], [13, -12.5, 1.6]].forEach(([ox, oy, r]) => {
+        ctx.beginPath();
+        ctx.arc(hx2 + ox, cb + oy, r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Center ruby gem
+      ctx.fillStyle = '#ff2d55';
+      ctx.beginPath();
+      ctx.moveTo(hx2, cb - 9);
+      ctx.lineTo(hx2 + 2.5, cb - 6);
+      ctx.lineTo(hx2, cb - 3);
+      ctx.lineTo(hx2 - 2.5, cb - 6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#800e13';
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+    } else if (acc === 'mythic_laurel') {
+      // Exclusive Leaderboard #1 Mythic Laurel Wreath
+      const lb = hy2 - 8;
+      ctx.strokeStyle = '#ffd34d';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.arc(hx2 - 8, lb, 9, 0.4 * Math.PI, 1.5 * Math.PI);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(hx2 + 8, lb, 9, 1.5 * Math.PI, 0.6 * Math.PI);
+      ctx.stroke();
+
+      // Laurel leaf clusters
+      ctx.fillStyle = '#f5cd79';
+      [[-14, -6], [-12, -12], [-6, -16], [6, -16], [12, -12], [14, -6]].forEach(([ox, oy]) => {
+        ctx.beginPath();
+        ctx.ellipse(hx2 + ox, lb + oy, 3.2, 1.8, ox < 0 ? -0.5 : 0.5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Central radiant emerald brooch
+      ctx.fillStyle = '#00cec9';
+      ctx.beginPath();
+      ctx.arc(hx2, lb - 7, 2.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#ffd34d';
+      ctx.lineWidth = 1;
+      ctx.stroke();
     }
 
     // Articulated Pedipalps & Dual Curved Fangs (Chelicerae)

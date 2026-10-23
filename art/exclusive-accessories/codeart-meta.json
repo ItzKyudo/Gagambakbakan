@@ -1,0 +1,37 @@
+{
+  "schema": "codeart.metadata.v1",
+  "art_source": "code",
+  "disclose": "code-drawn, no image model",
+  "artifacts": [
+    {
+      "name": "apex-crown",
+      "file": "client/public/exclusive-accessories/apex-crown.svg",
+      "format": "portable-svg",
+      "exclusive_for": "Top 1 Rank & Top 1 Level Leaderboard Champions",
+      "palette": [
+        "#ffd34d",
+        "#e1b12c",
+        "#991b1b",
+        "#ff2d55",
+        "#0984e3",
+        "#2ed573",
+        "#ffffff"
+      ]
+    },
+    {
+      "name": "mythic-laurel",
+      "file": "client/public/exclusive-accessories/mythic-laurel.svg",
+      "format": "portable-svg",
+      "exclusive_for": "Top 1 Level Leaderboard Legend",
+      "palette": [
+        "#ffd34d",
+        "#fff0bb",
+        "#d4a017",
+        "#00cec9",
+        "#81ecec",
+        "#ffffff",
+        "#ffeaa7"
+      ]
+    }
+  ]
+}

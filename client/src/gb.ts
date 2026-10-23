@@ -198,23 +198,94 @@ export const PATTERNS: [string, string][] = [
   ['custom', 'Draw yours']
 ];
 
-export const ACCS: [string, string][] = [
-  ['none', 'None'],
-  ['band', 'Headband'],
-  ['crown', 'Crown'],
-  ['horns', 'Horns'],
-  ['goggles', 'Goggles'],
-  ['halo', 'Halo'],
-  ['mohawk', 'Mohawk'],
-  ['mask', 'Ninja Mask'],
-  ['tophat', 'Top Hat'],
-  ['samurai', 'Kabuto Helm'],
-  ['wizard', 'Wizard Hat'],
-  ['pirate', 'Pirate Hat'],
-  ['visor', 'Cyber Visor'],
-  ['strawhat', 'Ronin Hat'],
-  ['headphones', 'Headset']
+export const STANDARD_ACCS: [string, string, number][] = [
+  ['none', 'None', 1],
+  ['band', 'Headband', 1],
+  ['horns', 'Horns', 3],
+  ['goggles', 'Goggles', 6],
+  ['mask', 'Ninja Mask', 9],
+  ['mohawk', 'Mohawk', 12],
+  ['strawhat', 'Ronin Hat', 15],
+  ['tophat', 'Top Hat', 18],
+  ['pirate', 'Pirate Hat', 21],
+  ['samurai', 'Kabuto Helm', 25],
+  ['wizard', 'Wizard Hat', 30],
+  ['visor', 'Cyber Visor', 35],
+  ['headphones', 'Headset', 40],
+  ['halo', 'Halo', 45]
 ];
+
+export const ACC_LEVELS: Record<string, number> = Object.fromEntries(
+  STANDARD_ACCS.map(([id, , lvl]) => [id, lvl])
+);
+
+export interface ExclusiveAccessoryDef {
+  id: string;
+  label: string;
+  board: 'rank' | 'level';
+  boardLabel: string;
+  requirement: 'top1_rank' | 'top1_level';
+  reqText: string;
+  desc: string;
+}
+
+export const EXCLUSIVE_ACCS: ExclusiveAccessoryDef[] = [
+  {
+    id: 'apex_crown',
+    label: 'Crown of Spires',
+    board: 'rank',
+    boardLabel: 'Top 1 Rank',
+    requirement: 'top1_rank',
+    reqText: 'Top 1 Rank',
+    desc: 'Imperial 24k gold crown of five radiant spires and star ruby. Awarded exclusively to the #1 Rank Champion.'
+  },
+  {
+    id: 'mythic_laurel',
+    label: 'Laurel of Spires',
+    board: 'level',
+    boardLabel: 'Top 1 Level',
+    requirement: 'top1_level',
+    reqText: 'Top 1 Level',
+    desc: 'Golden tingting laurel of celestial spires with radiant emerald. Awarded exclusively to the #1 Level Legend.'
+  }
+];
+
+export const ACCS: [string, string][] = [
+  ...STANDARD_ACCS.map(([id, label]) => [id, label] as [string, string]),
+  ...EXCLUSIVE_ACCS.map(x => [x.id, x.label] as [string, string])
+];
+
+export function isAccessoryUnlocked(
+  accId: string,
+  level: number,
+  podium?: { isTop1Rank?: boolean; isTop1Level?: boolean }
+): { unlocked: boolean; reqText: string; reqLevel?: number } {
+  const p = getProgress();
+  if (p.unlockAll) return { unlocked: true, reqText: 'Unlocked' };
+  if (accId === 'none') return { unlocked: true, reqText: 'Default' };
+
+  const exclusive = EXCLUSIVE_ACCS.find(x => x.id === accId);
+  if (exclusive) {
+    let unlocked = false;
+    if (exclusive.requirement === 'top1_rank') {
+      unlocked = Boolean(podium?.isTop1Rank);
+    } else if (exclusive.requirement === 'top1_level') {
+      unlocked = Boolean(podium?.isTop1Level);
+    }
+    return {
+      unlocked,
+      reqText: unlocked ? `${exclusive.boardLabel} Claimed` : exclusive.reqText
+    };
+  }
+
+  const reqLevel = ACC_LEVELS[accId] ?? 1;
+  const unlocked = level >= reqLevel;
+  return {
+    unlocked,
+    reqLevel,
+    reqText: unlocked ? `Level ${reqLevel}+` : `Requires Level ${reqLevel}`
+  };
+}
 
 export const DEF_LOOK: { p1: SpiderLook; p2: SpiderLook } = {
   p1: { name: 'Amber', color: 'amber', pattern: 'stripes', acc: 'none', customPattern: '' },
@@ -273,13 +344,15 @@ export function saveLooks(l: { p1: SpiderLook; p2: SpiderLook }): void {
   onDataPersistHook?.();
 }
 
-export function randomLook(): SpiderLook {
+export function randomLook(playerLevel = 1, podium?: { isTop1Rank?: boolean; isTop1Level?: boolean }): SpiderLook {
   const c = COLORS[Math.floor(Math.random() * COLORS.length)];
+  const unlocked = ACCS.filter(([id]) => isAccessoryUnlocked(id, playerLevel, podium).unlocked);
+  const pickedAcc = (unlocked.length > 0 ? unlocked : [['none', 'None']])[Math.floor(Math.random() * (unlocked.length || 1))][0];
   return {
     name: c.label,
     color: c.id,
     pattern: PATTERNS[Math.floor(Math.random() * (PATTERNS.length - 1))][0],
-    acc: ACCS[Math.floor(Math.random() * ACCS.length)][0],
+    acc: pickedAcc,
     customPattern: ''
   };
 }
@@ -399,17 +472,6 @@ export function spiderSVGraw(look: SpiderLook): string {
       `<path d="M128 77 Q150 66 172 76" fill="none" stroke="#ff7979" stroke-width="2" stroke-linecap="round" opacity=".75"/>` +
       `<rect x="143" y="69" width="18" height="8" rx="2.5" transform="rotate(-2 152 73)" fill="#dfe6e9" stroke="${OUT}" stroke-width="1.8"/>` +
       `<circle cx="146.5" cy="73" r="1.1" fill="#636e72"/><circle cx="157.5" cy="72.6" r="1.1" fill="#636e72"/>`;
-  } else if (look.acc === 'crown') {
-    // Royal Jewelled Crown with velvet cushion, 5 spires, pearls & gems
-    acc = `<path d="M131 71 L128 50 L140 61 L150 43 L160 61 L172 50 L169 71 Z" fill="#ffd34d" stroke="${OUT}" stroke-width="2.4" stroke-linejoin="round"/>` +
-      `<path d="M133 67 L167 67" stroke="#b5830a" stroke-width="2"/>` +
-      `<rect x="130" y="68" width="40" height="5.5" rx="2.5" fill="#c23616" stroke="${OUT}" stroke-width="1.8"/>` +
-      `<circle cx="128" cy="48.5" r="2.6" fill="#fff9d2" stroke="${OUT}" stroke-width="1.4"/>` +
-      `<circle cx="150" cy="41.5" r="3.2" fill="#fff9d2" stroke="${OUT}" stroke-width="1.5"/>` +
-      `<circle cx="172" cy="48.5" r="2.6" fill="#fff9d2" stroke="${OUT}" stroke-width="1.4"/>` +
-      `<polygon points="150,55 153.5,60 150,65 146.5,60" fill="#e84118" stroke="${OUT}" stroke-width="1.2"/>` +
-      `<circle cx="139" cy="63" r="2.2" fill="#00cec9" stroke="${OUT}" stroke-width="1"/>` +
-      `<circle cx="161" cy="63" r="2.2" fill="#00cec9" stroke="${OUT}" stroke-width="1"/>`;
   } else if (look.acc === 'horns') {
     // Curved segmented demon/oni horns with dark tips and brow sockets
     acc = `<ellipse cx="135" cy="73" rx="6.5" ry="3.5" transform="rotate(-18 135 73)" fill="#5c4b3b" stroke="${OUT}" stroke-width="1.6"/>` +
@@ -496,6 +558,59 @@ export function spiderSVGraw(look: SpiderLook): string {
       `<ellipse cx="127" cy="89" rx="3.2" ry="6" transform="rotate(-10 127 89)" fill="#00cec9"/>` +
       `<ellipse cx="173" cy="90" rx="6" ry="9.5" transform="rotate(10 173 90)" fill="#1e272e" stroke="${OUT}" stroke-width="2"/>` +
       `<ellipse cx="173" cy="90" rx="3.2" ry="6" transform="rotate(10 173 90)" fill="#00cec9"/>`;
+  } else if (look.acc === 'apex_crown') {
+    // Exclusive Leaderboard #1 Apex Champion Crown
+    acc = `<g data-codeart="exclusive-apex-crown">` +
+      `<path d="M122 72 Q150 60 178 72" fill="none" stroke="#ffeaa7" stroke-width="4.5" opacity=".4"/>` +
+      `<path d="M125 72 Q150 63 175 72 L172 76 Q150 69 128 76 Z" fill="#991b1b" stroke="${OUT}" stroke-width="1.6"/>` +
+      `<path d="M125 73 L120 48 L133 58 L150 36 L167 58 L180 48 L175 73 Z" fill="#ffd34d" stroke="${OUT}" stroke-width="2.2" stroke-linejoin="round"/>` +
+      `<polygon points="150,36 133,58 150,65 167,58" fill="#e1b12c" stroke="${OUT}" stroke-width="1.2"/>` +
+      `<polygon points="120,48 126,62 133,58" fill="#e1b12c"/>` +
+      `<polygon points="180,48 174,62 167,58" fill="#e1b12c"/>` +
+      `<rect x="124" y="70" width="52" height="6" rx="2.5" fill="#ffd34d" stroke="${OUT}" stroke-width="1.8"/>` +
+      `<circle cx="131" cy="73" r="1.5" fill="#0984e3"/>` +
+      `<circle cx="140" cy="73" r="1.5" fill="#ff2d55"/>` +
+      `<polygon points="150,71 152.5,73 150,75 147.5,73" fill="#ff2d55"/>` +
+      `<circle cx="160" cy="73" r="1.5" fill="#ff2d55"/>` +
+      `<circle cx="169" cy="73" r="1.5" fill="#2ed573"/>` +
+      `<polygon points="150,49 156,56 150,63 144,56" fill="#ff2d55" stroke="${OUT}" stroke-width="1.4"/>` +
+      `<polygon points="150,51 154,56 150,56" fill="#ff7675"/>` +
+      `<circle cx="148.5" cy="53" r="1" fill="#ffffff"/>` +
+      `<circle cx="120" cy="46" r="2.8" fill="#fffdf0" stroke="${OUT}" stroke-width="1.4"/>` +
+      `<circle cx="133" cy="57" r="2.2" fill="#fffdf0" stroke="${OUT}" stroke-width="1.2"/>` +
+      `<circle cx="167" cy="57" r="2.2" fill="#fffdf0" stroke="${OUT}" stroke-width="1.2"/>` +
+      `<circle cx="180" cy="46" r="2.8" fill="#fffdf0" stroke="${OUT}" stroke-width="1.4"/>` +
+      `<circle cx="150" cy="34" r="3.4" fill="#fffdf0" stroke="${OUT}" stroke-width="1.5"/>` +
+      `<circle cx="148.8" cy="32.8" r="1.1" fill="#ffffff"/>` +
+      `<path d="M148.5 24 H151.5 V31 H148.5 Z M146 26.5 H154 V28.5 H146 Z" fill="#ffd34d" stroke="${OUT}" stroke-width="0.9"/>` +
+      `<circle cx="150" cy="22" r="1" fill="#ffffff"/>` +
+      `</g>`;
+  } else if (look.acc === 'mythic_laurel') {
+    // Exclusive Leaderboard #1 Mythic Laurel Wreath
+    acc = `<g data-codeart="exclusive-mythic-laurel">` +
+      `<circle cx="150" cy="32" r="1.8" fill="#ffeaa7" stroke="${OUT}" stroke-width="0.8"/>` +
+      `<circle cx="138" cy="38" r="1.3" fill="#ffeaa7"/>` +
+      `<circle cx="162" cy="38" r="1.3" fill="#ffeaa7"/>` +
+      `<circle cx="150" cy="42" r="1.2" fill="#ffffff"/>` +
+      `<path d="M122 84 C112 62 120 46 142 39" fill="none" stroke="${OUT}" stroke-width="3.6" stroke-linecap="round"/>` +
+      `<path d="M122 84 C112 62 120 46 142 39" fill="none" stroke="#ffd34d" stroke-width="2.4" stroke-linecap="round"/>` +
+      `<path d="M178 84 C188 62 180 46 158 39" fill="none" stroke="${OUT}" stroke-width="3.6" stroke-linecap="round"/>` +
+      `<path d="M178 84 C188 62 180 46 158 39" fill="none" stroke="#ffd34d" stroke-width="2.4" stroke-linecap="round"/>` +
+      `<ellipse cx="118" cy="74" rx="4.5" ry="2.4" transform="rotate(-35 118 74)" fill="#ffd34d" stroke="${OUT}" stroke-width="1.3"/>` +
+      `<ellipse cx="126" cy="68" rx="4.2" ry="2.2" transform="rotate(25 126 68)" fill="#d4a017" stroke="${OUT}" stroke-width="1.1"/>` +
+      `<ellipse cx="120" cy="58" rx="4.5" ry="2.4" transform="rotate(-40 120 58)" fill="#ffd34d" stroke="${OUT}" stroke-width="1.3"/>` +
+      `<ellipse cx="130" cy="52" rx="4.2" ry="2.2" transform="rotate(30 130 52)" fill="#d4a017" stroke="${OUT}" stroke-width="1.1"/>` +
+      `<ellipse cx="132" cy="42" rx="4.5" ry="2.4" transform="rotate(-20 132 42)" fill="#ffd34d" stroke="${OUT}" stroke-width="1.3"/>` +
+      `<ellipse cx="182" cy="74" rx="4.5" ry="2.4" transform="rotate(35 182 74)" fill="#ffd34d" stroke="${OUT}" stroke-width="1.3"/>` +
+      `<ellipse cx="174" cy="68" rx="4.2" ry="2.2" transform="rotate(-25 174 68)" fill="#d4a017" stroke="${OUT}" stroke-width="1.1"/>` +
+      `<ellipse cx="180" cy="58" rx="4.5" ry="2.4" transform="rotate(40 180 58)" fill="#ffd34d" stroke="${OUT}" stroke-width="1.3"/>` +
+      `<ellipse cx="170" cy="52" rx="4.2" ry="2.2" transform="rotate(-30 170 52)" fill="#d4a017" stroke="${OUT}" stroke-width="1.1"/>` +
+      `<ellipse cx="168" cy="42" rx="4.5" ry="2.4" transform="rotate(20 168 42)" fill="#ffd34d" stroke="${OUT}" stroke-width="1.3"/>` +
+      `<circle cx="150" cy="74" r="5" fill="#ffd34d" stroke="${OUT}" stroke-width="1.5"/>` +
+      `<polygon points="150,70 153.5,74 150,78 146.5,74" fill="#00cec9" stroke="${OUT}" stroke-width="1.1"/>` +
+      `<polygon points="150,71 152,74 150,74" fill="#81ecec"/>` +
+      `<circle cx="149" cy="72.5" r="0.7" fill="#ffffff"/>` +
+      `</g>`;
   }
 
   return `<svg xmlns="http://www.w3.org/2000/svg" class="spider-art" width="240" height="180" viewBox="0 0 240 180" data-codeart="inline-vector" data-anchor="120 145" data-facing="right" aria-hidden="true"><defs><radialGradient id="pb" cx=".35" cy=".25" r=".8"><stop offset="0" stop-color="${c.light}"/><stop offset=".48" stop-color="${c.main}"/><stop offset="1" stop-color="${c.dark}"/></radialGradient>` +
@@ -524,17 +639,26 @@ export function spiderSVG(look: SpiderLook, u: string = ''): string {
     .replace(/url\(#(pb|ph|pc)\)/g, `url(#$1${u})`);
 }
 
+const accessorySvgCache = new Map<string, string>();
+
 export function accessorySVG(acc: string): string {
+  const cached = accessorySvgCache.get(acc);
+  if (cached) return cached;
+
+  let res = '';
   if (acc === 'none') {
-    return `<svg xmlns="http://www.w3.org/2000/svg" class="accessory-art" viewBox="105 34 90 88" aria-hidden="true">` +
+    res = `<svg xmlns="http://www.w3.org/2000/svg" class="accessory-art" viewBox="105 34 90 88" aria-hidden="true">` +
       `<circle cx="150" cy="76" r="18" fill="none" stroke="rgba(176,242,227,.35)" stroke-width="2.4" stroke-dasharray="5 4"/>` +
       `<line x1="138" y1="88" x2="162" y2="64" stroke="rgba(176,242,227,.45)" stroke-width="2.4" stroke-linecap="round"/>` +
       `</svg>`;
+  } else {
+    const look = { ...DEF_LOOK.p1, pattern: 'plain', acc };
+    const full = spiderSVGraw(look);
+    const match = full.match(/<g class="spider-palps"[\s\S]*?<\/g>([\s\S]*?)<\/g><\/g><\/g><\/svg>$/);
+    res = `<svg xmlns="http://www.w3.org/2000/svg" class="accessory-art" viewBox="105 34 90 88" aria-hidden="true">${match?.[1] || ''}</svg>`;
   }
-  const look = { ...DEF_LOOK.p1, pattern: 'plain', acc };
-  const full = spiderSVGraw(look);
-  const match = full.match(/<g class="spider-palps"[\s\S]*?<\/g>([\s\S]*?)<\/g><\/g><\/g><\/svg>$/);
-  return `<svg xmlns="http://www.w3.org/2000/svg" class="accessory-art" viewBox="105 34 90 88" aria-hidden="true">${match?.[1] || ''}</svg>`;
+  accessorySvgCache.set(acc, res);
+  return res;
 }
 
 /* ---------- key binds ---------- */

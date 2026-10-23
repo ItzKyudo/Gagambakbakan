@@ -245,6 +245,7 @@ export async function initAuth(): Promise<void> {
       syncNameWithProfile();
     } else {
       currentProfile = null;
+  cachedPodiumStatus = null;
     }
     notify();
   });
@@ -382,4 +383,42 @@ export async function signOutUser(): Promise<void> {
   currentUser = null;
   currentProfile = null;
   notify();
+}
+
+let cachedPodiumStatus: { isTop1Rank: boolean; isTop1Level: boolean; timestamp: number } | null = null;
+
+export async function fetchPodiumChampionStatus(force = false): Promise<{ isTop1Rank: boolean; isTop1Level: boolean }> {
+  const p = getProgress();
+  if (p.unlockAll) return { isTop1Rank: true, isTop1Level: true };
+
+  const now = Date.now();
+  if (!force && cachedPodiumStatus && (now - cachedPodiumStatus.timestamp < 30000)) {
+    return { isTop1Rank: cachedPodiumStatus.isTop1Rank, isTop1Level: cachedPodiumStatus.isTop1Level };
+  }
+
+  const user = getAuthUser();
+  if (!user || !supabase) {
+    return { isTop1Rank: false, isTop1Level: false };
+  }
+
+  try {
+    const [levelRes, rankRes] = await Promise.all([
+      supabase.from('profiles').select('id').order('online_exp', { ascending: false, nullsFirst: false }).order('username', { ascending: true }).limit(1),
+      supabase.from('profiles').select('id').order('rating', { ascending: false, nullsFirst: false }).order('username', { ascending: true }).limit(1)
+    ]);
+    const isTop1Level = levelRes.data?.[0]?.id === user.id;
+    const isTop1Rank = rankRes.data?.[0]?.id === user.id;
+    cachedPodiumStatus = { isTop1Rank, isTop1Level, timestamp: now };
+    return { isTop1Rank, isTop1Level };
+  } catch (err) {
+    console.warn('fetchPodiumChampionStatus error:', err);
+    return { isTop1Rank: false, isTop1Level: false };
+  }
+}
+
+export function getCachedPodiumChampionStatus(): { isTop1Rank: boolean; isTop1Level: boolean } {
+  const p = getProgress();
+  if (p.unlockAll) return { isTop1Rank: true, isTop1Level: true };
+  if (!cachedPodiumStatus) return { isTop1Rank: false, isTop1Level: false };
+  return { isTop1Rank: cachedPodiumStatus.isTop1Rank, isTop1Level: cachedPodiumStatus.isTop1Level };
 }

@@ -145,10 +145,23 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
     if (typeof options.colorLight === 'string' && HEX_COLOR.test(options.colorLight)) player.colorLight = options.colorLight;
     if (['stripes', 'dots', 'chevron', 'rings', 'cross', 'split', 'webmark', 'diamonds', 'plain', 'custom'].includes(options.pattern)) player.pattern = options.pattern;
     if (isValidCustomPattern(options.customPattern)) player.customPattern = options.customPattern;
-    if (['none', 'band', 'crown', 'horns', 'goggles', 'halo', 'mohawk', 'mask', 'tophat', 'samurai', 'wizard', 'pirate', 'visor', 'strawhat', 'headphones'].includes(options.acc)) player.acc = options.acc;
-    
     const lvl = Math.max(1, Math.min(100, parseInt(options.level, 10) || 1));
     player.level = lvl;
+
+    const ACC_LEVELS: Record<string, number> = {
+      none: 1, band: 1, horns: 3, goggles: 6, mask: 9, mohawk: 12,
+      strawhat: 15, tophat: 18, pirate: 21, samurai: 25, wizard: 30,
+      visor: 35, headphones: 40, halo: 45
+    };
+    const VALID_ACCS = ['none', 'band', 'horns', 'goggles', 'halo', 'mohawk', 'mask', 'tophat', 'samurai', 'wizard', 'pirate', 'visor', 'strawhat', 'headphones', 'apex_crown', 'mythic_laurel'];
+    if (VALID_ACCS.includes(options.acc)) {
+      const minLvl = ACC_LEVELS[options.acc];
+      if (minLvl && lvl < minLvl) {
+        player.acc = 'none';
+      } else {
+        player.acc = options.acc;
+      }
+    }
     if (typeof options.rank === 'string' && ['wolf-spider', 'huntsman-spider', 'philippine-tarantula', 'brown-widow', 'novice', 'brawler', 'striker', 'weaver', 'duelist', 'master', 'grandmaster'].includes(options.rank)) {
       player.rank = options.rank;
     }

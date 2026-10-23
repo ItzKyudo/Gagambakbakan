@@ -8,7 +8,7 @@ export interface PlayerStateData {
   colorLight: string;
   pattern: string;      // 'stripes' | 'dots' | 'chevron' | 'plain'
   customPattern: string;
-  acc: string;          // 'none' | 'band' | 'crown' | 'horns'
+  acc: string;          // 'none' | 'band' | 'horns' | 'apex_crown' | 'mythic_laurel'
   level: number;        // Player online level
   rank?: string;        // Competitive rank tier
   rating?: number;      // Competitive rating/MMR

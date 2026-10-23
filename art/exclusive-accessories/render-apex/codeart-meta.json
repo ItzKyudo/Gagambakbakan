@@ -1,0 +1,120 @@
+{
+  "schema": "codeart2d.codeart_meta.v1",
+  "art_source": "code",
+  "placeholder": false,
+  "disclosure": "code-drawn, no image model",
+  "generator": "svg_render.py",
+  "spec_sha256": "3ade1a36348b88db0c0f4e4f900f6d457a50dc7a7a07a1ba835a51269076bb58",
+  "renderer": {
+    "backend": "chrome",
+    "name": "chrome",
+    "version": "156.0.8078.47",
+    "zoom": 1,
+    "size": [
+      256,
+      256
+    ]
+  },
+  "palette": {
+    "colors": {
+      "0": "#ffd34d",
+      "1": "#1e272e",
+      "2": "#e1b12c",
+      "3": "#991b1b",
+      "4": "#dc2626",
+      "5": "#fffdf0",
+      "6": "#ffffff",
+      "7": "#ff2d55",
+      "8": "#800e13",
+      "9": "#ff7675",
+      "10": "#0984e3",
+      "11": "#2ed573",
+      "12": "#ffeaa7"
+    },
+    "variants": {}
+  },
+  "outputs": [
+    {
+      "path": "base/apex-crown.svg",
+      "sha256": "9d09d437d3f454bd7b4f3a3e2d6944fac42764a0a480d5475db5448e2974fbe7",
+      "bytes": 3194
+    },
+    {
+      "path": "base/apex-crown.png",
+      "sha256": "109040c4a483ddf3c5021027d4517b181425ca0014b909f0c08530f2f4afe482",
+      "bytes": 27500
+    }
+  ],
+  "qa": {
+    "status": "pass",
+    "method": "svg_render.py render: every variant's compiled SVG passed codeart_core.lint_portable_svg (portable profile) before rasterizing",
+    "notProven": [
+      "Appearance, readability and appeal; look at the PNGs at game size.",
+      "Agreement with other renderers on this machine; run svg_render.py doctor (renders are bit-exact only for the recorded renderer version).",
+      "That the art matches the brief and the intent of the SVG.",
+      "Pixel gates: vector renders are anti-aliased by design, so partial alpha and colours outside the palette are expected and not checked (render with --crisp for pixel art)."
+    ],
+    "checks": [
+      {
+        "id": "lint",
+        "status": "pass",
+        "value": 0,
+        "threshold": 0,
+        "profile": "portable"
+      }
+    ],
+    "inputs": [
+      {
+        "path": "../apex-crown.svg",
+        "sha256": "3ade1a36348b88db0c0f4e4f900f6d457a50dc7a7a07a1ba835a51269076bb58",
+        "bytes": 3697
+      }
+    ],
+    "outputs": [
+      {
+        "path": "base/apex-crown.svg",
+        "sha256": "9d09d437d3f454bd7b4f3a3e2d6944fac42764a0a480d5475db5448e2974fbe7",
+        "bytes": 3194
+      },
+      {
+        "path": "base/apex-crown.png",
+        "sha256": "109040c4a483ddf3c5021027d4517b181425ca0014b909f0c08530f2f4afe482",
+        "bytes": 27500
+      }
+    ],
+    "tool": {
+      "name": "svg_render.py render",
+      "version": "0.4.0"
+    }
+  },
+  "svg": {
+    "mode": "vector",
+    "profile": "portable",
+    "zoom": 1,
+    "canvas": [
+      256,
+      256
+    ],
+    "anchor_px": null,
+    "palette_source": "svg-colours",
+    "variants": {
+      "base": "base"
+    },
+    "images": [
+      {
+        "variant": "base",
+        "file": "base/apex-crown.png",
+        "scale": 1,
+        "size": [
+          256,
+          256
+        ],
+        "anchor_px": null,
+        "visible": 33511,
+        "partial_alpha": 12467,
+        "off_palette": 25479,
+        "colors": 1357
+      }
+    ]
+  }
+}

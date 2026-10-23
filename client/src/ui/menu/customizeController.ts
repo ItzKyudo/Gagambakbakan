@@ -1,5 +1,6 @@
 import { sound } from '../../audio';
-import { DEF_LOOK, customPatternSVG, getColor, getLooks, randomLook, saveLooks } from '../../gb';
+import { DEF_LOOK, customPatternSVG, getColor, getLevel, getLooks, getProgress, randomLook, saveLooks } from '../../gb';
+import { fetchPodiumChampionStatus, getCachedPodiumChampionStatus } from '../../auth';
 import { decodePatternArt, encodePatternArt, type PatternStroke } from '../../patternArt';
 
 export interface CustomizeState {
@@ -7,8 +8,26 @@ export interface CustomizeState {
   drawColor: string;
 }
 
+let podiumFetchDone = false;
+let lastPodiumState = { isTop1Rank: false, isTop1Level: false };
+
+export function resetPodiumFetchFlag(): void {
+  podiumFetchDone = false;
+}
+
 export function bindCustomizeEvents(container: HTMLElement, state: CustomizeState, render: () => void) {
   const looks = getLooks();
+
+  if (!podiumFetchDone) {
+    podiumFetchDone = true;
+    void fetchPodiumChampionStatus().then(podium => {
+      const changed = podium.isTop1Rank !== lastPodiumState.isTop1Rank || podium.isTop1Level !== lastPodiumState.isTop1Level;
+      lastPodiumState = { ...podium };
+      if (changed && container.isConnected) {
+        render();
+      }
+    });
+  }
   const lk = looks[state.player];
 
   // Tab toggle P1 / P2
@@ -116,9 +135,16 @@ export function bindCustomizeEvents(container: HTMLElement, state: CustomizeStat
     preview?.addEventListener('pointercancel', finish);
   }
 
-  // Accessories
+  // Accessories (Standard & Exclusive Leaderboard)
   container.querySelectorAll('.opt[data-acc]').forEach(btn => {
     btn.addEventListener('click', () => {
+      const isLocked = (btn as HTMLElement).dataset.locked === 'true';
+      if (isLocked) {
+        sound.playTone(180, 0.12, 'sawtooth', 0.04, -80);
+        btn.classList.add('shake-reject');
+        setTimeout(() => btn.classList.remove('shake-reject'), 400);
+        return;
+      }
       const accId = (btn as HTMLElement).dataset.acc!;
       lk.acc = accId;
       looks[state.player] = lk;
@@ -130,7 +156,10 @@ export function bindCustomizeEvents(container: HTMLElement, state: CustomizeStat
 
   // Randomize
   container.querySelector('#btnRandLook')?.addEventListener('click', () => {
-    const rand = randomLook();
+    const prog = getProgress();
+    const myLvl = getLevel(prog.onlineExp);
+    const podium = getCachedPodiumChampionStatus();
+    const rand = randomLook(myLvl, podium);
     looks[state.player] = rand;
     saveLooks(looks);
     sound.playTone(680, 0.12, 'square', 0.04, 280);

@@ -1,0 +1,115 @@
+{
+  "schema": "codeart2d.codeart_meta.v1",
+  "art_source": "code",
+  "placeholder": false,
+  "disclosure": "code-drawn, no image model",
+  "generator": "svg_render.py",
+  "spec_sha256": "8078fe02bb43c3aa228045afeb2867d14dd1bd3fc00d16d63216e432da70041b",
+  "renderer": {
+    "backend": "chrome",
+    "name": "chrome",
+    "version": "156.0.8078.47",
+    "zoom": 1,
+    "size": [
+      256,
+      256
+    ]
+  },
+  "palette": {
+    "colors": {
+      "0": "#ffd34d",
+      "1": "#1e272e",
+      "2": "#fff0bb",
+      "3": "#d4a017",
+      "4": "#00cec9",
+      "5": "#81ecec",
+      "6": "#ffffff",
+      "7": "#ffeaa7"
+    },
+    "variants": {}
+  },
+  "outputs": [
+    {
+      "path": "base/mythic-laurel.svg",
+      "sha256": "231c1c994a010b0e4bf6cebcbcbb6e0eacdd2fed66b40f4b2495fb2810e4a03d",
+      "bytes": 3672
+    },
+    {
+      "path": "base/mythic-laurel.png",
+      "sha256": "60530215cef91b4f83cb013fc37c899e78cb7fd62c028cbca0feb60a80df626e",
+      "bytes": 51793
+    }
+  ],
+  "qa": {
+    "status": "pass",
+    "method": "svg_render.py render: every variant's compiled SVG passed codeart_core.lint_portable_svg (portable profile) before rasterizing",
+    "notProven": [
+      "Appearance, readability and appeal; look at the PNGs at game size.",
+      "Agreement with other renderers on this machine; run svg_render.py doctor (renders are bit-exact only for the recorded renderer version).",
+      "That the art matches the brief and the intent of the SVG.",
+      "Pixel gates: vector renders are anti-aliased by design, so partial alpha and colours outside the palette are expected and not checked (render with --crisp for pixel art)."
+    ],
+    "checks": [
+      {
+        "id": "lint",
+        "status": "pass",
+        "value": 0,
+        "threshold": 0,
+        "profile": "portable"
+      }
+    ],
+    "inputs": [
+      {
+        "path": "../mythic-laurel.svg",
+        "sha256": "8078fe02bb43c3aa228045afeb2867d14dd1bd3fc00d16d63216e432da70041b",
+        "bytes": 4331
+      }
+    ],
+    "outputs": [
+      {
+        "path": "base/mythic-laurel.svg",
+        "sha256": "231c1c994a010b0e4bf6cebcbcbb6e0eacdd2fed66b40f4b2495fb2810e4a03d",
+        "bytes": 3672
+      },
+      {
+        "path": "base/mythic-laurel.png",
+        "sha256": "60530215cef91b4f83cb013fc37c899e78cb7fd62c028cbca0feb60a80df626e",
+        "bytes": 51793
+      }
+    ],
+    "tool": {
+      "name": "svg_render.py render",
+      "version": "0.4.0"
+    }
+  },
+  "svg": {
+    "mode": "vector",
+    "profile": "portable",
+    "zoom": 1,
+    "canvas": [
+      256,
+      256
+    ],
+    "anchor_px": null,
+    "palette_source": "svg-colours",
+    "variants": {
+      "base": "base"
+    },
+    "images": [
+      {
+        "variant": "base",
+        "file": "base/mythic-laurel.png",
+        "scale": 1,
+        "size": [
+          256,
+          256
+        ],
+        "anchor_px": null,
+        "visible": 30559,
+        "partial_alpha": 20038,
+        "off_palette": 27627,
+        "colors": 2053
+      }
+    ]
+  }
+}

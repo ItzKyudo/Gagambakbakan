@@ -1,0 +1,280 @@
+{
+  "schema": "codeart2d.doctor_report.v1",
+  "cases": [
+    "t01",
+    "t03",
+    "t06A",
+    "t07",
+    "t09",
+    "t10",
+    "t13",
+    "t16",
+    "t17",
+    "t06B",
+    "t06C",
+    "t13B"
+  ],
+  "backends": {
+    "resvg_py": {
+      "status": "unavailable",
+      "reason": "resvg_py is not installed: python -m pip install \"resvg-py>=0.5,<0.6\""
+    },
+    "resvg_js_cli": {
+      "status": "unavailable",
+      "reason": "resvg-js-cli is not on PATH (npm install -g @resvg/resvg-js-cli)"
+    },
+    "chrome": {
+      "status": "pass",
+      "renderer": {
+        "backend": "chrome",
+        "name": "chrome",
+        "version": "156.0.8078.47"
+      },
+      "results": [
+        {
+          "case": "t01",
+          "zoom": 1,
+          "status": "pass",
+          "method": "truth",
+          "mismatch_px": 0
+        },
+        {
+          "case": "t01",
+          "zoom": 4,
+          "status": "pass",
+          "method": "truth",
+          "mismatch_px": 0
+        },
+        {
+          "case": "t03",
+          "zoom": 1,
+          "status": "pass",
+          "method": "palette",
+          "off_palette_px": 0,
+          "partial_alpha_px": 0
+        },
+        {
+          "case": "t06A",
+          "zoom": 1,
+          "status": "pass",
+          "method": "truth",
+          "mismatch_px": 0
+        },
+        {
+          "case": "t07",
+          "zoom": 1,
+          "status": "pass",
+          "method": "truth",
+          "mismatch_px": 0
+        },
+        {
+          "case": "t09",
+          "zoom": 1,
+          "status": "pass",
+          "method": "probes",
+          "max_probe_error": 0
+        },
+        {
+          "case": "t10",
+          "zoom": 1,
+          "status": "pass",
+          "method": "probes",
+          "max_probe_error": 0
+        },
+        {
+          "case": "t13",
+          "zoom": 1,
+          "status": "pass",
+          "method": "probes",
+          "max_probe_error": 0
+        },
+        {
+          "case": "t16",
+          "zoom": 1,
+          "status": "pass",
+          "method": "truth",
+          "mismatch_px": 0
+        },
+        {
+          "case": "t17",
+          "zoom": 1,
+          "status": "pass",
+          "method": "truth",
+          "mismatch_px": 0
+        }
+      ]
+    }
+  },
+  "primary": "chrome",
+  "lint": [
+    {
+      "case": "t06B",
+      "status": "pass",
+      "method": "lint",
+      "codes": [
+        "css-transform",
+        "transform-origin"
+      ],
+      "missing": []
+    },
+    {
+      "case": "t06C",
+      "status": "pass",
+      "method": "lint",
+      "codes": [
+        "transform-origin"
+      ],
+      "missing": []
+    },
+    {
+      "case": "t13B",
+      "status": "pass",
+      "method": "lint",
+      "codes": [
+        "mix-blend-mode"
+      ],
+      "missing": []
+    }
+  ],
+  "status": "pass",
+  "method": "svg_render.py doctor: codeart_core.run_doctor renders the conformance corpus on each backend; exact cases compare every pixel with the truth image (t01 also at 4x), the palette case checks colours and alpha, golden cases compare pinned resvg-py hashes or Chrome-measured probe pixels, and lint cases must be rejected by the portable lint. Only the primary backend gates the status; deviations of fallback backends are warnings",
+  "notProven": [
+    "SVG features outside the corpus, text and fonts (text is outside the portable profile).",
+    "Bit-exact goldens are pinned for resvg-py 0.5.0 on win32 only; elsewhere probes allow 8/255.",
+    "Rendering speed and memory use."
+  ],
+  "checks": [
+    {
+      "id": "primary",
+      "status": "pass",
+      "value": "chrome",
+      "threshold": "an available backend"
+    },
+    {
+      "id": "resvg_py:available",
+      "status": "skipped",
+      "value": "resvg_py is not installed: python -m pip install \"resvg-py>=0.5,<0.6\""
+    },
+    {
+      "id": "resvg_js_cli:available",
+      "status": "skipped",
+      "value": "resvg-js-cli is not on PATH (npm install -g @resvg/resvg-js-cli)"
+    },
+    {
+      "id": "chrome:t01@1x",
+      "status": "pass",
+      "value": {
+        "method": "truth",
+        "mismatch_px": 0
+      }
+    },
+    {
+      "id": "chrome:t01@4x",
+      "status": "pass",
+      "value": {
+        "method": "truth",
+        "mismatch_px": 0
+      }
+    },
+    {
+      "id": "chrome:t03@1x",
+      "status": "pass",
+      "value": {
+        "method": "palette",
+        "off_palette_px": 0,
+        "partial_alpha_px": 0
+      }
+    },
+    {
+      "id": "chrome:t06A@1x",
+      "status": "pass",
+      "value": {
+        "method": "truth",
+        "mismatch_px": 0
+      }
+    },
+    {
+      "id": "chrome:t07@1x",
+      "status": "pass",
+      "value": {
+        "method": "truth",
+        "mismatch_px": 0
+      }
+    },
+    {
+      "id": "chrome:t09@1x",
+      "status": "pass",
+      "value": {
+        "method": "probes",
+        "max_probe_error": 0
+      }
+    },
+    {
+      "id": "chrome:t10@1x",
+      "status": "pass",
+      "value": {
+        "method": "probes",
+        "max_probe_error": 0
+      }
+    },
+    {
+      "id": "chrome:t13@1x",
+      "status": "pass",
+      "value": {
+        "method": "probes",
+        "max_probe_error": 0
+      }
+    },
+    {
+      "id": "chrome:t16@1x",
+      "status": "pass",
+      "value": {
+        "method": "truth",
+        "mismatch_px": 0
+      }
+    },
+    {
+      "id": "chrome:t17@1x",
+      "status": "pass",
+      "value": {
+        "method": "truth",
+        "mismatch_px": 0
+      }
+    },
+    {
+      "id": "lint:t06B",
+      "status": "pass",
+      "value": [
+        "css-transform",
+        "transform-origin"
+      ],
+      "threshold": "rejected by the portable lint"
+    },
+    {
+      "id": "lint:t06C",
+      "status": "pass",
+      "value": [
+        "transform-origin"
+      ],
+      "threshold": "rejected by the portable lint"
+    },
+    {
+      "id": "lint:t13B",
+      "status": "pass",
+      "value": [
+        "mix-blend-mode"
+      ],
+      "threshold": "rejected by the portable lint"
+    }
+  ],
+  "inputs": [],
+  "outputs": [],
+  "tool": {
+    "name": "svg_render.py doctor",
+    "version": "0.4.0"
+  },
+  "platform": {
+    "system": "win32",
+    "python": "3.12.11"
+  }
+}

@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="logo-title logo-description" data-codeart="code" data-anchor="256 256">
+  <title id="logo-title">Gagambakbakan</title>
+  <desc id="logo-description">A violet fighting spider gripping an amber bamboo stick on a forest-green badge.</desc>
+  <style>.c-forest{fill:#173e38}.c-rim{fill:#28574c}.c-deep{fill:#102d2c}.c-ink{fill:#202639}.c-far{fill:#626391}.c-violet{fill:#9294cf}.c-light{fill:#c0bdf0}.c-shade{fill:#666aab}.c-dark{fill:#454c7d}.c-wood{fill:#c58b46}.c-woodshade{fill:#946032}.c-gold{fill:#f3c779}.c-cream{fill:#fff0c7}.c-legfar{fill:none;stroke:#626391}.c-leg{fill:none;stroke:#9294cf}.c-outline{fill:none;stroke:#202639}</style>
+  <rect class="c-forest" width="512" height="512" rx="112" />
+  <path class="c-rim" d="M112 12H400A100 100 0 0 1 500 112V142A118 118 0 0 0 382 24H130A118 118 0 0 0 12 142V112A100 100 0 0 1 112 12Z" />
+  <path class="c-deep" d="M80 183H432L457 216L354 406L219 431L126 367Z" />
+  
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <path class="c-outline" stroke-width="24" d="M267 273L191 222L160 163M274 267L248 215L230 163M291 265L329 219L315 163M303 276L373 230L365 163" />
+    <path class="c-legfar" stroke-width="14" d="M267 273L191 222L160 163M274 267L248 215L230 163M291 265L329 219L315 163M303 276L373 230L365 163" />
+  </g>
+  
+  <rect class="c-ink" x="49" y="129" width="414" height="65" rx="25" />
+  <rect class="c-woodshade" x="55" y="135" width="402" height="53" rx="20" />
+  <rect class="c-wood" x="55" y="135" width="402" height="37" rx="18" />
+  <rect class="c-gold" x="64" y="136" width="384" height="9" rx="4.5" />
+  <path class="c-woodshade" d="M139 145H147V172H139ZM355 145H363V172H355Z" />
+  <path class="c-gold" d="M147 145H153V172H147ZM363 145H369V172H363Z" />
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <path class="c-outline" stroke-width="25" d="M270 298L140 252L100 175V157M278 283L206 234L184 175V157M303 284L365 255L406 190V157M306 305L414 265L441 209V167" />
+    <path class="c-leg" stroke-width="15" d="M270 298L140 252L100 175V157M278 283L206 234L184 175V157M303 284L365 255L406 190V157M306 305L414 265L441 209V167" />
+  </g>
+  
+  <path class="c-ink" d="M264 261C243 232 196 223 160 240C123 257 112 294 124 333C136 372 168 396 207 397C244 398 272 376 284 341L296 290Z" />
+  <path class="c-dark" d="M259 268C236 242 198 235 165 250C135 264 124 297 135 329C146 364 174 385 208 386C238 387 261 367 274 336L285 292Z" />
+  <path class="c-violet" d="M165 250C197 235 236 242 259 268L276 303L254 340L207 361L160 349L133 316C129 287 141 261 165 250Z" />
+  <path class="c-light" d="M148 283C160 253 198 243 227 253L249 266L211 258L176 269L150 300Z" />
+  <path class="c-shade" d="M133 316L160 349L207 361L254 340L276 303L271 338L240 370L207 380L171 366L147 343Z" />
+  <path class="c-ink" d="M277 267C297 251 327 250 347 266L368 291L359 330L331 353L294 347L266 324L261 290Z" />
+  <path class="c-shade" d="M281 276C298 262 323 262 340 275L357 294L349 324L328 342L299 337L277 319L272 291Z" />
+  <path class="c-violet" d="M281 276C298 262 323 262 340 275L351 290L333 312L302 318L277 304L272 291Z" />
+  <path class="c-light" d="M281 276C299 262 323 262 340 275L345 282L315 274L289 285L275 296L272 291Z" />
+  <path class="c-ink" d="M300 291L319 297L315 313L302 309ZM329 296L350 286L346 307L333 313Z" />
+  <path class="c-gold" d="M304 297L315 300L312 307L305 305ZM333 299L345 293L342 304L335 308Z" />
+  <path class="c-cream" d="M310 331L321 332L316 351L307 343ZM333 330L344 324L342 343L331 350Z" />
+</svg>

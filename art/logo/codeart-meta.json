@@ -1,0 +1,126 @@
+{
+  "schema": "codeart2d.codeart_meta.v1",
+  "art_source": "code",
+  "placeholder": false,
+  "disclosure": "code-drawn, no image model",
+  "generator": "svg_render.py",
+  "spec_sha256": "f31112fd1f5afb78164d20685433b13fd92538a79fa33f6f0adf6d1390814b6c",
+  "renderer": {
+    "backend": "chrome",
+    "name": "chrome",
+    "version": "156.0.8078.47",
+    "zoom": 2,
+    "size": [
+      1024,
+      1024
+    ]
+  },
+  "palette": {
+    "colors": {
+      "0": "#173e38",
+      "1": "#28574c",
+      "2": "#102d2c",
+      "3": "#202639",
+      "4": "#626391",
+      "5": "#9294cf",
+      "6": "#c0bdf0",
+      "7": "#666aab",
+      "8": "#454c7d",
+      "9": "#c58b46",
+      "10": "#946032",
+      "11": "#f3c779",
+      "12": "#fff0c7"
+    },
+    "variants": {}
+  },
+  "outputs": [
+    {
+      "path": "base/logo.svg",
+      "sha256": "a4290390774444c91c516eeb07be55f6afd607b213596804cd87963c2ef9e221",
+      "bytes": 3593
+    },
+    {
+      "path": "base/logo.png",
+      "sha256": "2e3009bf72047ebf3633495c5ce5c44587c4a23bb57e3236a47fe2f75e1be1c8",
+      "bytes": 92138
+    }
+  ],
+  "qa": {
+    "status": "pass",
+    "method": "svg_render.py render: every variant's compiled SVG passed codeart_core.lint_portable_svg (portable profile) before rasterizing",
+    "notProven": [
+      "Appearance, readability and appeal; look at the PNGs at game size.",
+      "Agreement with other renderers on this machine; run svg_render.py doctor (renders are bit-exact only for the recorded renderer version).",
+      "That the art matches the brief and the intent of the SVG.",
+      "Pixel gates: vector renders are anti-aliased by design, so partial alpha and colours outside the palette are expected and not checked (render with --crisp for pixel art)."
+    ],
+    "checks": [
+      {
+        "id": "lint",
+        "status": "pass",
+        "value": 0,
+        "threshold": 0,
+        "profile": "portable"
+      }
+    ],
+    "inputs": [
+      {
+        "path": "../../client/public/logo.svg",
+        "sha256": "f31112fd1f5afb78164d20685433b13fd92538a79fa33f6f0adf6d1390814b6c",
+        "bytes": 3826
+      }
+    ],
+    "outputs": [
+      {
+        "path": "base/logo.svg",
+        "sha256": "a4290390774444c91c516eeb07be55f6afd607b213596804cd87963c2ef9e221",
+        "bytes": 3593
+      },
+      {
+        "path": "base/logo.png",
+        "sha256": "2e3009bf72047ebf3633495c5ce5c44587c4a23bb57e3236a47fe2f75e1be1c8",
+        "bytes": 92138
+      }
+    ],
+    "tool": {
+      "name": "svg_render.py render",
+      "version": "0.4.0"
+    }
+  },
+  "svg": {
+    "mode": "vector",
+    "profile": "portable",
+    "zoom": 2,
+    "canvas": [
+      512,
+      512
+    ],
+    "anchor_px": [
+      256.0,
+      256.0
+    ],
+    "palette_source": "svg-colours",
+    "variants": {
+      "base": "base"
+    },
+    "images": [
+      {
+        "variant": "base",
+        "file": "base/logo.png",
+        "scale": 2,
+        "size": [
+          1024,
+          1024
+        ],
+        "anchor_px": [
+          512.0,
+          512.0
+        ],
+        "visible": 1006265,
+        "partial_alpha": 1664,
+        "off_palette": 17136,
+        "colors": 2563
+      }
+    ]
+  }
+}

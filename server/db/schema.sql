@@ -84,7 +84,8 @@ BEGIN
     matches,
     win_rate,
     online_exp,
-    unlocked_skills
+    unlocked_skills,
+    looks
   )
   VALUES (
     NEW.id,
@@ -95,8 +96,9 @@ BEGIN
     COALESCE((NEW.raw_user_meta_data->>'losses')::int, 0),
     COALESCE((NEW.raw_user_meta_data->>'matches')::int, 0),
     COALESCE((NEW.raw_user_meta_data->>'win_rate')::int, 0),
-    COALESCE((NEW.raw_user_meta_data->>'online_exp')::int, 0),
-    COALESCE(NEW.raw_user_meta_data->'unlocked_skills', '["dash"]'::jsonb)
+    COALESCE((NEW.raw_user_meta_data->>'onlineExp')::int, (NEW.raw_user_meta_data->>'online_exp')::int, 0),
+    COALESCE(NEW.raw_user_meta_data->'unlockedSkills', NEW.raw_user_meta_data->'unlocked_skills', '["dash"]'::jsonb),
+    NEW.raw_user_meta_data->'looks'
   )
   ON CONFLICT (id) DO UPDATE SET
     username = EXCLUDED.username,

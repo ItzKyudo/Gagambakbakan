@@ -1,9 +1,10 @@
-import { Room, Client } from 'colyseus';
+import { Room, Client, ServerError, type AuthContext } from 'colyseus';
 import { BattleStateData, PlayerStateData, WebStateData } from './schema/BattleState';
 import { BattleCombat, type PlayerInput } from './BattleCombat';
 import { ABILITIES, getRandomAbilities, isAbilityId, selectDraftAbilities, validateUnlockedSkills, AbilityId } from '../abilities';
 import { getRankFromRating, normalizeRankId, calculateRatingChange } from '../ranks';
 import { validateUsername } from '../auth';
+import { checkMatchmakingRateLimit } from '../matchmakingRateLimit';
 
 const TAP = 8, FALL_DEPTH = 100;
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
@@ -21,6 +22,14 @@ function isValidCustomPattern(value: unknown): value is string {
 }
 
 export class BattleRoom extends Room<{ state: BattleStateData }> {
+  static async onAuth(_token: string, _options: unknown, context: AuthContext) {
+    const result = checkMatchmakingRateLimit(context.ip);
+    if (!result.allowed) {
+      throw new ServerError(429, `Too many matchmaking attempts. Try again in ${Math.ceil(result.retryAfterMs / 1000)} seconds.`);
+    }
+    return true;
+  }
+
   maxClients = 2;
   
   private battleState!: BattleStateData;

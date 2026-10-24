@@ -89,7 +89,7 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
   };
 
   const onStart = (opts: MenuStartOptions) => {
-    if (!getAuthUser()) {
+    if (opts.isRanked && !getAuthUser()) {
       activeTab = 'account';
       render();
       return;

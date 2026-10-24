@@ -55,10 +55,17 @@ export function renderMainMenuView(activePanel: 'main' | 'play' = 'main'): strin
       <div class="menu-left-col">
         <nav class="panel" id="pMain" aria-label="Main menu" ${activePanel === 'play' ? 'hidden' : ''}>
           <button type="button" class="mb primary" id="btnGoPlay">
-            <span class="mi">${user ? '<svg class="ico"><use href="#ic-play"/></svg>' : icon(LogIn, { class: 'ico', width: 20, height: 20, 'stroke-width': 2.1 })}</span>
-            <span class="ml">${user ? 'Play' : 'Log In'}</span>
-            <small style="${user ? '' : 'color:var(--amber); font-weight:600;'}">${user ? 'vs AI, PvP, or Online' : 'Sign in or register to play'}</small>
+            <span class="mi"><svg class="ico"><use href="#ic-play"/></svg></span>
+            <span class="ml">${user ? 'Play' : 'Play as Guest'}</span>
+            <small>${user ? 'vs AI, PvP, or Online' : 'No account needed, including online'}</small>
           </button>
+          ${!user ? `
+            <button type="button" class="mb" id="btnGoAccount">
+              <span class="mi">${icon(LogIn, { class: 'ico', width: 20, height: 20, 'stroke-width': 2.1 })}</span>
+              <span class="ml">Log In</span>
+              <small>Save progress and play ranked</small>
+            </button>
+          ` : ''}
           ${user ? `
             <button type="button" class="mb" id="btnGoAbilities">
               <span class="mi"><svg class="ico"><use href="#ic-web"/></svg></span>
@@ -90,10 +97,10 @@ export function renderMainMenuView(activePanel: 'main' | 'play' = 'main'): strin
 
         <nav class="panel" id="pPlay" aria-label="Choose a mode" ${activePanel === 'play' ? '' : 'hidden'}>
           <h2>Play</h2>
-          <button type="button" class="mb selected" id="btnModeRank">
+          <button type="button" class="mb ${user ? 'selected' : ''}" id="btnModeRank">
             <span class="mi"><svg class="ico"><use href="#ic-rank"/></svg></span>
             <span class="ml" id="rankBtnLabel">Rank</span>
-            <small id="rankBtnTag">Strict same-rank &bull; ${rankInfo.title}</small>
+            <small id="rankBtnTag">${user ? `Strict same-rank &bull; ${rankInfo.title}` : 'Log in to play ranked'}</small>
             <div class="online-queue-side" id="rankQueueSide" style="display:none;">
               <span class="queue-timer-val" id="rankQueueTimer">00:00</span>
               <span class="queue-cancel-x" id="btnCancelRankQueue" title="Cancel Queue" aria-label="Cancel queue">✕</span>
@@ -104,10 +111,10 @@ export function renderMainMenuView(activePanel: 'main' | 'play' = 'main'): strin
             <span class="ml">vs AI</span>
             <small id="diffNote">${st.diff.charAt(0).toUpperCase() + st.diff.slice(1)} diff</small>
           </button>
-          <button type="button" class="mb mb-online" id="btnModeOnline">
+          <button type="button" class="mb mb-online ${user ? '' : 'selected'}" id="btnModeOnline">
             <span class="mi"><svg class="ico"><use href="#ic-globe"/></svg></span>
             <span class="ml" id="onlineBtnLabel">Multiplayer Online</span>
-            <small id="onlineBtnTag">Quick match</small>
+            <small id="onlineBtnTag">${user ? 'Quick match' : 'Guest quick match'}</small>
             <div class="online-queue-side" id="onlineQueueSide" style="display:none;">
               <span class="queue-timer-val" id="onlineQueueTimer">00:00</span>
               <span class="queue-cancel-x" id="btnCancelQueue" title="Cancel Queue" aria-label="Cancel queue">✕</span>

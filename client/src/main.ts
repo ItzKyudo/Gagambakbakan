@@ -237,7 +237,7 @@ function showMainMenu(initialTab?: MenuTab) {
 }
 
 async function startGame(opts: MenuStartOptions) {
-  if (!getAuthUser()) {
+  if (opts.isRanked && !getAuthUser()) {
     showMainMenu('account');
     return;
   }

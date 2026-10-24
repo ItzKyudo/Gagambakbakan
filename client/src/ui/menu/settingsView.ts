@@ -1,5 +1,6 @@
-import { createElement, ArrowLeft, Volume2, VolumeX, type IconNode } from 'lucide';
+import { createElement, ArrowLeft, LogOut, Volume2, VolumeX, type IconNode } from 'lucide';
 import { sound } from '../../audio';
+import { getAuthUser } from '../../auth';
 import { ACTIONS, getKeys, getSettings, keyLabel } from '../../gb';
 
 function icon(node: IconNode, attrs: Record<string, string | number> = {}): string {
@@ -17,6 +18,7 @@ export interface ListeningKey {
 export function renderSettingsView(listeningKey: ListeningKey | null): string {
   const st = getSettings();
   const kb = getKeys();
+  const user = getAuthUser();
 
   return `
     <div class="page settings-page" style="max-width:760px; margin-inline:auto;">
@@ -111,6 +113,19 @@ export function renderSettingsView(listeningKey: ListeningKey | null): string {
         <div class="msg" id="kmsg" aria-live="polite">${listeningKey ? 'Press any key for ' + listeningKey.action + ' (Esc cancels)' : ''}</div>
         <div class="btns"><button type="button" class="btn ghost" id="btnResetKeys">Reset keys</button></div>
       </section>
+
+      ${user ? `
+        <section class="sec" aria-label="Account session">
+          <h2>Account</h2>
+          <p class="note">You are signed in. Logging out keeps local settings on this device.</p>
+          <div class="btns">
+            <button type="button" class="btn ghost" id="btnSettingsSignOut">
+              ${icon(LogOut, { class: 'ico', width: 16, height: 16, 'stroke-width': 2.2 })}
+              <span>Log Out</span>
+            </button>
+          </div>
+        </section>
+      ` : ''}
     </div>
   `;
 }

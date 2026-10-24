@@ -1,4 +1,5 @@
 import { sound } from '../../audio';
+import { signOutUser } from '../../auth';
 import { defaultKeys, getSettings, saveKeys, saveSettings, applyQualityClass, type GraphicQuality } from '../../gb';
 import type { ListeningKey } from './settingsView';
 
@@ -104,6 +105,19 @@ export function bindSettingsEvents(container: HTMLElement, state: SettingsState,
     saveKeys(defaultKeys());
     sound.playTone(400, 0.1, 'triangle', 0.04, -100);
     render();
+  });
+
+  container.querySelector<HTMLButtonElement>('#btnSettingsSignOut')?.addEventListener('click', async event => {
+    const button = event.currentTarget as HTMLButtonElement;
+    button.disabled = true;
+    button.textContent = 'Logging out...';
+    try {
+      await signOutUser();
+      render();
+    } catch {
+      button.disabled = false;
+      button.textContent = 'Logout failed. Try again.';
+    }
   });
 }
 

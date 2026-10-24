@@ -65,7 +65,7 @@ export function bindMainMenuEvents(container: HTMLElement, actions: MainMenuActi
     if (labelOnline) labelOnline.innerHTML = 'Multiplayer Online';
     if (tagOnline) {
       tagOnline.style.display = 'inline';
-      tagOnline.textContent = !isRankedQueue && tagNote ? tagNote : 'Quick match';
+      tagOnline.textContent = !isRankedQueue && tagNote ? tagNote : (getAuthUser() ? 'Quick match' : 'Guest quick match');
     }
     if (sideOnline) sideOnline.style.display = 'none';
 
@@ -84,7 +84,9 @@ export function bindMainMenuEvents(container: HTMLElement, actions: MainMenuActi
     if (labelRank) labelRank.innerHTML = 'Rank';
     if (tagRank) {
       tagRank.style.display = 'inline';
-      tagRank.textContent = isRankedQueue && tagNote ? tagNote : `Strict same-rank • ${rInfo.title}`;
+      tagRank.textContent = isRankedQueue && tagNote
+        ? tagNote
+        : (getAuthUser() ? `Strict same-rank • ${rInfo.title}` : 'Log in to play ranked');
     }
     if (sideRank) sideRank.style.display = 'none';
 
@@ -232,28 +234,29 @@ export function bindMainMenuEvents(container: HTMLElement, actions: MainMenuActi
     } catch (err: any) {
       if (!isQueueing) return;
       sound.playTone(220, 0.15, 'sawtooth', 0.05, -50);
-      cancelQueue('Connection failed. Click to retry.');
+      cancelQueue(err?.message?.includes('Too many matchmaking attempts')
+        ? err.message
+        : 'Connection failed. Click to retry.');
     }
   };
 
   if (!pPlay.hidden) {
-    toggleRankCard(true);
+    const user = getAuthUser();
+    toggleRankCard(Boolean(user));
     playModeBtns.forEach(b => b.classList.remove('selected'));
-    const rankBtn = container.querySelector<HTMLButtonElement>('#btnModeRank');
-    if (rankBtn) {
-      rankBtn.classList.add('selected');
-    }
+    container.querySelector<HTMLButtonElement>(user ? '#btnModeRank' : '#btnModeOnline')?.classList.add('selected');
   }
 
   container.querySelector('#btnGoPlay')?.addEventListener('click', () => {
     cancelQueue();
-    if (!getAuthUser()) {
-      sound.playTone(520, 0.08, 'triangle', 0.05, 200);
-      actions.navigate('account');
-      return;
-    }
     sound.playTone(520, 0.08, 'triangle', 0.05, 200);
     actions.navigate('play');
+  });
+
+  container.querySelector('#btnGoAccount')?.addEventListener('click', () => {
+    cancelQueue();
+    sound.playTone(520, 0.08, 'triangle', 0.05, 200);
+    actions.navigate('account');
   });
 
   container.querySelector('#btnGoLeaderboard')?.addEventListener('click', () => {
@@ -349,10 +352,6 @@ export function bindMainMenuEvents(container: HTMLElement, actions: MainMenuActi
   });
   container.querySelector('#btnModeCpu')?.addEventListener('click', () => {
     cancelQueue();
-    if (!getAuthUser()) {
-      actions.navigate('account');
-      return;
-    }
     const st = getSettings();
     const lks = getLooks();
     const col = getColor(lks.p1.color);
@@ -371,10 +370,6 @@ export function bindMainMenuEvents(container: HTMLElement, actions: MainMenuActi
 
   container.querySelector('#btnMode2p')?.addEventListener('click', () => {
     cancelQueue();
-    if (!getAuthUser()) {
-      actions.navigate('account');
-      return;
-    }
     const st = getSettings();
     const lks = getLooks();
     const col = getColor(lks.p1.color);
@@ -415,10 +410,6 @@ export function bindMainMenuEvents(container: HTMLElement, actions: MainMenuActi
 
   // Online Multiplayer Quick Match Button
   container.querySelector('#btnModeOnline')?.addEventListener('click', () => {
-    if (!getAuthUser()) {
-      actions.navigate('account');
-      return;
-    }
     if (isQueueing) {
       sound.playTone(440, 0.08, 'triangle', 0.04, -100);
       cancelQueue();

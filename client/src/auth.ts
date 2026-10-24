@@ -97,7 +97,7 @@ export async function fetchProfile(userId: string): Promise<UserProfile | null> 
     };
     saveProgress(finalProg);
 
-    const looksData = meta.looks || data?.looks;
+    const looksData = data?.looks || meta.looks;
     if (looksData?.p1) {
       saveLooks(looksData);
     }
@@ -143,7 +143,9 @@ export async function syncBattleResultToDatabase(
         rank: reward.rank,
         matches: reward.totalPlayed,
         win_rate: reward.winRate,
-        online_exp: reward.progress.totalExp
+        online_exp: reward.progress.totalExp,
+        unlocked_skills: getProgress().unlockedSkills,
+        looks: looks || getLooks()
       })
       .eq('id', currentUser.id);
 
@@ -187,19 +189,12 @@ export async function syncUserDataToDatabase(): Promise<void> {
   try {
     const prog = getProgress();
     const looks = getLooks();
-    await supabase.auth.updateUser({
-      data: {
-        rating: prog.rating,
-        rank: prog.rank,
-        wins: prog.wins,
-        losses: prog.losses,
-        played: prog.played,
-        winRate: prog.winRate,
-        onlineExp: prog.onlineExp,
-        unlockedSkills: prog.unlockedSkills,
-        looks
-      }
-    });
+    const { error } = await supabase.from('profiles').update({
+      unlocked_skills: prog.unlockedSkills,
+      looks,
+      updated_at: new Date().toISOString()
+    }).eq('id', currentUser.id);
+    if (error) throw error;
   } catch (err) {
     console.warn('Failed to sync user data to database:', err);
   }

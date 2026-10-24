@@ -72,6 +72,47 @@ test('auth listener lifecycle: subscribe, unsubscribe, and silence token refresh
   assert.equal(context.getAuthUser(), null);
 });
 
+test('logged-in customization and abilities persist to the profiles row', async () => {
+  const updates = [];
+  const looks = { p1: { name: 'Spidey', color: 'red' }, p2: { name: 'Jade', color: 'green' } };
+  const progress = { rank: 'wolf-spider', rating: 0, unlockedSkills: ['dash', 'web'] };
+  const mockSupabase = {
+    auth: {
+      async getSession() {
+        return { data: { session: { user: { id: 'user-abc', user_metadata: { username: 'Spidey' } } } } };
+      },
+      onAuthStateChange() {}
+    },
+    from(table) {
+      return {
+        select() { return this; },
+        update(data) { updates.push({ table, data }); return this; },
+        eq() { return this; },
+        async maybeSingle() { return { data: null }; },
+        then(resolve) { resolve({ error: null }); }
+      };
+    }
+  };
+  const context = {
+    createClient: () => mockSupabase,
+    getLooks: () => looks,
+    getProgress: () => progress,
+    saveLooks() {},
+    saveProgress() {},
+    registerDataPersistHook() {},
+    getRankFromRating: () => ({ id: 'wolf-spider', minRating: 0 }),
+    console: { warn() {}, error() {} }
+  };
+
+  runInNewContext(source('../src/auth.ts'), context);
+  await context.initAuth();
+  await context.syncUserDataToDatabase();
+
+  assert.equal(updates.at(-1).table, 'profiles');
+  assert.deepEqual(updates.at(-1).data.unlocked_skills, ['dash', 'web']);
+  assert.deepEqual(updates.at(-1).data.looks, looks);
+});
+
 test('renderMenuPage cleanup contract prevents lingering subscriptions from wiping DOM', () => {
   let authListener = null;
   const mockAuth = {

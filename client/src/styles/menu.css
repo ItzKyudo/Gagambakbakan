@@ -2088,12 +2088,18 @@ body.main-menu-active .menu-right-col {
   flex-shrink: 1;
 }
 
-body.main-menu-active .menu-right-col.showcase {
-  align-items: flex-end;
+body:has(.menu-split-body) .menu-right-col.showcase {
+  width: 330px;
+  flex: 0 1 330px;
+  margin-left: auto;
+  align-items: stretch;
 }
 
 @media (max-width: 860px) {
-  body.main-menu-active .menu-right-col.showcase {
+  body:has(.menu-split-body) .menu-right-col.showcase {
+    width: min(100%, 420px);
+    flex: 0 1 auto;
+    margin-left: 0;
     align-items: center;
   }
 }

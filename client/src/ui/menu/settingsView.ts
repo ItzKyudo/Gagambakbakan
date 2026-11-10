@@ -87,7 +87,7 @@ export function renderSettingsView(listeningKey: ListeningKey | null): string {
 
       <section class="sec" aria-label="Demo mode">
         <h2>Demo mode</h2>
-        <p class="note">Try every ability and accessory. This does not earn levels or ability points.</p>
+        <p class="note">Try every ability and accessory. This does not earn levels or ability points.  (During Competition only)</p>
         <div class="btns">
           <button type="button" class="btn ghost" id="btnDemoMode" aria-pressed="${getProgress().unlockAll}">
             ${getProgress().unlockAll ? 'Turn Demo Off' : 'Turn Demo On'}

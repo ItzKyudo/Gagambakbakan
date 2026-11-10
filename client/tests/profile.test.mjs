@@ -58,6 +58,12 @@ test('match history keeps account, slot, mode and score; fetches every page; rep
 
 test('profile abilities are visible and read-only; Player 2 has no account rank', () => {
   const context = {
+    SPIDER_RANKS: [
+      { id: 'wolf-spider', minRating: 0 },
+      { id: 'huntsman-spider', species: 'Huntsman Spider', title: 'Nightmare Prowler', minRating: 300 },
+      { id: 'philippine-tarantula', minRating: 800 },
+      { id: 'brown-widow', minRating: 1600 }
+    ],
     getProgress: () => ({ rating: 400, onlineExp: 100 }),
     getLevel: () => 2,
     getUnlockedIds: () => ['dash'],

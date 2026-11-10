@@ -14,7 +14,7 @@ import { LocalGameEngine, type InputState } from './game/localGame';
 import { network } from './network';
 import { sound } from './audio';
 import { getKeys, getLooks, getColor, getProgress, getLevel, getUnlockedIds, recordOnlineMatch, applyQualityClass, type PlayerKeys } from './gb';
-import { getAuthUser, syncBattleResultToDatabase } from './auth';
+import { fetchProfile, getAuthUser } from './auth';
 import { RANK_RATING_LABEL } from './ui/menu/rankTitle';
 import { saveMatchHistory } from './matchHistory';
 import { getRoute, setRoute } from './router';
@@ -523,7 +523,7 @@ function getNetworkCallbacks(isRanked: boolean) {
     onRoundWon: () => {
       // Gameplay music continues until match end
     },
-    onMatchEnd: (data: { winner: number; winnerName: string; p1Wins: number; p2Wins: number; forfeit?: boolean; disconnectForfeit?: boolean; isTimeOut?: boolean }) => {
+    onMatchEnd: (data: { winner: number; winnerName: string; p1Wins: number; p2Wins: number; forfeit?: boolean; disconnectForfeit?: boolean; isTimeOut?: boolean; progressSaved?: boolean }) => {
       if (matchRecorded) return;
       matchRecorded = true;
       sound.music.play('ambient');
@@ -538,16 +538,22 @@ function getNetworkCallbacks(isRanked: boolean) {
         const myId = network.myPlayerId >= 0 ? network.myPlayerId : (currentScene ? currentScene.myPlayerId : 0);
         const isMe = myId === data.winner;
         const myWins = myId === 0 ? data.p1Wins : data.p2Wins;
-        void saveMatchHistory([{
-          player_slot: 'p1', mode: isRanked ? 'ranked' : 'online', won: isMe,
-          opponent: (myId === 0 ? currentScene?.gameState?.p2.name : currentScene?.gameState?.p1.name) || 'Opponent',
-          rounds_won: myWins, rounds_lost: myId === 0 ? data.p2Wins : data.p1Wins
-        }]);
+        const account = getAuthUser();
+        if (data.winner < 0 || !data.progressSaved || !account) {
+          const title = data.winner < 0 ? 'DRAW!' : isMe ? 'VICTORY!' : 'DEFEAT!';
+          const detail = data.winner < 0 ? 'Five rounds ended level. No rating changed.'
+            : !account ? 'Sign in to earn online EXP and rank.'
+            : 'Result could not be saved. No rank or EXP was awarded.';
+          gamePage.showModal(title, detail, [
+            { label: 'Rematch', primary: true, onClick: () => network.sendRestart() },
+            { label: 'Menu', onClick: () => showMainMenu('play') }
+          ]);
+          return;
+        }
 
         // EXP and level reward specifically for online matches
-        const reward = recordOnlineMatch(isMe, myWins);
-        // Sync battlefield results, rating, rank, and EXP to database
-        syncBattleResultToDatabase(reward, getLooks());
+        const reward = recordOnlineMatch(isMe, myWins, isRanked);
+        void fetchProfile(account.id);
 
         if (reward.leveledUp) {
           sound.play('power_up');
@@ -751,7 +757,7 @@ function startLocalGame(opts: MenuStartOptions) {
     if (currentScene) currentScene.addShake(shake.amount);
   };
   localEngine.onMatchEnd = (data) => {
-    void saveMatchHistory([
+    if (data.winner >= 0) void saveMatchHistory([
       { player_slot: 'p1', mode: opts.mode === 'cpu' ? 'cpu' : '2p', opponent: cpuName,
         won: data.winner === 0, rounds_won: data.p1Wins, rounds_lost: data.p2Wins },
       ...(opts.mode === '2p' ? [{ player_slot: 'p2' as const, mode: '2p' as const,
@@ -761,8 +767,10 @@ function startLocalGame(opts: MenuStartOptions) {
     sound.music.play('ambient');
     if (gamePage) {
       if (gamePage.isDraftOpen) gamePage.hideDraftModal();
-      const sub = `${data.winnerName} won the match (${data.p1Wins} - ${data.p2Wins})! Run it back?`;
-      gamePage.showModal(`${data.winnerName} Takes It!`, sub, [
+      const sub = data.winner < 0
+        ? 'Five rounds ended level. No winner or loss recorded.'
+        : `${data.winnerName} won the match (${data.p1Wins} - ${data.p2Wins})! Run it back?`;
+      gamePage.showModal(data.winner < 0 ? 'Draw!' : `${data.winnerName} Takes It!`, sub, [
         { label: 'Rematch', primary: true, onClick: () => { localEngine?.startMatch(); gamePage?.hideModal(); } },
         { label: 'Menu', onClick: () => {
           try { sessionStorage.removeItem('gb_active_game'); } catch {}

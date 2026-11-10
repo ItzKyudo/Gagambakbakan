@@ -1,5 +1,5 @@
 import { createElement, BookOpen, GraduationCap, Settings, LogIn, type IconNode } from 'lucide';
-import { getColor, getExpProgress, getLooks, getProgress, getSettings, getUnlockedIds, spiderSVG, getBattlefieldsData } from '../../gb';
+import { getColor, getExpProgress, getLooks, getProgress, getUnlockedIds, spiderSVG, getBattlefieldsData } from '../../gb';
 import { SKILLS_LIST } from '../../game/abilities';
 import { getRankFromRating, getRankProgress, renderRankBadgeSVG, RANK_RATING_LABEL } from './rankTitle';
 import { getAuthUser } from '../../auth';
@@ -14,7 +14,6 @@ function icon(node: IconNode, attrs: Record<string, string | number> = {}): stri
 export function renderMainMenuView(activePanel: 'main' | 'play' = 'main'): string {
   const user = getAuthUser();
   const looks = getLooks();
-  const st = getSettings();
   const prog = getProgress();
   const expInfo = getExpProgress(prog.onlineExp);
   const unlockedCount = getUnlockedIds(prog).length;
@@ -57,41 +56,34 @@ export function renderMainMenuView(activePanel: 'main' | 'play' = 'main'): strin
           <button type="button" class="mb primary" id="btnGoPlay">
             <span class="mi"><svg class="ico"><use href="#ic-play"/></svg></span>
             <span class="ml">${user ? 'Play' : 'Play as Guest'}</span>
-            <small>${user ? 'vs AI, PvP, or Online' : 'No account needed, including online'}</small>
           </button>
           ${!user ? `
             <button type="button" class="mb" id="btnGoAccount">
               <span class="mi">${icon(LogIn, { class: 'ico', width: 20, height: 20, 'stroke-width': 2.1 })}</span>
               <span class="ml">Log In</span>
-              <small>Save progress and play ranked</small>
             </button>
           ` : ''}
           ${user ? `
             <button type="button" class="mb" id="btnGoAbilities">
               <span class="mi"><svg class="ico"><use href="#ic-web"/></svg></span>
               <span class="ml">Abilities</span>
-              <small id="abCount">Level ${expInfo.level} &middot; ${unlockedCount} of ${SKILLS_LIST.length} unlocked</small>
             </button>
           ` : ''}
           <button type="button" class="mb" id="btnGoLeaderboard">
             <span class="mi"><svg class="ico" aria-hidden="true"><use href="#ic-rank"/></svg></span>
             <span class="ml">Leaderboard</span>
-            <small>Highest level &amp; rank</small>
           </button>
           <button type="button" class="mb" id="btnGoLearn">
             <span class="mi">${icon(GraduationCap, { class: 'ico', width: 20, height: 20, 'stroke-width': 2.1 })}</span>
             <span class="ml">Learn</span>
-            <small>Interactive battle tutorial</small>
           </button>
           <button type="button" class="mb" id="btnGoSettings">
             <span class="mi">${icon(Settings, { class: 'ico', width: 20, height: 20, 'stroke-width': 2.1 })}</span>
             <span class="ml">Settings</span>
-            <small>Keys, sound, music</small>
           </button>
           <button type="button" class="mb" id="btnGoAbout">
             <span class="mi">${icon(BookOpen, { class: 'ico', width: 20, height: 20, 'stroke-width': 2.1 })}</span>
             <span class="ml">About</span>
-            <small>Lore, rules &amp; credits</small>
           </button>
         </nav>
 
@@ -100,30 +92,28 @@ export function renderMainMenuView(activePanel: 'main' | 'play' = 'main'): strin
           <button type="button" class="mb ${user ? 'selected' : ''}" id="btnModeRank">
             <span class="mi"><svg class="ico"><use href="#ic-rank"/></svg></span>
             <span class="ml" id="rankBtnLabel">Rank</span>
-            <small id="rankBtnTag">${user ? `Strict same-rank &bull; ${rankInfo.title}` : 'Log in to play ranked'}</small>
             <div class="online-queue-side" id="rankQueueSide" style="display:none;">
               <span class="queue-timer-val" id="rankQueueTimer">00:00</span>
               <span class="queue-cancel-x" id="btnCancelRankQueue" title="Cancel Queue" aria-label="Cancel queue">✕</span>
             </div>
           </button>
+          <p class="menu-queue-status" id="rankBtnTag" hidden aria-live="polite"></p>
           <button type="button" class="mb" id="btnModeCpu">
             <span class="mi"><svg class="ico"><use href="#ic-cpu"/></svg></span>
             <span class="ml">vs AI</span>
-            <small id="diffNote">${st.diff.charAt(0).toUpperCase() + st.diff.slice(1)} diff</small>
           </button>
           <button type="button" class="mb mb-online ${user ? '' : 'selected'}" id="btnModeOnline">
             <span class="mi"><svg class="ico"><use href="#ic-globe"/></svg></span>
             <span class="ml" id="onlineBtnLabel">Multiplayer Online</span>
-            <small id="onlineBtnTag">${user ? 'Quick match' : 'Guest quick match'}</small>
             <div class="online-queue-side" id="onlineQueueSide" style="display:none;">
               <span class="queue-timer-val" id="onlineQueueTimer">00:00</span>
               <span class="queue-cancel-x" id="btnCancelQueue" title="Cancel Queue" aria-label="Cancel queue">✕</span>
             </div>
           </button>
+          <p class="menu-queue-status" id="onlineBtnTag" hidden aria-live="polite"></p>
           <button type="button" class="mb" id="btnMode2p">
             <span class="mi"><svg class="ico"><use href="#ic-versus"/></svg></span>
             <span class="ml">PvP</span>
-            <small>2 players, 1 keyboard</small>
           </button>
           <button type="button" class="mb quiet" id="btnPlayBack">
             <span class="mi"><svg class="ico"><use href="#ic-back"/></svg></span>

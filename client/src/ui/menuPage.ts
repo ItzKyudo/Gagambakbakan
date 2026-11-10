@@ -54,8 +54,8 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
   }
   window.addEventListener('hashchange', onHashChange);
 
-  initAuth();
-  const unsubscribeAuth = subscribeAuth((_event) => {
+  const authReady = initAuth();
+  const refreshForAuth = () => {
     if (isDestroyed) return;
     const currentUserId = getAuthUser()?.id;
     if (currentUserId === lastAuthUserId) return;
@@ -69,7 +69,9 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
     if (activeTab === 'main' || activeTab === 'play' || activeTab === 'account') {
       render();
     }
-  });
+  };
+  const unsubscribeAuth = subscribeAuth(refreshForAuth);
+  void authReady.then(refreshForAuth);
 
   const cleanup = () => {
     if (isDestroyed) return;

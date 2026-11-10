@@ -1,5 +1,6 @@
 import { Client, Room } from 'colyseus.js';
 import { normalizeRankId } from './ui/menu/rankTitle';
+import { supabase } from './auth';
 
 export interface NetworkCallbacks {
   onAssigned?: (data: { id: number; name: string }) => void;
@@ -11,7 +12,7 @@ export interface NetworkCallbacks {
   onDraftStart?: (data: { choicesP1: string[]; choicesP2: string[] }) => void;
   onPlayerDrafted?: (data: { id: number; skill1: string; skill2: string }) => void;
   onRoundWon?: (data: { winner: number; round: number; p1Wins: number; p2Wins: number }) => void;
-  onMatchEnd?: (data: { winner: number; winnerName: string; p1Wins: number; p2Wins: number; forfeit?: boolean; disconnectForfeit?: boolean; isTimeOut?: boolean }) => void;
+  onMatchEnd?: (data: { winner: number; winnerName: string; p1Wins: number; p2Wins: number; forfeit?: boolean; disconnectForfeit?: boolean; isTimeOut?: boolean; progressSaved?: boolean }) => void;
   onRematchVote?: (data: { count: number; ready: boolean }) => void;
   onPlayerLeft?: (data: { winner?: number; sessionId?: string }) => void;
   onPlayerDisconnected?: (data: { id: number; name: string; timeoutSeconds: number }) => void;
@@ -144,9 +145,12 @@ export class NetworkManager {
       this.callbacks = callbacks;
     }
     const client = this.initClient(callbacks);
+    const { data } = supabase ? await supabase.auth.getSession() : { data: { session: null } };
+    if (data.session?.access_token) client.auth.token = data.session.access_token;
     const opts = typeof profile === 'string' ? { name: profile, rank: 'wolf-spider', rating: 0, isRanked: false } : { rank: 'wolf-spider', rating: 0, isRanked: false, ...profile };
     opts.rank = normalizeRankId(opts.rank);
     opts.isRanked = Boolean(opts.isRanked);
+    if (opts.isRanked && !data.session?.access_token) throw new Error('Sign in to play ranked.');
     const room = await client.joinOrCreate('battle', opts);
     if (this.client === client) this.room = room;
     return room;

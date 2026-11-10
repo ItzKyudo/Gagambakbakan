@@ -4,7 +4,7 @@ import { getColor, getLevel, getLooks, getProgress, getSettings, getUnlockedIds,
 import { network } from '../../network';
 import type { MenuStartOptions, MenuTab } from './menuTypes';
 import { mountDemoFightArena } from './demoArena';
-import { getPlayerRankTitle, getRankFromRating } from './rankTitle';
+import { getPlayerRankTitle } from './rankTitle';
 
 interface MainMenuActions {
   navigate: (tab: MenuTab) => void;
@@ -47,9 +47,6 @@ export function bindMainMenuEvents(container: HTMLElement, actions: MainMenuActi
     queueSeconds = 0;
     network.leave();
 
-    const curProg = getProgress();
-    const rInfo = getRankFromRating(curProg.rating);
-
     // Reset Online Quick Match button
     const btnOnline = container.querySelector('#btnModeOnline') as HTMLElement | null;
     const labelOnline = container.querySelector('#onlineBtnLabel') as HTMLElement | null;
@@ -64,8 +61,8 @@ export function bindMainMenuEvents(container: HTMLElement, actions: MainMenuActi
     if (iconOnline) iconOnline.classList.remove('queue-spin');
     if (labelOnline) labelOnline.innerHTML = 'Multiplayer Online';
     if (tagOnline) {
-      tagOnline.style.display = 'inline';
-      tagOnline.textContent = !isRankedQueue && tagNote ? tagNote : (getAuthUser() ? 'Quick match' : 'Guest quick match');
+      tagOnline.style.display = !isRankedQueue && tagNote ? 'block' : 'none';
+      tagOnline.textContent = !isRankedQueue ? tagNote || '' : '';
     }
     if (sideOnline) sideOnline.style.display = 'none';
 
@@ -83,10 +80,8 @@ export function bindMainMenuEvents(container: HTMLElement, actions: MainMenuActi
     if (iconRank) iconRank.classList.remove('queue-spin');
     if (labelRank) labelRank.innerHTML = 'Rank';
     if (tagRank) {
-      tagRank.style.display = 'inline';
-      tagRank.textContent = isRankedQueue && tagNote
-        ? tagNote
-        : (getAuthUser() ? `Strict same-rank • ${rInfo.title}` : 'Log in to play ranked');
+      tagRank.style.display = isRankedQueue && tagNote ? 'block' : 'none';
+      tagRank.textContent = isRankedQueue ? tagNote || '' : '';
     }
     if (sideRank) sideRank.style.display = 'none';
 
@@ -127,11 +122,10 @@ export function bindMainMenuEvents(container: HTMLElement, actions: MainMenuActi
       timer.textContent = '00:00';
     }
     if (label) {
-      const currentProg = getProgress();
-      const rankTitle = getPlayerRankTitle(currentProg.rating);
-      label.innerHTML = ranked
-        ? `<span class="queue-main-title">Searching ${rankTitle}...</span>`
-        : `<span class="queue-main-title">Queueing (${rankTitle})...</span>`;
+      const queueTitle = !getAuthUser() ? 'Finding guest opponent...' : ranked
+        ? `Searching ${getPlayerRankTitle(getProgress().rating)}...`
+        : `Queueing (${getPlayerRankTitle(getProgress().rating)})...`;
+      label.innerHTML = `<span class="queue-main-title">${queueTitle}</span>`;
     }
 
     queueTimer = setInterval(() => {

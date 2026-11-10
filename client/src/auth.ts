@@ -5,9 +5,7 @@ import {
   saveLooks,
   saveProgress,
   registerDataPersistHook,
-  type OnlineMatchReward,
-  type ProgressData,
-  type SpiderLook
+  type ProgressData
 } from './gb';
 import { getRankFromRating, type SpiderRankId } from './ui/menu/rankTitle';
 
@@ -70,14 +68,14 @@ export async function fetchProfile(userId: string): Promise<UserProfile | null> 
     const meta = currentUser?.user_metadata || {};
     const metaUsername = meta.username;
     const username = data?.username || metaUsername || 'Player';
-    const rating = typeof data?.rating === 'number' ? data.rating : (typeof meta.rating === 'number' ? meta.rating : 0);
-    const wins = typeof data?.wins === 'number' ? data.wins : (typeof meta.wins === 'number' ? meta.wins : 0);
-    const losses = typeof data?.losses === 'number' ? data.losses : (typeof meta.losses === 'number' ? meta.losses : 0);
-    const played = typeof data?.matches === 'number' ? data.matches : (typeof meta.played === 'number' ? meta.played : wins + losses);
+    const rating = typeof data?.rating === 'number' ? data.rating : 0;
+    const wins = typeof data?.wins === 'number' ? data.wins : 0;
+    const losses = typeof data?.losses === 'number' ? data.losses : 0;
+    const played = typeof data?.matches === 'number' ? data.matches : wins + losses;
     const winRate = played > 0 ? Math.round((wins / played) * 100) : 0;
-    const onlineExp = typeof data?.online_exp === 'number' ? data.online_exp : (typeof meta.onlineExp === 'number' ? meta.onlineExp : 0);
-    const unlockedSkills = Array.isArray(data?.unlocked_skills) ? data.unlocked_skills : (Array.isArray(meta.unlockedSkills) ? meta.unlockedSkills : undefined);
-    const rank = (data?.rank || meta.rank || getRankFromRating(rating).id) as SpiderRankId;
+    const onlineExp = typeof data?.online_exp === 'number' ? data.online_exp : 0;
+    const unlockedSkills = Array.isArray(data?.unlocked_skills) ? data.unlocked_skills : undefined;
+    const rank = getRankFromRating(rating).id as SpiderRankId;
 
     // Restore database data into game state (authenticated account data is authoritative)
     const localProg = getProgress();
@@ -114,73 +112,11 @@ export async function fetchProfile(userId: string): Promise<UserProfile | null> 
       onlineExp,
       unlockedSkills: finalProg.unlockedSkills
     };
+    if (currentUser?.id === userId) currentProfile = profile;
     return profile;
   } catch (err) {
     console.warn('fetchProfile error:', err);
     return null;
-  }
-}
-
-export async function syncBattleResultToDatabase(
-  reward: OnlineMatchReward,
-  looks?: { p1: SpiderLook; p2: SpiderLook }
-): Promise<void> {
-  if (!supabase || !currentUser) return;
-
-  try {
-    const profileUpdate: Record<string, any> = {
-      rating: reward.newRating,
-      wins: reward.totalWins,
-      losses: reward.totalLosses,
-      updated_at: new Date().toISOString()
-    };
-
-    // 1. Update public profiles table
-    const { error: fullUpdateErr } = await supabase
-      .from('profiles')
-      .update({
-        ...profileUpdate,
-        rank: reward.rank,
-        matches: reward.totalPlayed,
-        win_rate: reward.winRate,
-        online_exp: reward.progress.totalExp,
-        unlocked_skills: getProgress().unlockedSkills,
-        looks: looks || getLooks()
-      })
-      .eq('id', currentUser.id);
-
-    // If extended columns do not exist in profiles table yet (PGRST204), update base columns
-    if (fullUpdateErr && fullUpdateErr.code === 'PGRST204') {
-      await supabase.from('profiles').update(profileUpdate).eq('id', currentUser.id);
-    }
-
-    // 2. Persist full state to auth.users raw_user_meta_data JSONB in Postgres
-    await supabase.auth.updateUser({
-      data: {
-        rating: reward.newRating,
-        rank: reward.rank,
-        wins: reward.totalWins,
-        losses: reward.totalLosses,
-        played: reward.totalPlayed,
-        winRate: reward.winRate,
-        onlineExp: reward.progress.totalExp,
-        unlockedSkills: getProgress().unlockedSkills,
-        looks: looks || getLooks()
-      }
-    });
-
-    if (currentProfile) {
-      currentProfile.rating = reward.newRating;
-      currentProfile.rank = reward.rank;
-      currentProfile.wins = reward.totalWins;
-      currentProfile.losses = reward.totalLosses;
-      currentProfile.played = reward.totalPlayed;
-      currentProfile.winRate = reward.winRate;
-      currentProfile.onlineExp = reward.progress.totalExp;
-    }
-    notify();
-  } catch (err) {
-    console.warn('Failed to sync match result to database:', err);
   }
 }
 
@@ -211,6 +147,30 @@ function syncNameWithProfile() {
 }
 
 let authInitialized = false;
+const IDLE_LIMIT_MS = 60 * 60 * 1000;
+const LAST_ACTIVITY_KEY = 'gb_last_activity';
+let idleTimer: number | undefined;
+
+function armIdleLogout() {
+  window.clearTimeout(idleTimer);
+  const lastActivity = Number(localStorage.getItem(LAST_ACTIVITY_KEY)) || Date.now();
+  if (!localStorage.getItem(LAST_ACTIVITY_KEY)) localStorage.setItem(LAST_ACTIVITY_KEY, String(lastActivity));
+  idleTimer = window.setTimeout(() => {
+    if (currentUser) void signOutUser();
+  }, Math.max(0, IDLE_LIMIT_MS - (Date.now() - lastActivity)));
+}
+
+function recordActivity() {
+  if (!currentUser) return;
+  const lastActivity = Number(localStorage.getItem(LAST_ACTIVITY_KEY)) || Date.now();
+  if (Date.now() - lastActivity >= IDLE_LIMIT_MS) {
+    void signOutUser();
+    return;
+  }
+  if (Date.now() - lastActivity < 1000) return;
+  localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()));
+  armIdleLogout();
+}
 
 registerDataPersistHook(() => {
   if (currentUser) {
@@ -225,15 +185,22 @@ export async function initAuth(): Promise<void> {
   try {
     const { data } = await supabase.auth.getSession();
     currentUser = data.session?.user || null;
+    if (currentUser && Date.now() - Number(localStorage.getItem(LAST_ACTIVITY_KEY) || Date.now()) >= IDLE_LIMIT_MS) {
+      await signOutUser();
+    }
     if (currentUser) {
       currentProfile = await fetchProfile(currentUser.id);
       syncNameWithProfile();
+      armIdleLogout();
     }
   } catch (err) {
     console.warn('Supabase getSession error:', err);
   }
 
   supabase.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && session && !localStorage.getItem(LAST_ACTIVITY_KEY)) {
+      localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()));
+    }
     const newUser = session?.user || null;
     const sameUser = Boolean(
       (!currentUser && !newUser) ||
@@ -251,11 +218,24 @@ export async function initAuth(): Promise<void> {
     if (currentUser) {
       currentProfile = await fetchProfile(currentUser.id);
       syncNameWithProfile();
+      armIdleLogout();
     } else {
+      window.clearTimeout(idleTimer);
+      localStorage.removeItem(LAST_ACTIVITY_KEY);
       currentProfile = null;
       cachedPodiumStatus = null;
     }
     notify(event);
+  });
+
+  for (const event of ['pointerdown', 'keydown', 'mousemove', 'wheel', 'touchstart']) {
+    window.addEventListener(event, recordActivity, { passive: true });
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && currentUser) armIdleLogout();
+  });
+  window.addEventListener('storage', (event) => {
+    if (event.key === LAST_ACTIVITY_KEY && currentUser) armIdleLogout();
   });
 }
 
@@ -306,14 +286,6 @@ export async function signUpUser(
   const options: { data: Record<string, any>; captchaToken?: string } = {
     data: {
       username: cleanUser,
-      rating: 0,
-      rank: 'wolf-spider',
-      wins: 0,
-      losses: 0,
-      played: 0,
-      winRate: 0,
-      onlineExp: 0,
-      unlockedSkills: ['dash'],
       looks
     }
   };
@@ -379,6 +351,8 @@ export async function signInUser(
   }
 
   currentUser = data.user;
+  localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()));
+  armIdleLogout();
   currentProfile = await fetchProfile(data.user.id);
   syncNameWithProfile();
   notify();
@@ -387,6 +361,8 @@ export async function signInUser(
 
 export async function signOutUser(): Promise<void> {
   if (!supabase) return;
+  window.clearTimeout(idleTimer);
+  localStorage.removeItem(LAST_ACTIVITY_KEY);
   await supabase.auth.signOut();
   currentUser = null;
   currentProfile = null;

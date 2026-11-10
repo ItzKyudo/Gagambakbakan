@@ -380,7 +380,7 @@ export function validateUnlockedSkills(skills: unknown, level: number = 1): Abil
 
   for (const id of list) {
     if (unlocked.length >= maxAllowed) break;
-    if (id !== 'dash' && !unlocked.includes(id) && isNodeAvailableToUnlock(id, unlocked)) {
+    if (id !== 'dash' && !unlocked.includes(id) && ABILITIES[id].unlock.level <= safeLvl && isNodeAvailableToUnlock(id, unlocked)) {
       unlocked.push(id);
     }
   }

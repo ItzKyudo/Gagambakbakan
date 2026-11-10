@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="816" height="256" viewBox="0 0 816 256" role="img" aria-labelledby="team-title team-desc" data-codeart="code" data-anchor="408 128">
+  <title id="team-title">Gagambai — Bamboo Crew</title>
+  <desc id="team-desc">Gagambai team logo with a spider symbol and custom geometric GAGAMBAI lettering.</desc>
+  <g id="symbol">
+  <style>
+    .c-forest{fill:#173e38}.c-violet{fill:#9294cf}.c-light{fill:#c0bdf0}.c-amber{fill:#f3c779}
+    .c-leg{fill:none;stroke:#9294cf}.c-gap{fill:none;stroke:#173e38}
+  </style>
+  <path class="c-forest" d="M64 12H192L240 60V137C240 186 198 220 128 248C58 220 16 186 16 137V60Z"/>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <path class="c-leg" stroke-width="9" d="M132 143L88 118L78 76M136 137L120 108L114 76M145 137L161 112L156 76M153 145L185 120L188 76"/>
+  </g>
+  <rect class="c-amber" x="30" y="58" width="196" height="28" rx="12"/>
+  <path class="c-forest" d="M88 58H94V86H88ZM174 58H180V86H174Z"/>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <path class="c-gap" stroke-width="18" d="M124 156L67 127L48 83V72M132 148L102 118L92 78V72M153 148L188 128L206 92V72M158 160L207 140L223 105V78"/>
+    <path class="c-leg" stroke-width="10" d="M124 156L67 127L48 83V72M132 148L102 118L92 78V72M153 148L188 128L206 92V72M158 160L207 140L223 105V78"/>
+  </g>
+  <path class="c-forest" d="M134 132C115 110 81 112 62 132C43 153 50 183 70 200C92 219 123 210 138 189L151 151Z"/>
+  <path class="c-violet" d="M129 137C112 119 85 121 69 138C54 154 59 178 76 192C94 208 119 201 131 183L143 151Z"/>
+  <path class="c-light" d="M69 146C76 127 101 122 118 133L98 132L81 141L65 160Z"/>
+  <path class="c-forest" d="M135 128L162 122L187 139L195 164L178 188L152 194L130 178L122 152Z"/>
+  <path class="c-violet" d="M140 136L161 131L180 144L186 162L172 180L154 185L137 172L131 153Z"/>
+  <path class="c-light" d="M140 136L161 131L180 144L158 140L138 151L131 153Z"/>
+  <path class="c-forest" d="M143 150L160 156L157 169L145 165ZM168 154L184 145L180 163L170 169Z"/>
+  <path class="c-amber" d="M147 155L156 158L154 164L148 162ZM171 157L179 152L177 160L172 164Z"/>
+  <path class="c-light" d="M150 179L159 181L155 194L148 188ZM169 180L178 174L176 189L168 195Z"/>
+  </g>
+  <g id="wordmark" transform="translate(292 93) scale(1.08)">
+    <path class="c-violet" fill-rule="evenodd" transform="translate(0 0)" d="M10 0H44L52 8V20H38V14H16V50H38V40H28V27H52V55L43 64H10L0 54V10Z"/>
+    <path class="c-violet" fill-rule="evenodd" transform="translate(60 0)" d="M0 64L18 0H36L54 64H39L36 51H18L15 64ZM21 38H33L27 15Z"/>
+    <path class="c-violet" fill-rule="evenodd" transform="translate(122 0)" d="M10 0H44L52 8V20H38V14H16V50H38V40H28V27H52V55L43 64H10L0 54V10Z"/>
+    <path class="c-violet" fill-rule="evenodd" transform="translate(182 0)" d="M0 64L18 0H36L54 64H39L36 51H18L15 64ZM21 38H33L27 15Z"/>
+    <path class="c-violet" fill-rule="evenodd" transform="translate(244 0)" d="M0 64V0H15L30 27L45 0H60V64H45V27L30 52L15 27V64Z"/>
+    <path class="c-violet" fill-rule="evenodd" transform="translate(312 0)" d="M0 0H36L49 12V26L42 32L51 40V52L39 64H0ZM15 13V25H31L35 21V17L31 13ZM15 38V51H32L36 47V42L32 38Z"/>
+    <path class="c-violet" fill-rule="evenodd" transform="translate(371 0)" d="M0 64L18 0H36L54 64H39L36 51H18L15 64ZM21 38H33L27 15Z"/>
+    <path class="c-violet" fill-rule="evenodd" transform="translate(433 0)" d="M0 0H16V64H0Z"/>
+  </g>
+</svg>

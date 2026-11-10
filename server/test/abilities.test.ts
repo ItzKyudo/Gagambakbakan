@@ -1,12 +1,18 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { getRandomAbilities, selectDraftAbilities, validateUnlockedSkills } from '../src/abilities';
+import { getRandomAbilities, selectDraftAbilities, selectSpiderAbilities, validateUnlockedSkills } from '../src/abilities';
 
 test('server rejects invalid and duplicate client ability ids', () => {
   assert.deepEqual(getRandomAbilities(3, [], ['bogus']), ['dash']);
   assert.deepEqual(getRandomAbilities(3, [], ['web', 'web']), ['web']);
   assert.deepEqual(selectDraftAbilities(['dash', 'dash'], ['dash', 'web']), ['dash', 'web']);
   assert.deepEqual(selectDraftAbilities(null, ['web']), ['web', '']);
+});
+
+test('spider signature stays equipped and forged second skills fall back to offered choices', () => {
+  assert.deepEqual(selectSpiderAbilities('hunter', ['shield'], ['dash', 'web']), ['pounce', 'dash']);
+  assert.deepEqual(selectSpiderAbilities('guardian', ['web'], ['dash', 'web']), ['shield', 'web']);
+  assert.deepEqual(selectSpiderAbilities('invalid', ['pounce'], ['dash', 'surge']), ['web', 'dash']);
 });
 
 test('server sanitizes and validates unlocked skills against level and web tree', () => {

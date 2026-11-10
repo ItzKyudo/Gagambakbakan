@@ -3,6 +3,7 @@ export interface PlayerStateData {
   userId?: string | null;
   id: number;           // 0 = Amber, 1 = Jade
   name: string;
+  species: string;
   connected: boolean;
   color: string;
   colorDark: string;

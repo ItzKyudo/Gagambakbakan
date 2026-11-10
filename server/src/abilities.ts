@@ -307,6 +307,19 @@ export function isAbilityId(id: unknown): id is AbilityId {
   return typeof id === 'string' && id in ABILITIES;
 }
 
+export const SPIDER_SKILLS = { weaver: 'web', hunter: 'pounce', guardian: 'shield' } as const;
+export type SpiderType = keyof typeof SPIDER_SKILLS;
+export function isSpiderType(value: unknown): value is SpiderType {
+  return typeof value === 'string' && value in SPIDER_SKILLS;
+}
+
+export function selectSpiderAbilities(species: string, skills: unknown, choices: AbilityId[]): [AbilityId, AbilityId | ''] {
+  const signature = isSpiderType(species) ? SPIDER_SKILLS[species] : 'web';
+  const submitted = Array.isArray(skills) ? skills[0] : undefined;
+  const [, second] = selectDraftAbilities([signature, submitted], [signature, ...choices.filter(id => id !== signature)]);
+  return [signature, second];
+}
+
 export function selectDraftAbilities(skills: unknown, choices: AbilityId[]): [AbilityId, AbilityId | ''] {
   const submitted = Array.isArray(skills) ? skills : [];
   const skill1 = isAbilityId(submitted[0]) && choices.includes(submitted[0]) ? submitted[0] : (choices[0] || 'dash');

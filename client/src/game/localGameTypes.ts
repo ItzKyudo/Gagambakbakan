@@ -3,6 +3,7 @@ import type { AbilityId } from './abilities';
 export interface LocalPlayerState {
   id: number;
   name: string;
+  species: string;
   color: string;
   colorDark: string;
   colorLight: string;

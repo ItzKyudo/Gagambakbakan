@@ -23,6 +23,7 @@ export interface NetworkCallbacks {
 
 export interface PlayerProfile {
   name: string;
+  species?: string;
   color?: string;
   colorDark?: string;
   colorLight?: string;

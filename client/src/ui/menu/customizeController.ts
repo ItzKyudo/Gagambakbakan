@@ -52,6 +52,16 @@ export function bindCustomizeEvents(container: HTMLElement, state: CustomizeStat
     });
   }
 
+  // Spider type
+  container.querySelectorAll('.opt[data-species]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      lk.species = (btn as HTMLElement).dataset.species as typeof lk.species;
+      saveLooks(looks);
+      sound.playTone(620, 0.06, 'triangle', 0.04, 180);
+      render();
+    });
+  });
+
   // Swatches
   container.querySelectorAll('.sw[data-col]').forEach(btn => {
     btn.addEventListener('click', () => {

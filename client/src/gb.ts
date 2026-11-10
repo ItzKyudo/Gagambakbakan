@@ -20,6 +20,7 @@ export interface SpiderColor {
 
 export interface SpiderLook {
   name: string;
+  species: 'weaver' | 'hunter' | 'guardian';
   color: string;
   pattern: string;
   acc: string;
@@ -288,9 +289,19 @@ export function isAccessoryUnlocked(
 }
 
 export const DEF_LOOK: { p1: SpiderLook; p2: SpiderLook } = {
-  p1: { name: 'Amber', color: 'amber', pattern: 'stripes', acc: 'none', customPattern: '' },
-  p2: { name: 'Jade', color: 'jade', pattern: 'stripes', acc: 'none', customPattern: '' }
+  p1: { name: 'Amber', species: 'weaver', color: 'amber', pattern: 'stripes', acc: 'none', customPattern: '' },
+  p2: { name: 'Jade', species: 'hunter', color: 'jade', pattern: 'stripes', acc: 'none', customPattern: '' }
 };
+
+export const SPIDERS = [
+  { id: 'weaver', name: 'Weaver', skill: 'web', description: 'Web tangles your rival.' },
+  { id: 'hunter', name: 'Hunter', skill: 'pounce', description: 'Pounce closes the distance.' },
+  { id: 'guardian', name: 'Guardian', skill: 'shield', description: 'Shield protects you from a hit.' }
+] as const;
+
+export function spiderSkill(species: string): AbilityId {
+  return SPIDERS.find(spider => spider.id === species)?.skill || 'web';
+}
 
 export function getColor(idOrHex: string): SpiderColor {
   if (!idOrHex) return COLORS[0];
@@ -325,6 +336,7 @@ function cleanLook(v: any, d: SpiderLook): SpiderLook {
   v = v || {};
   const o: SpiderLook = {
     name: typeof v.name === 'string' ? v.name.replace(/[<>&"]/g, '').trim().slice(0, 10) : d.name,
+    species: SPIDERS.some(spider => spider.id === v.species) ? v.species : d.species,
     color: COLORS.some(c => c.id === v.color) ? v.color : d.color,
     pattern: hasOption(PATTERNS, v.pattern) ? v.pattern : d.pattern,
     acc: hasOption(ACCS, v.acc) ? v.acc : d.acc,
@@ -350,6 +362,7 @@ export function randomLook(playerLevel = 1, podium?: { isTop1Rank?: boolean; isT
   const pickedAcc = (unlocked.length > 0 ? unlocked : [['none', 'None']])[Math.floor(Math.random() * (unlocked.length || 1))][0];
   return {
     name: c.label,
+    species: SPIDERS[Math.floor(Math.random() * SPIDERS.length)].id,
     color: c.id,
     pattern: PATTERNS[Math.floor(Math.random() * (PATTERNS.length - 1))][0],
     acc: pickedAcc,

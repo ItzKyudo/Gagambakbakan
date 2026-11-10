@@ -1,7 +1,7 @@
 import { Room, Client, ServerError, type AuthContext } from 'colyseus';
 import { BattleStateData, PlayerStateData, WebStateData } from './schema/BattleState';
 import { BattleCombat, type PlayerInput } from './BattleCombat';
-import { ABILITIES, getRandomAbilities, isAbilityId, selectDraftAbilities, AbilityId } from '../abilities';
+import { ABILITIES, getRandomAbilities, isAbilityId, isSpiderType, SPIDER_SKILLS, selectSpiderAbilities, AbilityId } from '../abilities';
 import { getRankFromRating, normalizeRankId, calculateRatingChange } from '../ranks';
 import { validateUsername } from '../auth';
 import { checkMatchmakingRateLimit } from '../matchmakingRateLimit';
@@ -101,7 +101,7 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
 
       const target = isP1 ? this.battleState.p1 : this.battleState.p2;
       const choices = (isP1 ? this.battleState.draftChoicesP1 : this.battleState.draftChoicesP2).filter(isAbilityId);
-      const [s1, s2] = selectDraftAbilities(data?.skills, choices);
+      const [s1, s2] = selectSpiderAbilities(target.species, data?.skills, choices);
 
       target.skill1 = s1;
       target.skill2 = s2;
@@ -175,6 +175,7 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
     player.connected = true;
     player.userId = identity.userId;
     player.name = identity.userId ? identity.name : 'Guest';
+    player.species = isSpiderType(options.species) ? options.species : 'weaver';
     player.acc = 'none';
     if (!identity.userId && typeof options.name === 'string') {
       const v = validateUsername(options.name);
@@ -351,8 +352,8 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
     const p2Skills = this.battleState.p2.unlockedSkills && this.battleState.p2.unlockedSkills.length > 0
       ? this.battleState.p2.unlockedSkills
       : getRandomAbilities(16, [], this.battleState.p2.level || 1);
-    this.battleState.draftChoicesP1 = p1Skills;
-    this.battleState.draftChoicesP2 = p2Skills;
+    this.battleState.draftChoicesP1 = p1Skills.filter(skill => skill !== SPIDER_SKILLS[this.battleState.p1.species as keyof typeof SPIDER_SKILLS]);
+    this.battleState.draftChoicesP2 = p2Skills.filter(skill => skill !== SPIDER_SKILLS[this.battleState.p2.species as keyof typeof SPIDER_SKILLS]);
     this.battleState.p1Drafted = false;
     this.battleState.p2Drafted = false;
     this.battleState.status = 'draft';
@@ -433,7 +434,7 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
 
   private autoDraft(target: PlayerStateData, choices: string[]) {
     const validChoices = choices.filter(isAbilityId);
-    const [s1, s2] = selectDraftAbilities([], validChoices);
+    const [s1, s2] = selectSpiderAbilities(target.species, [], validChoices);
     target.skill1 = s1;
     target.skill2 = s2;
     target.cd1max = ABILITIES[s1 as AbilityId]?.cd || 3;

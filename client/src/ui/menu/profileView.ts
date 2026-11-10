@@ -10,10 +10,7 @@ export function renderProfileView(slot: 'p1' | 'p2'): string {
   const rank = getRankFromRating(progress.rating);
   const currentRankIndex = SPIDER_RANKS.findIndex(tier => tier.id === rank.id);
   const unlocked = getUnlockedIds(progress);
-  const looks = typeof getLooks === 'function' ? getLooks() : {
-    p1: { name: 'Player 1', color: 'amber', pattern: 'none', acc: 'none', customPattern: '' },
-    p2: { name: 'Player 2', color: 'jade', pattern: 'none', acc: 'none', customPattern: '' }
-  };
+  const looks = getLooks();
   const lk = looks[slot] || looks.p1;
   const spiderHtml = typeof spiderSVG === 'function' ? spiderSVG(lk, '-profile') : '';
   const spiderColor = typeof getColor === 'function' ? getColor(lk.color) : { main: '#f2a33a', light: '#ffd694', label: 'Amber' };

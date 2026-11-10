@@ -180,6 +180,7 @@ export function bindMainMenuEvents(container: HTMLElement, actions: MainMenuActi
       const myLvl = getLevel(prog.onlineExp);
       const profile = {
         name: looks.p1.name || `Player_${Math.floor(Math.random() * 900 + 100)}`,
+        species: looks.p1.species,
         color: color.main,
         colorDark: color.dark,
         colorLight: color.light,

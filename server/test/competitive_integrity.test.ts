@@ -105,15 +105,17 @@ test('join ignores forged level, rating, skills, and exclusive accessory', async
   const client = { sessionId: 'guest-session', auth: guest, send() {} };
   room.onJoin(client, {
     name: 'Guest', level: 100, rating: 9000, rank: 'brown-widow',
-    unlockedSkills: ['dash', 'surge', 'anchor', 'haste'], acc: 'apex_crown', isRanked: true
+    unlockedSkills: ['dash', 'surge', 'anchor', 'haste'], acc: 'apex_crown', isRanked: true, species: 'hunter'
   });
   assert.equal(room.battleState.p1.level, 1);
   assert.equal(room.battleState.p1.rating, 0);
   assert.equal(room.battleState.p1.acc, 'none');
   assert.equal(room.battleState.p1.isRanked, false);
+  assert.equal(room.battleState.p1.species, 'hunter');
   assert.deepEqual(room.battleState.p1.unlockedSkills, ['dash', 'web', 'surge']);
   room.battleState.p1.connected = false;
   room.battleState.p1.acc = 'apex_crown';
-  room.onJoin(client, { name: 'Guest', acc: 'invalid' });
+  room.onJoin(client, { name: 'Guest', acc: 'invalid', species: 'invalid' });
   assert.equal(room.battleState.p1.acc, 'none');
+  assert.equal(room.battleState.p1.species, 'weaver');
 });

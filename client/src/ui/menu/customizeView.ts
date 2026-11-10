@@ -4,6 +4,7 @@ import {
   STANDARD_ACCS,
   EXCLUSIVE_ACCS,
   COLORS,
+  SPIDERS,
   PATTERNS,
   accessorySVG,
   getLevel,
@@ -57,6 +58,17 @@ export function renderCustomizeView(customizePlayer: 'p1' | 'p2', drawColor: str
             <label class="lbl" for="nm">Fighter name</label>
             <input type="text" id="nm" value="${name}" maxlength="10" autocomplete="off" spellcheck="false">
           </div>
+
+          <fieldset class="field">
+            <legend class="lbl">Spider type and signature skill</legend>
+            <div class="opts visual-opts">
+              ${SPIDERS.map(spider => `
+                <button type="button" class="opt" data-species="${spider.id}" aria-pressed="${lk.species === spider.id}">
+                  <strong>${spider.name}</strong><span>${spider.description}</span>
+                </button>
+              `).join('')}
+            </div>
+          </fieldset>
 
           <fieldset class="field custom-color-field">
             <legend class="lbl">Shell color</legend>

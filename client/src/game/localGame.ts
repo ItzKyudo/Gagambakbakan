@@ -3,7 +3,7 @@ import { sound } from '../audio';
 import { LocalCombat } from './localCombat';
 import type { InputState, LocalBattleState, LocalPlayerState } from './localGameTypes';
 import { ABILITIES, drawSkills, type AbilityId } from './abilities';
-import { getUnlockedIds, recordMatch, getColor } from '../gb';
+import { getUnlockedIds, recordMatch, getColor, spiderSkill } from '../gb';
 
 export type { InputState, LocalBattleState, LocalPlayerState, LocalWebState } from './localGameTypes';
 
@@ -21,8 +21,8 @@ export class LocalGameEngine {
   constructor(
     mode: 'cpu' | '2p' | 'demo' = 'cpu',
     diff: 'easy' | 'normal' | 'hard' = 'normal',
-    customP1?: { name?: string; color?: string; colorDark?: string; colorLight?: string; pattern?: string; customPattern?: string; acc?: string },
-    customP2?: { name?: string; color?: string; colorDark?: string; colorLight?: string; pattern?: string; customPattern?: string; acc?: string }
+    customP1?: { name?: string; species?: string; color?: string; colorDark?: string; colorLight?: string; pattern?: string; customPattern?: string; acc?: string },
+    customP2?: { name?: string; species?: string; color?: string; colorDark?: string; colorLight?: string; pattern?: string; customPattern?: string; acc?: string }
   ) {
     this.mode = mode;
     this.diff = diff;
@@ -40,6 +40,7 @@ export class LocalGameEngine {
     const p1 = this.createSpider(
       0,
       customP1?.name || 'Amber',
+      customP1?.species || 'weaver',
       340,
       1,
       p1Main,
@@ -53,6 +54,7 @@ export class LocalGameEngine {
     const p2 = this.createSpider(
       1,
       customP2?.name || (mode === 'cpu' ? 'Jade' : 'Jade'),
+      customP2?.species || 'hunter',
       620,
       -1,
       p2Main,
@@ -91,6 +93,7 @@ export class LocalGameEngine {
   private createSpider(
     id: number,
     name: string,
+    species: string,
     x: number,
     face: number,
     main: string,
@@ -103,6 +106,7 @@ export class LocalGameEngine {
     return {
       id,
       name,
+      species,
       color: main,
       colorDark: dark,
       colorLight: light,
@@ -185,8 +189,8 @@ export class LocalGameEngine {
     // Offer all unlocked skills for drafting
     const unlocked = getUnlockedIds();
     const choices = unlocked && unlocked.length > 0 ? unlocked : (['dash', 'web', 'surge'] as AbilityId[]);
-    this.state.draftChoicesP1 = choices;
-    this.state.draftChoicesP2 = choices;
+    this.state.draftChoicesP1 = choices.filter(skill => skill !== spiderSkill(this.state.p1.species));
+    this.state.draftChoicesP2 = choices.filter(skill => skill !== spiderSkill(this.state.p2.species));
     this.state.p1Drafted = false;
     this.state.p2Drafted = false;
     this.state.status = 'draft';
@@ -194,10 +198,9 @@ export class LocalGameEngine {
 
     // In CPU mode, CPU picks 2 choices (from unlocked pool or fallback pair)
     if (this.mode === 'cpu') {
-      const cpuPool = unlocked.length >= 2 ? unlocked : ['dash', 'web'];
-      const cpuPicked = drawSkills(cpuPool as AbilityId[], 2);
-      this.state.p2.skill1 = cpuPicked[0] || 'dash';
-      this.state.p2.skill2 = cpuPicked[1] || 'web';
+      const cpuPicked = drawSkills(this.state.draftChoicesP2, 1);
+      this.state.p2.skill1 = spiderSkill(this.state.p2.species);
+      this.state.p2.skill2 = cpuPicked[0] || '';
       this.state.p2.cd1max = ABILITIES[this.state.p2.skill1 as AbilityId]?.cd || 3;
       this.state.p2.cd2max = ABILITIES[this.state.p2.skill2 as AbilityId]?.cd || 5;
       this.state.p2Drafted = true;
@@ -206,8 +209,9 @@ export class LocalGameEngine {
 
   public confirmDraft(playerId: number, skills: string[]) {
     const s = playerId === 0 ? this.state.p1 : this.state.p2;
-    s.skill1 = skills[0] || 'dash';
-    s.skill2 = skills[1] || '';
+    s.skill1 = spiderSkill(s.species);
+    const choices = playerId === 0 ? this.state.draftChoicesP1 : this.state.draftChoicesP2;
+    s.skill2 = choices.includes(skills[0] as AbilityId) ? skills[0] : (choices[0] || '');
     s.cd1max = ABILITIES[s.skill1 as AbilityId]?.cd || 3;
     s.cd2max = s.skill2 ? (ABILITIES[s.skill2 as AbilityId]?.cd || 5) : 0;
 

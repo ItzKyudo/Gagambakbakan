@@ -77,6 +77,7 @@ export class GamePage {
   private pkGo!: HTMLButtonElement;
   private selectedDraftSlots: number[] = [];
   private currentDraftOffer: AbilityId[] = [];
+  private fixedDraftSkill = '';
   private draftConfirmCallback: ((skills: string[]) => void) | null = null;
   public isDraftOpen: boolean = false;
   private isDraftLeaving: boolean = false;
@@ -689,12 +690,14 @@ export class GamePage {
     choices: string[],
     round: number,
     playerName: string,
-    onConfirm: (skills: string[]) => void
+    onConfirm: (skills: string[]) => void,
+    fixedSkill = ''
   ) {
     this.clearDraftTimer();
     this.isDraftLeaving = false;
     this.isDraftOpen = true;
     this.currentDraftOffer = (choices && choices.length > 0 ? choices : ['dash']) as AbilityId[];
+    this.fixedDraftSkill = fixedSkill;
     this.draftConfirmCallback = onConfirm;
 
     const targetCount = this.targetDraftCount;
@@ -703,9 +706,11 @@ export class GamePage {
     this.pkWho.style.setProperty('--c', 'var(--amber)');
 
     if (targetCount === 1) {
-      this.pkTitle.textContent = 'Pick your skill';
-      this.pkSub.textContent = 'You have 1 ability unlocked. Equip your card for the match. Press 1 or click to choose.';
-      this.selectedDraftSlots = [0]; // Auto-selected so player can confirm immediately
+      this.pkTitle.textContent = fixedSkill ? 'Pick your second skill' : 'Pick your skill';
+      this.pkSub.textContent = fixedSkill
+        ? `${ABILITIES[fixedSkill as AbilityId]?.name || fixedSkill} is your spider's signature skill. Choose one more skill for this match.`
+        : 'You have 1 ability unlocked. Equip your card for the match. Press 1 or click to choose.';
+      this.selectedDraftSlots = this.currentDraftOffer.length === 1 ? [0] : [];
     } else {
       this.pkTitle.textContent = 'Pick 2 skills';
       const keyHint = choices.length <= 3 ? 'Press 1, 2 or 3 to choose.' : `Press 1-${Math.min(9, choices.length)} or click to choose.`;
@@ -794,7 +799,7 @@ export class GamePage {
   }
 
   private get targetDraftCount(): number {
-    return Math.min(2, Math.max(1, this.currentDraftOffer.length));
+    return this.fixedDraftSkill ? 1 : Math.min(2, Math.max(1, this.currentDraftOffer.length));
   }
 
   private toggleCard(k: number) {
@@ -927,7 +932,7 @@ export class GamePage {
     this.isDraftLeaving = false;
     this.pickModal.hidden = false;
     this.pkTitle.textContent = 'Waiting for Opponent...';
-    const names = chosen.map(id => ABILITIES[id as AbilityId]?.name || id).join(' & ');
+    const names = [...(this.fixedDraftSkill ? [this.fixedDraftSkill] : []), ...chosen].map(id => ABILITIES[id as AbilityId]?.name || id).join(' & ');
     this.pkSub.textContent = `You picked ${names}. Waiting for your opponent to choose their abilities...`;
     this.pkCount.textContent = 'Ready ✓';
     this.pkGo.disabled = true;

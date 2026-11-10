@@ -14,7 +14,7 @@ import { GagambakbakanScene } from './game/GagambakbakanScene';
 import { LocalGameEngine, type InputState } from './game/localGame';
 import { network } from './network';
 import { sound } from './audio';
-import { getKeys, getLooks, getColor, getProgress, getLevel, getUnlockedIds, recordOnlineMatch, applyQualityClass, type PlayerKeys } from './gb';
+import { getKeys, getLooks, getColor, getProgress, getLevel, getUnlockedIds, recordOnlineMatch, applyQualityClass, spiderSkill, type PlayerKeys } from './gb';
 import { fetchProfile, getAuthUser } from './auth';
 import { RANK_RATING_LABEL } from './ui/menu/rankTitle';
 import { saveMatchHistory } from './matchHistory';
@@ -334,7 +334,7 @@ async function startOnlineGame(opts: MenuStartOptions) {
           gamePage.showDraftModal(myChoices, network.room.state.round || 1, myName || 'Player', (skills) => {
             onlineDraftSubmitted = true;
             network.sendSelectSkills(skills);
-          });
+          }, spiderSkill((myId === 0 ? network.room.state.p1 : network.room.state.p2).species));
         }
       } else if (network.room.state.status === 'ready' || network.room.state.status === 'fight') {
         sound.music.play('duel');
@@ -367,6 +367,7 @@ async function startOnlineGame(opts: MenuStartOptions) {
     const myLvl = getLevel(prog.onlineExp);
     const profile = {
       name: opts.playerName || `Player_${Math.floor(Math.random() * 900 + 100)}`,
+      species: getLooks().p1.species,
       color: opts.playerColor?.main,
       colorDark: opts.playerColor?.dark,
       colorLight: opts.playerColor?.light,
@@ -490,7 +491,7 @@ function getNetworkCallbacks(isRanked: boolean) {
             gamePage.showDraftModal(myChoices, state.round || 1, myName || 'Player', (skills) => {
               onlineDraftSubmitted = true;
               network.sendSelectSkills(skills);
-            });
+            }, spiderSkill((myId === 0 ? state.p1 : state.p2).species));
           }
         } else if (state.status === 'ready' || state.status === 'fight') {
           onlineDraftSubmitted = false;
@@ -735,6 +736,7 @@ function startLocalGame(opts: MenuStartOptions) {
     opts.diff,
     {
       name: opts.playerName || lks.p1.name,
+      species: lks.p1.species,
       color: opts.playerColor?.main || c1.main,
       colorDark: opts.playerColor?.dark || c1.dark,
       colorLight: opts.playerColor?.light || c1.light,
@@ -744,6 +746,7 @@ function startLocalGame(opts: MenuStartOptions) {
     },
     {
       name: cpuName,
+      species: opts.mode === 'cpu' ? 'hunter' : lks.p2.species,
       color: cpuColor.main,
       colorDark: cpuColor.dark,
       colorLight: cpuColor.light,
@@ -806,7 +809,8 @@ function startLocalGame(opts: MenuStartOptions) {
               if (opts.mode === 'cpu') {
                 sound.music.play('duel');
               }
-            }
+            },
+            spiderSkill(localEngine.state.p1.species)
           );
         } else if (opts.mode === '2p' && localEngine.state.p1Drafted && !localEngine.state.p2Drafted && !gp.isDraftOpen) {
           gp.showDraftModal(
@@ -816,7 +820,8 @@ function startLocalGame(opts: MenuStartOptions) {
             (skills) => {
               localEngine?.confirmDraft(1, skills);
               sound.music.play('duel');
-            }
+            },
+            spiderSkill(localEngine.state.p2.species)
           );
         }
       } else if (localEngine.state.status === 'ready' || localEngine.state.status === 'fight') {

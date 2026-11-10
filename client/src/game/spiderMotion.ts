@@ -93,7 +93,8 @@ export function gaitMotion(phase: number): { reach: number; lift: number } {
 
 export const LEARN_DEMO_PHASES = [
   { id: 'move', duration: 2.4 },
-  { id: 'strike', duration: 1.5 },
+  { id: 'light', duration: 1.5 },
+  { id: 'heavy', duration: 1.7 },
   { id: 'block', duration: 1.5 },
   { id: 'climb', duration: 4 }
 ] as const;

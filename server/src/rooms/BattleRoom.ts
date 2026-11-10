@@ -30,7 +30,7 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
       throw new ServerError(429, `Too many matchmaking attempts. Try again in ${Math.ceil(result.retryAfterMs / 1000)} seconds.`);
     }
     const identity = await authenticateBattle(token, Boolean(options?.isRanked), options?.acc);
-    options.rank = identity.rank;
+    options.rank = identity.userId ? identity.rank : 'guest';
     options.rating = identity.rating;
     options.level = identity.level;
     options.unlockedSkills = identity.unlockedSkills;
@@ -50,7 +50,7 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
 
   onCreate(options: any) {
     const rating = Number.isFinite(options?.rating) ? Math.max(0, Number(options.rating) | 0) : 0;
-    const roomRank = typeof options?.rank === 'string'
+    const roomRank = options?.rank === 'guest' ? 'guest' : typeof options?.rank === 'string'
       ? normalizeRankId(options.rank)
       : getRankFromRating(rating).id;
     const isRanked = Boolean(options?.isRanked);

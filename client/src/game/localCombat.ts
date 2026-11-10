@@ -143,7 +143,8 @@ private recover(s: LocalPlayerState) {
   s.hangT = 0;
   s.drop = 0;
   s.dropV = 0;
-  s.grip = RECOVER_GRIP;
+  const opponent = s.id === 0 ? this.state.p2 : this.state.p1;
+  s.grip = Math.max(1, Math.min(RECOVER_GRIP, opponent.grip - 10));
   s.guard = 100;
   s.gLock = false;
   s.inv = 1.1;

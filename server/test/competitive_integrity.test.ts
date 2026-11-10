@@ -50,6 +50,17 @@ test('ranked requires a token; guests get level-one casual skills', async () => 
   assert.equal(guest.level, 1);
   assert.equal(guest.isRanked, false);
   assert.deepEqual(guest.unlockedSkills, ['dash', 'web', 'surge']);
+  const options = { rank: 'brown-widow', rating: 9000, isRanked: false };
+  await BattleRoom.onAuth('', options, { ip: 'test-guest-pool' } as any);
+  assert.equal(options.rank, 'guest');
+  assert.equal(options.rating, 0);
+  const room = Object.create(BattleRoom.prototype) as any;
+  let metadata: any;
+  room.setMetadata = (value: any) => { metadata = value; };
+  room.onMessage = () => {};
+  room.setSimulationInterval = () => {};
+  room.onCreate(options);
+  assert.deepEqual(metadata, { rank: 'guest', isRanked: false });
   assert.equal(levelFromExp(3850), 12);
   assert.equal(levelFromExp(4500), 13);
 });

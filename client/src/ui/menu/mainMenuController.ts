@@ -122,11 +122,10 @@ export function bindMainMenuEvents(container: HTMLElement, actions: MainMenuActi
       timer.textContent = '00:00';
     }
     if (label) {
-      const currentProg = getProgress();
-      const rankTitle = getPlayerRankTitle(currentProg.rating);
-      label.innerHTML = ranked
-        ? `<span class="queue-main-title">Searching ${rankTitle}...</span>`
-        : `<span class="queue-main-title">Queueing (${rankTitle})...</span>`;
+      const queueTitle = !getAuthUser() ? 'Finding guest opponent...' : ranked
+        ? `Searching ${getPlayerRankTitle(getProgress().rating)}...`
+        : `Queueing (${getPlayerRankTitle(getProgress().rating)})...`;
+      label.innerHTML = `<span class="queue-main-title">${queueTitle}</span>`;
     }
 
     queueTimer = setInterval(() => {

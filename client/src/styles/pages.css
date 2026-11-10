@@ -137,6 +137,13 @@ body:has(#pick:not([hidden])) .rail { display: none !important; }
   animation: queueBorderPulse 2.2s ease-in-out infinite;
 }
 
+.mb.queueing .ml,
+.mb.matched .ml {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.15;
+}
+
 @keyframes queueBorderPulse {
   0%, 100% {
     border-color: #4cc7b2;
@@ -940,7 +947,7 @@ body.customize-active .menu-view-container {
 .learn-engine-badge { color: var(--jade-light); font: 700 11px var(--label); letter-spacing: .08em; text-transform: uppercase; }
 .learn-arena { border-inline: 0; border-radius: 0; box-shadow: none; }
 #learnBattlePreview { width: 100%; height: 100%; }
-.learn-action-track { display: grid; grid-template-columns: repeat(4, 1fr); background: rgba(8, 16, 15, .42); }
+.learn-action-track { display: grid; grid-template-columns: repeat(5, 1fr); background: rgba(8, 16, 15, .42); }
 .learn-action-track span { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 38px; color: var(--muted); font: 700 12px var(--label); letter-spacing: .06em; text-transform: uppercase; border-top: 2px solid transparent; transition: color .16s ease, background-color .16s ease, border-color .16s ease; }
 .learn-action-track span.active { color: var(--amber-light); background: rgba(242, 163, 58, .1); border-color: var(--amber); }
 .learn-p1-keys { display: flex; justify-content: center; flex-wrap: wrap; gap: 9px; padding: 11px 12px 13px; }

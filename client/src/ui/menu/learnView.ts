@@ -11,7 +11,7 @@ import {
 import { getKeys, getLooks, keyLabel } from '../../gb';
 import { createPhaserGame } from '../../game/phaserConfig';
 import { LocalGameEngine } from '../../game/localGame';
-import { ATK, BODY_Y, DIFF_SETTINGS, FALL_DEPTH, FALL_SPEED, REEL_CD, SINK, SPEED, TAP } from '../../game/constants';
+import { ATK, ATK_HEAVY, BODY_Y, DIFF_SETTINGS, FALL_DEPTH, FALL_SPEED, REEL_CD, SINK, SPEED, TAP } from '../../game/constants';
 import { learnDemoFrame } from '../../game/spiderMotion';
 
 function icon(node: IconNode, attrs: Record<string, string | number> = {}): string {
@@ -43,7 +43,8 @@ export function renderLearnView(): string {
         <div class="learn-live-head" aria-live="polite">
           <span class="learn-live-icon">
             <span data-learn-icon="move">${icon(ArrowLeftRight, { width: 22, height: 22 })}</span>
-            <span data-learn-icon="strike" hidden>${icon(Swords, { width: 22, height: 22 })}</span>
+            <span data-learn-icon="light" hidden>${icon(Swords, { width: 22, height: 22 })}</span>
+            <span data-learn-icon="heavy" hidden>${icon(Swords, { width: 22, height: 22 })}</span>
             <span data-learn-icon="block" hidden>${icon(Shield, { width: 22, height: 22 })}</span>
             <span data-learn-icon="climb" hidden>${icon(ArrowUp, { width: 22, height: 22 })}</span>
           </span>
@@ -53,13 +54,14 @@ export function renderLearnView(): string {
         <div class="arena learn-arena"><div id="learnBattlePreview"></div></div>
         <div class="learn-action-track" aria-label="Tutorial sequence">
           <span data-learn-step="move" class="active">${icon(ArrowLeftRight, { width: 17, height: 17 })}<b>Move</b></span>
-          <span data-learn-step="strike">${icon(Swords, { width: 17, height: 17 })}<b>Strike</b></span>
+          <span data-learn-step="light">${icon(Swords, { width: 17, height: 17 })}<b>Light</b></span>
+          <span data-learn-step="heavy">${icon(Swords, { width: 17, height: 17 })}<b>Heavy</b></span>
           <span data-learn-step="block">${icon(Shield, { width: 17, height: 17 })}<b>Block</b></span>
           <span data-learn-step="climb">${icon(ArrowUp, { width: 17, height: 17 })}<b>Climb</b></span>
         </div>
         <div class="learn-p1-keys" aria-label="Player 1 controls">
           ${keycap(kb.p1.left, 'Left', 'move')}${keycap(kb.p1.right, 'Right', 'move')}
-          ${keycap(kb.p1.strike, 'Light', 'strike')}${keycap(kb.p1.heavy, 'Heavy', 'strike')}${keycap(kb.p1.block, 'Hold', 'block')}
+          ${keycap(kb.p1.strike, 'Light', 'light')}${keycap(kb.p1.heavy, 'Heavy', 'heavy')}${keycap(kb.p1.block, 'Hold', 'block')}
           ${keycap(kb.p1.climb, 'Tap', 'climb')}
         </div>
       </section>
@@ -99,7 +101,8 @@ export function bindLearnDemo(container: HTMLElement): () => void {
   const icons = container.querySelectorAll<HTMLElement>('[data-learn-icon]');
   const copy = {
     move: ['Move', 'Close the gap and control the center.'],
-    strike: ['Attack', 'Light strike (0.3s) for fast pokes; Heavy strike (0.6s) for high damage.'],
+    light: ['Light attack', 'Quick hit (0.3s) for fast pokes.'],
+    heavy: ['Heavy attack', 'Slower hit (0.6s) that deals more damage.'],
     block: ['Block', 'Raise your front legs before the hit lands.'],
     climb: ['Climb', 'Tap quickly before your silk reaches the pond.']
   } as const;
@@ -109,7 +112,7 @@ export function bindLearnDemo(container: HTMLElement): () => void {
   const started = performance.now();
 
   function reset() {
-    Object.assign(state.p1, { x: 440, face: 1, move: 0, walkPhase: 0, grip: 100, guard: 100, hang: false, falling: false, drop: 0, hb: 0, stun: 0, blocking: false, blockT: 0, inv: 0, hitFlash: 0, ko: false, atkT: 0, atkType: 1 });
+    Object.assign(state.p1, { x: 440, face: 1, move: 0, walkPhase: 0, grip: 100, guard: 100, hang: false, falling: false, drop: 0, hb: 0, stun: 0, blocking: false, blockT: 0, inv: 0, hitFlash: 0, ko: false, atkT: 0, atkType: 1, isHeavy: false });
     Object.assign(state.p2, { x: 760, face: -1, move: 0, walkPhase: 0, grip: 100, guard: 100, hang: false, falling: false, drop: 0, hb: 0, stun: 0, blocking: false, blockT: 0, inv: 0, hitFlash: 0, ko: false, atkT: 0, atkType: 1 });
   }
 
@@ -123,7 +126,8 @@ export function bindLearnDemo(container: HTMLElement): () => void {
       reset();
       lastPhase = frame.phase;
       phaseFxPlayed = false;
-      state.p1.atkType = frame.cycle % 3;
+      state.p1.isHeavy = frame.phase === 'heavy';
+      state.p1.atkType = state.p1.isHeavy ? 0 : frame.cycle % 3;
       title!.textContent = copy[frame.phase][0];
       hint!.textContent = copy[frame.phase][1];
       steps.forEach(step => step.classList.toggle('active', step.dataset.learnStep === frame.phase));
@@ -137,12 +141,13 @@ export function bindLearnDemo(container: HTMLElement): () => void {
       state.p1.x = 440 + travel;
       state.p1.move = t < 1.42 ? 1 : 0;
       state.p1.walkPhase = travel * .055;
-    } else if (frame.phase === 'strike') {
-      const attackT = Math.max(0, Math.min(ATK.end, t - .28));
-      const hitT = Math.max(0, attackT - ATK.wind);
+    } else if (frame.phase === 'light' || frame.phase === 'heavy') {
+      const attack = frame.phase === 'heavy' ? ATK_HEAVY : ATK;
+      const attackT = Math.max(0, Math.min(attack.end, t - .28));
+      const hitT = Math.max(0, attackT - attack.wind);
       state.p1.x = 520 + 110 * Math.min(.16, Math.max(0, attackT - .1));
       state.p1.atkT = attackT;
-      state.p2.x = 592 + 430 / 7 * (1 - Math.exp(-7 * hitT));
+      state.p2.x = 592 + (frame.phase === 'heavy' ? 580 : 430) / 7 * (1 - Math.exp(-7 * hitT));
       state.p2.hitFlash = hitT > 0 && hitT < .2 ? .2 - hitT : 0;
       state.p2.stun = Math.max(0, .28 - hitT);
       if (hitT > 0 && !phaseFxPlayed) {
@@ -150,7 +155,7 @@ export function bindLearnDemo(container: HTMLElement): () => void {
         const x = (state.p1.x + state.p2.x) / 2;
         scene.addFx({ type: 'spark', x, y: BODY_Y - 6, col: '#ffffff', count: 10, sp: 260 });
         scene.addFx({ type: 'spark', x, y: BODY_Y - 6, col: state.p1.color, count: 8, sp: 220 });
-        scene.addShake(7);
+        scene.addShake(frame.phase === 'heavy' ? 10 : 7);
       }
     } else if (frame.phase === 'block') {
       const attackT = Math.max(0, Math.min(ATK.end, t - .28));

@@ -6,6 +6,7 @@ import './styles/pages.css';
 import './styles/menu.css';
 import './styles/abilities.css';
 import './styles/rewards.css';
+import { initIconCache } from './iconCache';
 import { renderMenuPage, type MenuStartOptions } from './ui/menuPage';
 import { GamePage } from './ui/gamePage';
 import { createPhaserGame } from './game/phaserConfig';
@@ -19,6 +20,8 @@ import { RANK_RATING_LABEL } from './ui/menu/rankTitle';
 import { saveMatchHistory } from './matchHistory';
 import { getRoute, setRoute } from './router';
 import type { MenuTab } from './ui/menu/menuTypes';
+
+initIconCache();
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
 

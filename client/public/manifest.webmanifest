@@ -1,0 +1,23 @@
+{
+  "name": "Gagambakbakan - Spider Brawl",
+  "short_name": "Gagambakbakan",
+  "description": "Two spiders. One twig. Fast-paced web brawl fighting game.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d1a22",
+  "theme_color": "#0d1a22",
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

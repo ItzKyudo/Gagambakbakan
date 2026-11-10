@@ -133,7 +133,7 @@ export function renderProfileView(slot: 'p1' | 'p2'): string {
         <p class="note">${slot === 'p2' ? 'Uses this account’s shared ability pool. ' : ''}Read-only. Manage unlocks from the Abilities menu.</p>
       </div>
       <ul class="profile-abilities">${SKILLS_LIST.filter(skill => unlocked.includes(skill.id)).map(skill => `
-        <li><svg class="ico" aria-hidden="true"><use href="#${skill.icon}"/></svg>
+        <li><img class="ability-icon" src="/abilities/${skill.id}.png" alt="">
           <div><h3>${skill.name}</h3><p>${skill.desc}</p><small>${skill.cd}s cooldown · ${skill.use === 'hang' ? 'While hanging' : 'While standing'}</small></div></li>`).join('')}</ul>
     </section>
   </section>`;

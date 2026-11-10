@@ -566,15 +566,12 @@
   border-color: rgba(76, 199, 178, 0.3);
 }
 
-.profile-abilities .ico {
+.profile-abilities .ability-icon {
   flex-shrink: 0;
-  width: 32px;
-  height: 32px;
-  color: var(--jade);
-  background: rgba(76, 199, 178, 0.12);
-  padding: 6px;
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
   border-radius: 6px;
-  border: 1px solid rgba(76, 199, 178, 0.25);
   margin-top: 2px;
 }
 

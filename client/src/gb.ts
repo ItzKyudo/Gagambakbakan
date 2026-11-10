@@ -954,7 +954,7 @@ export interface OnlineMatchReward {
   winRate: number;
 }
 
-export function recordOnlineMatch(won: boolean, myRoundsWon: number): OnlineMatchReward {
+export function recordOnlineMatch(won: boolean, myRoundsWon: number, isRanked: boolean): OnlineMatchReward {
   const p = getProgress();
   const oldExp = p.onlineExp;
   const oldLevel = getLevel(oldExp);
@@ -978,7 +978,9 @@ export function recordOnlineMatch(won: boolean, myRoundsWon: number): OnlineMatc
 
   // Competitive rank rating calculation (separate from ability unlocking EXP)
   const oldRating = Number.isFinite(p.rating) ? Math.max(0, p.rating) : 0;
-  const { newRating, delta: ratingChange } = calculateRatingDelta(oldRating, won);
+  const { newRating, delta: ratingChange } = isRanked
+    ? calculateRatingDelta(oldRating, won)
+    : { newRating: oldRating, delta: 0 };
 
 
   p.rating = newRating;

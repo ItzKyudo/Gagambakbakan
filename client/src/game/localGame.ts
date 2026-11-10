@@ -322,12 +322,12 @@ export class LocalGameEngine {
     this.state.status = 'roundEnd';
     this.state.stateT = 0;
 
-    // Both spiders remain not KO'd, so no wins are awarded (round ends as a tie)
+    // The final round may use remaining grip and guard to settle the match.
     this.onFx?.({
       type: 'txt',
       x: 600,
       y: 200,
-      text: 'TIME UP — TIE!',
+      text: 'TIME UP!',
       col: '#ffd694'
     });
     sound.play('ko');
@@ -337,14 +337,16 @@ export class LocalGameEngine {
     const p1Wins = this.state.p1.wins;
     const p2Wins = this.state.p2.wins;
 
-    if (p1Wins >= 2 || p2Wins >= 2) {
+    if (p1Wins >= 2 || p2Wins >= 2 || this.state.round >= 5) {
       this.state.status = 'matchEnd';
       this.state.stateT = 0;
-      this.state.winner = p1Wins >= 2 ? 0 : 1;
-      const winnerName = this.state.winner === 0 ? this.state.p1.name : this.state.p2.name;
+      const score1 = p1Wins * 1000 + this.state.p1.grip + this.state.p1.guard;
+      const score2 = p2Wins * 1000 + this.state.p2.grip + this.state.p2.guard;
+      this.state.winner = score1 === score2 ? -1 : score1 > score2 ? 0 : 1;
+      const winnerName = this.state.winner < 0 ? 'Draw' : this.state.winner === 0 ? this.state.p1.name : this.state.p2.name;
 
       // Record match for offline stats
-      recordMatch(this.mode === 'cpu' && this.state.winner === 0);
+      if (this.state.winner >= 0) recordMatch(this.mode === 'cpu' && this.state.winner === 0);
 
       if (this.onMatchEnd) {
         this.onMatchEnd({

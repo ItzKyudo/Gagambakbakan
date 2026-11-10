@@ -1,10 +1,12 @@
 import { Room, Client, ServerError, type AuthContext } from 'colyseus';
 import { BattleStateData, PlayerStateData, WebStateData } from './schema/BattleState';
 import { BattleCombat, type PlayerInput } from './BattleCombat';
-import { ABILITIES, getRandomAbilities, isAbilityId, selectDraftAbilities, validateUnlockedSkills, AbilityId } from '../abilities';
+import { ABILITIES, getRandomAbilities, isAbilityId, selectDraftAbilities, AbilityId } from '../abilities';
 import { getRankFromRating, normalizeRankId, calculateRatingChange } from '../ranks';
 import { validateUsername } from '../auth';
 import { checkMatchmakingRateLimit } from '../matchmakingRateLimit';
+import { authenticateBattle, recordBattleResult, type BattleIdentity } from '../competitiveStore';
+import { randomUUID } from 'node:crypto';
 
 const TAP = 8, FALL_DEPTH = 100;
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
@@ -22,12 +24,19 @@ function isValidCustomPattern(value: unknown): value is string {
 }
 
 export class BattleRoom extends Room<{ state: BattleStateData }> {
-  static async onAuth(_token: string, _options: unknown, context: AuthContext) {
+  static async onAuth(token: string, options: any, context: AuthContext) {
     const result = checkMatchmakingRateLimit(context.ip);
     if (!result.allowed) {
       throw new ServerError(429, `Too many matchmaking attempts. Try again in ${Math.ceil(result.retryAfterMs / 1000)} seconds.`);
     }
-    return true;
+    const identity = await authenticateBattle(token, Boolean(options?.isRanked), options?.acc);
+    options.rank = identity.rank;
+    options.rating = identity.rating;
+    options.level = identity.level;
+    options.unlockedSkills = identity.unlockedSkills;
+    options.isRanked = identity.isRanked;
+    if (identity.userId) options.name = identity.name;
+    return identity;
   }
 
   maxClients = 2;
@@ -36,6 +45,8 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
   private playerInputs: Map<string, PlayerInput> = new Map();
   private combat!: BattleCombat;
   private rematchVotes: Set<string> = new Set();
+  private matchId = randomUUID();
+  private resultPending = false;
 
   onCreate(options: any) {
     const rating = Number.isFinite(options?.rating) ? Math.max(0, Number(options.rating) | 0) : 0;
@@ -108,7 +119,7 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
     });
 
     this.onMessage('restart', (client) => {
-      if (this.battleState.status === 'matchEnd') {
+      if (this.battleState.status === 'matchEnd' && !this.resultPending) {
         this.rematchVotes.add(client.sessionId);
         this.broadcast('rematchVote', { count: this.rematchVotes.size, ready: this.rematchVotes.size >= 2 });
         if (this.rematchVotes.size >= 2) {
@@ -158,10 +169,14 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
   onJoin(client: Client, options: any) {
     const isP1 = !this.battleState.p1.connected;
     const player = isP1 ? this.battleState.p1 : this.battleState.p2;
+    const identity = client.auth as BattleIdentity;
 
     player.sessionId = client.sessionId;
     player.connected = true;
-    if (typeof options.name === 'string') {
+    player.userId = identity.userId;
+    player.name = identity.userId ? identity.name : 'Guest';
+    player.acc = 'none';
+    if (!identity.userId && typeof options.name === 'string') {
       const v = validateUsername(options.name);
       player.name = v.ok && v.clean ? v.clean : (options.name.replace(/[<>&"]/g, '').trim().slice(0, 10) || player.name);
     }
@@ -170,7 +185,7 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
     if (typeof options.colorLight === 'string' && HEX_COLOR.test(options.colorLight)) player.colorLight = options.colorLight;
     if (['stripes', 'dots', 'chevron', 'rings', 'cross', 'split', 'webmark', 'diamonds', 'plain', 'custom'].includes(options.pattern)) player.pattern = options.pattern;
     if (isValidCustomPattern(options.customPattern)) player.customPattern = options.customPattern;
-    const lvl = Math.max(1, Math.min(100, parseInt(options.level, 10) || 1));
+    const lvl = identity.level;
     player.level = lvl;
 
     const ACC_LEVELS: Record<string, number> = {
@@ -181,21 +196,18 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
     const VALID_ACCS = ['none', 'band', 'horns', 'goggles', 'halo', 'mohawk', 'mask', 'tophat', 'samurai', 'wizard', 'pirate', 'visor', 'strawhat', 'headphones', 'apex_crown', 'mythic_laurel'];
     if (VALID_ACCS.includes(options.acc)) {
       const minLvl = ACC_LEVELS[options.acc];
-      if (minLvl && lvl < minLvl) {
+      if ((minLvl && lvl < minLvl) ||
+          (options.acc === 'apex_crown' && !identity.apexCrown) ||
+          (options.acc === 'mythic_laurel' && !identity.mythicLaurel)) {
         player.acc = 'none';
       } else {
         player.acc = options.acc;
       }
     }
-    if (Number.isFinite(options.rating)) {
-      player.rating = Math.max(0, Number(options.rating) | 0);
-      player.rank = getRankFromRating(player.rating).id;
-    } else if (typeof options.rank === 'string') {
-      player.rank = normalizeRankId(options.rank);
-      player.rating = getRankFromRating(0).minRating;
-    }
-    player.isRanked = Boolean(options.isRanked);
-    player.unlockedSkills = validateUnlockedSkills(options.unlockedSkills, lvl);
+    player.rating = identity.rating;
+    player.rank = identity.rank;
+    player.isRanked = identity.isRanked;
+    player.unlockedSkills = identity.unlockedSkills;
 
     this.playerInputs.set(client.sessionId, {
       left: false,
@@ -230,29 +242,7 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
       this.battleState.winner = winner.id;
       winner.wins = Math.max(winner.wins, 2);
 
-      const p1Won = winner.id === 0;
-      const p1Delta = calculateRatingChange(this.battleState.p1.rating, p1Won);
-      const p2Delta = calculateRatingChange(this.battleState.p2.rating, !p1Won);
-      if (this.battleState.p1.isRanked || this.battleState.p2.isRanked) {
-        this.battleState.p1.rating = p1Delta.newRating;
-        this.battleState.p1.rank = getRankFromRating(p1Delta.newRating).id;
-        this.battleState.p2.rating = p2Delta.newRating;
-        this.battleState.p2.rank = getRankFromRating(p2Delta.newRating).id;
-      }
-
-      this.broadcast('state', this.battleState);
-      this.broadcast('matchEnd', {
-        winner: winner.id,
-        winnerName: winner.name,
-        p1Wins: this.battleState.p1.wins,
-        p2Wins: this.battleState.p2.wins,
-        p1RatingChange: p1Delta.delta,
-        p2RatingChange: p2Delta.delta,
-        p1NewRating: p1Delta.newRating,
-        p2NewRating: p2Delta.newRating,
-        forfeit: true,
-        disconnectForfeit: isDisconnect
-      });
+      void this.finishMatch(true, isDisconnect);
     }
   }
 
@@ -341,6 +331,7 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
 
   private startMatch() {
     this.lock(); // Lock room so third players cannot disrupt a 2-player match
+    this.matchId = randomUUID();
     this.rematchVotes.clear();
     this.battleState.isPaused = false;
     this.battleState.disconnectPause = null;
@@ -512,45 +503,59 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
     this.battleState.status = 'roundEnd';
     this.battleState.stateT = 0;
 
-    // Both spiders remain not KO'd, round ends in a tie
-    this.broadcast('fx', { type: 'txt', x: 600, y: 200, text: 'TIME UP — TIE!', col: '#ffd694' });
+    // The final round may use remaining grip and guard to settle the match.
+    this.broadcast('fx', { type: 'txt', x: 600, y: 200, text: 'TIME UP!', col: '#ffd694' });
     this.broadcast('snd', { name: 'ko' });
   }
 
   private endRound() {
     const p1Wins = this.battleState.p1.wins;
     const p2Wins = this.battleState.p2.wins;
-
-    if (p1Wins >= 2 || p2Wins >= 2) {
+    if (p1Wins >= 2 || p2Wins >= 2 || this.battleState.round >= 5) {
       this.battleState.status = 'matchEnd';
       this.battleState.stateT = 0;
-      this.battleState.winner = p1Wins >= 2 ? 0 : 1;
-      const winner = this.battleState.winner === 0 ? this.battleState.p1 : this.battleState.p2;
-
-      const p1Won = this.battleState.winner === 0;
-      const p1Delta = calculateRatingChange(this.battleState.p1.rating, p1Won);
-      const p2Delta = calculateRatingChange(this.battleState.p2.rating, !p1Won);
-      if (this.battleState.p1.isRanked || this.battleState.p2.isRanked) {
-        this.battleState.p1.rating = p1Delta.newRating;
-        this.battleState.p1.rank = getRankFromRating(p1Delta.newRating).id;
-        this.battleState.p2.rating = p2Delta.newRating;
-        this.battleState.p2.rank = getRankFromRating(p2Delta.newRating).id;
-      }
-
-      this.broadcast('state', this.battleState);
-      this.broadcast('matchEnd', {
-        winner: this.battleState.winner,
-        winnerName: winner.name,
-        p1Wins,
-        p2Wins,
-        p1RatingChange: p1Delta.delta,
-        p2RatingChange: p2Delta.delta,
-        p1NewRating: p1Delta.newRating,
-        p2NewRating: p2Delta.newRating
-      });
+      const score1 = p1Wins * 1000 + this.battleState.p1.grip + this.battleState.p1.guard;
+      const score2 = p2Wins * 1000 + this.battleState.p2.grip + this.battleState.p2.guard;
+      this.battleState.winner = score1 === score2 ? -1 : score1 > score2 ? 0 : 1;
+      void this.finishMatch();
     } else {
       this.battleState.round++;
       this.startRound();
     }
+  }
+
+  private async finishMatch(forfeit = false, disconnectForfeit = false) {
+    this.resultPending = true;
+    const { p1, p2, winner } = this.battleState;
+    let progressSaved = false;
+    if (winner >= 0) {
+      try {
+        await recordBattleResult(this.matchId, p1.userId || null, p2.userId || null,
+          winner, p1.wins, p2.wins, Boolean(p1.isRanked && p2.isRanked));
+        progressSaved = true;
+      } catch (error) {
+        console.error('Battle result could not be saved:', error);
+      }
+    }
+    const ranked = Boolean(p1.isRanked && p2.isRanked);
+    const p1Delta = ranked && progressSaved && winner >= 0
+      ? calculateRatingChange(p1.rating, winner === 0)
+      : { newRating: p1.rating, delta: 0 };
+    const p2Delta = ranked && progressSaved && winner >= 0
+      ? calculateRatingChange(p2.rating, winner === 1)
+      : { newRating: p2.rating, delta: 0 };
+    p1.rating = p1Delta.newRating;
+    p2.rating = p2Delta.newRating;
+    p1.rank = getRankFromRating(p1.rating).id;
+    p2.rank = getRankFromRating(p2.rating).id;
+    this.broadcast('state', this.battleState);
+    this.broadcast('matchEnd', {
+      winner, winnerName: winner < 0 ? 'Draw' : winner === 0 ? p1.name : p2.name,
+      p1Wins: p1.wins, p2Wins: p2.wins,
+      p1RatingChange: p1Delta.delta, p2RatingChange: p2Delta.delta,
+      p1NewRating: p1.rating, p2NewRating: p2.rating,
+      forfeit, disconnectForfeit, isTimeOut: winner < 0, progressSaved
+    });
+    this.resultPending = false;
   }
 }

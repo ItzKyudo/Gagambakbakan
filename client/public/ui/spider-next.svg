@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <style>.c-body{fill:#f2a33a}.c-head{fill:#ffd694}.c-web{fill:none;stroke:#4cc7b2;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}</style>
+  <path class="c-web" d="M15 17 8 10M14 21 5 18M14 27 5 30M15 31 8 38M24 17 29 10M25 21 31 17M25 27 31 31M24 31 29 38"/>
+  <ellipse class="c-body" cx="19" cy="24" rx="8" ry="10"/>
+  <circle class="c-head" cx="27" cy="24" r="5"/>
+  <path class="c-web" d="m35 16 8 8-8 8"/>
+</svg>

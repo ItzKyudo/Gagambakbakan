@@ -1,6 +1,6 @@
 import { sound } from '../../audio';
 import { signOutUser } from '../../auth';
-import { defaultKeys, getSettings, saveKeys, saveSettings, applyQualityClass, type GraphicQuality } from '../../gb';
+import { defaultKeys, getProgress, getSettings, saveKeys, saveProgress, saveSettings, applyQualityClass, type GraphicQuality } from '../../gb';
 import type { ListeningKey } from './settingsView';
 
 export interface SettingsState {
@@ -90,6 +90,13 @@ export function bindSettingsEvents(container: HTMLElement, state: SettingsState,
   });
 
   // Key bind buttons
+  container.querySelector('#btnDemoMode')?.addEventListener('click', () => {
+    const progress = getProgress();
+    progress.unlockAll = !progress.unlockAll;
+    saveProgress(progress);
+    render();
+  });
+
   container.querySelectorAll('.kb[data-p][data-a]').forEach(btn => {
     btn.addEventListener('click', () => {
       const p = (btn as HTMLElement).dataset.p as 'p1' | 'p2';

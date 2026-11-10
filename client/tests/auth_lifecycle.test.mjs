@@ -11,6 +11,19 @@ function source(path) {
     .replace(/export /g, '');
 }
 
+function browser() {
+  const values = new Map();
+  return {
+    window: { clearTimeout() {}, setTimeout() { return 1; }, addEventListener() {} },
+    document: { addEventListener() {}, visibilityState: 'visible' },
+    localStorage: {
+      getItem(key) { return values.get(key) ?? null; },
+      setItem(key, value) { values.set(key, value); },
+      removeItem(key) { values.delete(key); }
+    }
+  };
+}
+
 test('auth listener lifecycle: subscribe, unsubscribe, and silence token refresh', async () => {
   let authCallback = null;
   const mockSupabase = {
@@ -33,6 +46,7 @@ test('auth listener lifecycle: subscribe, unsubscribe, and silence token refresh
   };
 
   const context = {
+    ...browser(),
     createClient: () => mockSupabase,
     isSupabaseConfigured: true,
     getLooks: () => ({ p1: { name: 'Player' }, p2: { name: 'Jade' } }),
@@ -94,6 +108,7 @@ test('logged-in customization and abilities persist to the profiles row', async 
     }
   };
   const context = {
+    ...browser(),
     createClient: () => mockSupabase,
     getLooks: () => looks,
     getProgress: () => progress,

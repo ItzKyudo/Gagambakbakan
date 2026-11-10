@@ -55,18 +55,9 @@ BEGIN
     SELECT 1 FROM pg_policies WHERE tablename = 'profiles' AND policyname = 'Users can update own profile'
   ) THEN
     CREATE POLICY "Users can update own profile"
-      ON public.profiles FOR UPDATE USING (auth.uid() = id);
-  END IF;
-END $$;
-
--- Allow users to insert their own profile
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies WHERE tablename = 'profiles' AND policyname = 'Users can insert own profile'
-  ) THEN
-    CREATE POLICY "Users can insert own profile"
-      ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
+      ON public.profiles FOR UPDATE TO authenticated
+      USING ((SELECT auth.uid()) = id)
+      WITH CHECK ((SELECT auth.uid()) = id);
   END IF;
 END $$;
 
@@ -90,14 +81,7 @@ BEGIN
   VALUES (
     NEW.id,
     COALESCE(NEW.raw_user_meta_data->>'username', 'Player_' || SUBSTRING(NEW.id::text FROM 1 FOR 6)),
-    COALESCE((NEW.raw_user_meta_data->>'rating')::int, 0),
-    COALESCE(NEW.raw_user_meta_data->>'rank', 'wolf-spider'),
-    COALESCE((NEW.raw_user_meta_data->>'wins')::int, 0),
-    COALESCE((NEW.raw_user_meta_data->>'losses')::int, 0),
-    COALESCE((NEW.raw_user_meta_data->>'matches')::int, 0),
-    COALESCE((NEW.raw_user_meta_data->>'win_rate')::int, 0),
-    COALESCE((NEW.raw_user_meta_data->>'onlineExp')::int, (NEW.raw_user_meta_data->>'online_exp')::int, 0),
-    COALESCE(NEW.raw_user_meta_data->'unlockedSkills', NEW.raw_user_meta_data->'unlocked_skills', '["dash"]'::jsonb),
+    0, 'wolf-spider', 0, 0, 0, 0, 0, '["dash"]'::jsonb,
     NEW.raw_user_meta_data->'looks'
   )
   ON CONFLICT (id) DO UPDATE SET
@@ -105,7 +89,11 @@ BEGIN
     updated_at = NOW();
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
+
+REVOKE INSERT, UPDATE ON public.profiles FROM PUBLIC, anon, authenticated;
+GRANT SELECT ON public.profiles TO anon, authenticated;
+GRANT UPDATE (username, looks, unlocked_skills, updated_at) ON public.profiles TO authenticated;
 
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created

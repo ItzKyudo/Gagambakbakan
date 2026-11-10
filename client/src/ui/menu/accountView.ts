@@ -60,12 +60,12 @@ export function renderAccountView(state: AccountState): string {
             ` : `
               <div class="account-direct-wrap" style="max-width:440px; width:100%; display:grid; gap:16px;">
                 <!-- TABS (LOG IN / CREATE ACCOUNT) -->
-                <div class="tabs" role="group" aria-label="Account Action" style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-                  <button type="button" id="tabAuthLogin" class="btn ${state.mode === 'login' ? 'primary' : 'ghost'}" style="justify-content:center; gap:8px; font-weight:700; min-height:42px;">
+                <div class="tabs account-auth-tabs" role="group" aria-label="Account Action">
+                  <button type="button" id="tabAuthLogin" class="btn ${state.mode === 'login' ? 'primary' : 'ghost'}" aria-pressed="${state.mode === 'login'}">
                     ${icon(LogIn, { width: 16, height: 16, 'stroke-width': 2.2 })}
                     <span>Log In</span>
                   </button>
-                  <button type="button" id="tabAuthRegister" class="btn ${state.mode === 'register' ? 'primary' : 'ghost'}" style="justify-content:center; gap:8px; font-weight:700; min-height:42px;">
+                  <button type="button" id="tabAuthRegister" class="btn ${state.mode === 'register' ? 'primary' : 'ghost'}" aria-pressed="${state.mode === 'register'}">
                     ${icon(User, { width: 16, height: 16, 'stroke-width': 2.2 })}
                     <span>Create Account</span>
                   </button>

@@ -20,5 +20,5 @@ CREATE POLICY "Read own match history" ON public.match_history
   FOR SELECT TO authenticated USING (auth.uid() = user_id);
 DROP POLICY IF EXISTS "Insert own match history" ON public.match_history;
 CREATE POLICY "Insert own match history" ON public.match_history
-  FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
+  FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id AND mode IN ('cpu', '2p'));
 GRANT SELECT, INSERT ON public.match_history TO authenticated;

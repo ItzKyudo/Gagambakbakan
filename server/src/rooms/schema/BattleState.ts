@@ -1,5 +1,6 @@
 export interface PlayerStateData {
   sessionId: string;
+  userId?: string | null;
   id: number;           // 0 = Amber, 1 = Jade
   name: string;
   connected: boolean;

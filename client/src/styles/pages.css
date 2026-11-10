@@ -1003,6 +1003,36 @@ body.customize-active .menu-view-container {
 /* ====================================================
    ACCOUNT / AUTH PAGE
    ==================================================== */
+.account-auth-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+  border: 0;
+}
+
+.account-auth-tabs .btn {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  height: auto;
+  gap: 8px;
+  padding: 8px 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 13px;
+  letter-spacing: .02em;
+  white-space: nowrap;
+}
+
+.account-auth-tabs .btn[aria-pressed="true"] {
+  background: var(--amber);
+  border-color: var(--amber);
+  color: #2a1a05;
+}
+
 .account-page input[type="text"],
 .account-page input[type="email"],
 .account-page input[type="password"] {

@@ -1,7 +1,7 @@
 import { createElement, ArrowLeft, LogOut, Volume2, VolumeX, type IconNode } from 'lucide';
 import { sound } from '../../audio';
 import { getAuthUser } from '../../auth';
-import { ACTIONS, getKeys, getSettings, keyLabel } from '../../gb';
+import { ACTIONS, getKeys, getProgress, getSettings, keyLabel } from '../../gb';
 
 function icon(node: IconNode, attrs: Record<string, string | number> = {}): string {
   return createElement(node, attrs).outerHTML;
@@ -82,6 +82,16 @@ export function renderSettingsView(listeningKey: ListeningKey | null): string {
           <label><input type="radio" name="diff" value="easy" ${st.diff === 'easy' ? 'checked' : ''}><span>Easy</span></label>
           <label><input type="radio" name="diff" value="normal" ${st.diff === 'normal' ? 'checked' : ''}><span>Normal</span></label>
           <label><input type="radio" name="diff" value="hard" ${st.diff === 'hard' ? 'checked' : ''}><span>Hard</span></label>
+        </div>
+      </section>
+
+      <section class="sec" aria-label="Demo mode">
+        <h2>Demo mode</h2>
+        <p class="note">Try every ability and accessory. This does not earn levels or ability points.</p>
+        <div class="btns">
+          <button type="button" class="btn ghost" id="btnDemoMode" aria-pressed="${getProgress().unlockAll}">
+            ${getProgress().unlockAll ? 'Turn Demo Off' : 'Turn Demo On'}
+          </button>
         </div>
       </section>
 

@@ -2,12 +2,13 @@ import { getAuthUser, supabase } from '../../auth';
 import { getColor, getExpProgress, getLevel, getLooks, getProgress, getUnlockedIds, spiderSVG } from '../../gb';
 import { SKILLS_LIST } from '../../game/abilities';
 import { fetchMatchHistory, MATCH_MODES, summarizeMatches, type MatchMode, type MatchRecord } from '../../matchHistory';
-import { getRankFromRating, getRankProgress, renderRankBadgeSVG, RANK_RATING_LABEL } from './rankTitle';
+import { getRankFromRating, getRankProgress, renderRankBadgeSVG, RANK_RATING_LABEL, SPIDER_RANKS } from './rankTitle';
 import { renderLeaderboardBadge } from './leaderboardBadge';
 
 export function renderProfileView(slot: 'p1' | 'p2'): string {
   const progress = getProgress();
   const rank = getRankFromRating(progress.rating);
+  const currentRankIndex = SPIDER_RANKS.findIndex(tier => tier.id === rank.id);
   const unlocked = getUnlockedIds(progress);
   const looks = typeof getLooks === 'function' ? getLooks() : {
     p1: { name: 'Player 1', color: 'amber', pattern: 'none', acc: 'none', customPattern: '' },
@@ -54,31 +55,40 @@ export function renderProfileView(slot: 'p1' | 'p2'): string {
       <div class="profile-rank-col">
         ${slot === 'p1' ? `
           <div class="profile-rank-card">
-            <div class="profile-rank-emblem-wrap">
-              <div class="profile-rank-glow" style="background:${rank.badgeCol};"></div>
-              ${renderRankBadgeSVG(rank.id, 500)}
-            </div>
-
-            <div class="profile-rank-bottom">
-              <div class="profile-rank-details">
-                <span class="profile-rank-badge" style="background:${rank.badgeCol};">Current Rank</span>
-                <h2 class="profile-rank-title" style="color:${rank.badgeCol};">${rank.species} · ${rank.title}</h2>
+            ${SPIDER_RANKS.map((tier, index) => `
+              <div class="profile-rank-slide" data-rank-slide="${index}" ${index === currentRankIndex ? '' : 'hidden'}>
+                <div class="profile-rank-emblem-wrap">
+                  <div class="profile-rank-glow" style="background:${tier.badgeCol};"></div>
+                  ${renderRankBadgeSVG(tier.id, 500)}
+                </div>
+                <div class="profile-rank-bottom">
+                  <div class="profile-rank-details">
+                    <span class="profile-rank-badge" style="background:${tier.badgeCol};">${index < currentRankIndex ? 'Previous Rank' : index === currentRankIndex ? 'Current Rank' : 'Upcoming Rank'}</span>
+                    <h2 class="profile-rank-title" style="color:${tier.badgeCol};">${tier.species} · ${tier.title}</h2>
+                  </div>
+                  ${index === currentRankIndex ? `
+                    <div class="profile-rank-progress-wrap">
+                      <div class="profile-rpc-header">
+                        <span class="profile-rpc-label">Rank Progression</span>
+                        <span class="profile-rpc-value"><strong>${progress.rating.toLocaleString()}</strong> ${RANK_RATING_LABEL}</span>
+                      </div>
+                      <div class="profile-rpc-track">
+                        <div class="profile-rpc-fill" style="width:${Math.max(4, rankProgress.progressPct)}%; background:${rank.badgeCol};"></div>
+                      </div>
+                      <div class="profile-rpc-footer">
+                        <span>${rank.minRating} ${RANK_RATING_LABEL}</span>
+                        <span class="profile-rpc-pct">${rankProgress.progressPct}%</span>
+                        <span>${rankProgress.nextRank ? `${rankProgress.nextRank.title} (${rankProgress.nextRank.minRating} ${RANK_RATING_LABEL})` : 'Peak Tier'}</span>
+                      </div>
+                    </div>
+                  ` : `<p class="profile-rank-preview">${tier.desc}<br><strong>Starts at ${tier.minRating.toLocaleString()} ${RANK_RATING_LABEL}</strong></p>`}
+                </div>
               </div>
-
-              <div class="profile-rank-progress-wrap">
-                <div class="profile-rpc-header">
-                  <span class="profile-rpc-label">Rank Progression</span>
-                  <span class="profile-rpc-value"><strong>${progress.rating.toLocaleString()}</strong> ${RANK_RATING_LABEL}</span>
-                </div>
-                <div class="profile-rpc-track">
-                  <div class="profile-rpc-fill" style="width:${Math.max(4, rankProgress.progressPct)}%; background:${rank.badgeCol};"></div>
-                </div>
-                <div class="profile-rpc-footer">
-                  <span>${rank.title} (${rank.minRating ?? 0} ${RANK_RATING_LABEL})</span>
-                  <span class="profile-rpc-pct">${rankProgress.progressPct}%</span>
-                  <span>${rankProgress.nextRank ? `${rankProgress.nextRank.title} (${rankProgress.nextRank.minRating} ${RANK_RATING_LABEL})` : 'Peak Tier'}</span>
-                </div>
-              </div>
+            `).join('')}
+            <div class="profile-rank-nav" aria-label="Browse ranks">
+              <button type="button" id="profileRankPrev" ${currentRankIndex === 0 ? 'disabled' : ''} aria-label="Previous rank"><img src="/ui/spider-next.svg" alt="" class="spider-prev-icon"></button>
+              <span class="profile-rank-sr" id="profileRankPosition" role="status">Rank ${currentRankIndex + 1} of ${SPIDER_RANKS.length}: ${rank.species}</span>
+              <button type="button" id="profileRankNext" ${currentRankIndex === SPIDER_RANKS.length - 1 ? 'disabled' : ''} aria-label="Next rank"><img src="/ui/spider-next.svg" alt=""></button>
             </div>
           </div>
         ` : `
@@ -134,6 +144,22 @@ export function bindProfileEvents(container: HTMLElement, slot: 'p1' | 'p2') {
   const name = page.querySelector<HTMLElement>('#profileName')!;
   name.textContent = getLooks()[slot].name;
   name.focus();
+  const rankSlides = [...page.querySelectorAll<HTMLElement>('[data-rank-slide]')];
+  if (rankSlides.length) {
+    let rankIndex = SPIDER_RANKS.findIndex(tier => tier.id === getRankFromRating(getProgress().rating).id);
+    const prev = page.querySelector<HTMLButtonElement>('#profileRankPrev')!;
+    const next = page.querySelector<HTMLButtonElement>('#profileRankNext')!;
+    const position = page.querySelector<HTMLElement>('#profileRankPosition')!;
+    const showRank = (index: number) => {
+      rankIndex = Math.max(0, Math.min(rankSlides.length - 1, index));
+      rankSlides.forEach((slide, i) => { slide.hidden = i !== rankIndex; });
+      prev.disabled = rankIndex === 0;
+      next.disabled = rankIndex === rankSlides.length - 1;
+      position.textContent = `Rank ${rankIndex + 1} of ${rankSlides.length}: ${SPIDER_RANKS[rankIndex].species}`;
+    };
+    prev.addEventListener('click', () => showRank(rankIndex - 1));
+    next.addEventListener('click', () => showRank(rankIndex + 1));
+  }
   const status = page.querySelector<HTMLElement>('#profileHistoryStatus')!;
   const retry = page.querySelector<HTMLButtonElement>('#profileHistoryRetry')!;
   const more = page.querySelector<HTMLButtonElement>('#profileMore')!;

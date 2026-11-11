@@ -59,7 +59,7 @@
   pointer-events: none;
 }
 
-.profile-spider-stage svg {
+.profile-spider-stage .spider-art {
   width: min(100%, 250px);
   height: auto;
   position: relative;
@@ -1658,7 +1658,7 @@
   transform: translateY(-4px) scale(1.02);
 }
 
-.stage svg {
+.stage .spider-art {
   width: 100%;
   height: auto;
   display: block;
@@ -2067,8 +2067,8 @@ body.main-menu-active .stage {
   justify-content: center;
 }
 
-body:has(.menu-split-body) .stage svg,
-body.main-menu-active .stage svg {
+body:has(.menu-split-body) .stage .spider-art,
+body.main-menu-active .stage .spider-art {
   max-height: clamp(90px, 15vh, 160px);
   width: auto;
 }

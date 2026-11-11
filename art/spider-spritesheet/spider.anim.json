@@ -1,0 +1,108 @@
+{
+  "schema": "codeart2d.rig_anim.v1",
+  "rig": "spider.rig.svg",
+  "entry_reference": "idle",
+  "states": {
+    "idle": "idle",
+    "moving": "move_right",
+    "light_attack": "light_attack",
+    "heavy_attack": "heavy_attack",
+    "blocking": "block",
+    "block_broken": "block_break",
+    "parrying": "parry",
+    "climbing": "climb"
+  },
+  "clips": {
+    "idle": {
+      "frames": 4, "loop": true, "duration_ms": 180, "grounded": false,
+      "tracks": {
+        "abdomen": {"translate": [[0, [0, 0]], [0.5, [0, 1]], [1, [0, 0]]]},
+        "head": {"translate": [[0, [0, 0]], [0.5, [0, 1]], [1, [0, 0]]]},
+        "near_lead": {"rotate": [[0, 0], [0.5, -4], [1, 0]]}
+      }
+    },
+    "move_right": {
+      "frames": 8, "loop": true, "duration_ms": 90, "stride_world_units": 24, "grounded": false,
+      "events": [{"t": 0, "name": "step_l"}, {"t": 0.5, "name": "step_r"}],
+      "tracks": {
+        "root": {"translate": [[0, [0, 1]], [0.25, [0, -1]], [0.5, [0, 1]], [0.75, [0, -1]], [1, [0, 1]]]},
+        "abdomen": {"rotate": [[0, -2], [0.5, 2], [1, -2]]},
+        "near_rear": {"rotate": [[0, -16], [0.5, 16], [1, -16]]},
+        "near_mid": {"rotate": [[0, 20], [0.5, -20], [1, 20]]},
+        "near_front": {"rotate": [[0, -20], [0.5, 20], [1, -20]]},
+        "near_lead": {"rotate": [[0, 16], [0.5, -16], [1, 16]]},
+        "far_rear": {"rotate": [[0, 14], [0.5, -14], [1, 14]]},
+        "far_mid": {"rotate": [[0, -18], [0.5, 18], [1, -18]]},
+        "far_front": {"rotate": [[0, 18], [0.5, -18], [1, 18]]},
+        "far_lead": {"rotate": [[0, -14], [0.5, 14], [1, -14]]}
+      }
+    },
+    "light_attack": {
+      "frames": 5, "loop": false, "duration_ms": [90, 65, 70, 90, 110], "grounded": false,
+      "events": [{"t": 0.5, "name": "hit"}],
+      "tracks": {
+        "abdomen": {"translate": [[0, [0, 0]], [0.25, [-3, 1]], [0.5, [4, 0]], [1, [0, 0]]]},
+        "head": {"translate": [[0, [0, 0]], [0.25, [-3, 1]], [0.5, [6, 0]], [1, [0, 0]]]},
+        "near_lead": {"rotate": [[0, 0], [0.25, -55], [0.5, 24], [0.75, -14], [1, 0]]},
+        "far_lead": {"rotate": [[0, 0], [0.25, -16], [0.5, 12], [1, 0]]}
+      }
+    },
+    "heavy_attack": {
+      "frames": 6, "loop": false, "duration_ms": [120, 100, 100, 75, 100, 130], "grounded": false,
+      "events": [{"t": 0.6, "name": "hit"}],
+      "tracks": {
+        "root": {"translate": [[0, [0, 0]], [0.4, [-4, 4]], [0.6, [6, -2]], [1, [0, 0]]]},
+        "abdomen": {"rotate": [[0, 0], [0.4, 10], [0.6, -8], [1, 0]]},
+        "head": {"rotate": [[0, 0], [0.4, 14], [0.6, -12], [1, 0]]},
+        "near_lead": {"rotate": [[0, 0], [0.4, -76], [0.6, 33], [1, 0]]},
+        "far_lead": {"rotate": [[0, 0], [0.4, -68], [0.6, 25], [1, 0]]},
+        "near_front": {"rotate": [[0, 0], [0.4, -32], [0.6, 18], [1, 0]]},
+        "far_front": {"rotate": [[0, 0], [0.4, -28], [0.6, 16], [1, 0]]}
+      }
+    },
+    "block": {
+      "frames": 3, "loop": true, "duration_ms": 180, "grounded": false,
+      "tracks": {
+        "head": {"translate": [[0, [-2, 2]], [1, [-2, 2]]]},
+        "near_lead": {"rotate": [[0, -75], [1, -75]]},
+        "near_front": {"rotate": [[0, -47], [1, -47]]},
+        "far_lead": {"rotate": [[0, -60], [1, -60]]}
+      }
+    },
+    "block_break": {
+      "frames": 4, "loop": false, "duration_ms": [90, 110, 130, 150], "grounded": false,
+      "events": [{"t": 0.333, "name": "custom:guard_break"}],
+      "tracks": {
+        "root": {"translate": [[0, [0, 0]], [0.333, [-8, 4]], [0.667, [-5, 3]], [1, [0, 0]]]},
+        "head": {"rotate": [[0, 0], [0.333, 22], [0.667, -10], [1, 0]]},
+        "near_lead": {"rotate": [[0, -75], [0.333, 36], [0.667, -24], [1, 0]]},
+        "near_front": {"rotate": [[0, -47], [0.333, 31], [0.667, -12], [1, 0]]},
+        "far_lead": {"rotate": [[0, -60], [0.333, 20], [0.667, -10], [1, 0]]}
+      }
+    },
+    "parry": {
+      "frames": 4, "loop": false, "duration_ms": [70, 70, 110, 120], "grounded": false,
+      "events": [{"t": 0.333, "name": "custom:parry"}],
+      "tracks": {
+        "root": {"translate": [[0, [0, 0]], [0.333, [3, -2]], [0.667, [2, -1]], [1, [0, 0]]]},
+        "near_lead": {"rotate": [[0, -75], [0.333, -105], [0.667, -65], [1, 0]]},
+        "far_lead": {"rotate": [[0, -60], [0.333, -82], [0.667, -51], [1, 0]]},
+        "head": {"rotate": [[0, 0], [0.333, -12], [1, 0]]}
+      }
+    },
+    "climb": {
+      "frames": 6, "loop": true, "duration_ms": 120, "grounded": false,
+      "tracks": {
+        "root": {"translate": [[0, [15, -23]], [0.5, [15, -25]], [1, [15, -23]]], "rotate": [[0, -90], [1, -90]], "scale": [[0, 0.7], [1, 0.7]]},
+        "near_lead": {"rotate": [[0, -28], [0.5, 24], [1, -28]]},
+        "far_lead": {"rotate": [[0, 24], [0.5, -28], [1, 24]]},
+        "near_front": {"rotate": [[0, 20], [0.5, -20], [1, 20]]},
+        "far_front": {"rotate": [[0, -20], [0.5, 20], [1, -20]]},
+        "near_mid": {"rotate": [[0, -14], [0.5, 14], [1, -14]]},
+        "far_mid": {"rotate": [[0, 14], [0.5, -14], [1, 14]]},
+        "near_rear": {"rotate": [[0, 8], [0.5, -8], [1, 8]]},
+        "far_rear": {"rotate": [[0, -8], [0.5, 8], [1, -8]]}
+      }
+    }
+  }
+}

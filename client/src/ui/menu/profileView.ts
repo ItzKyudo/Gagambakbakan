@@ -1,5 +1,6 @@
 import { getAuthUser, supabase } from '../../auth';
-import { getColor, getExpProgress, getLevel, getLooks, getProgress, getUnlockedIds, spiderSVG } from '../../gb';
+import { getColor, getExpProgress, getLevel, getLooks, getProgress, getUnlockedIds } from '../../gb';
+import { spiderCanvasHtml } from '../../game/spiderSheet';
 import { SKILLS_LIST } from '../../game/abilities';
 import { fetchMatchHistory, MATCH_MODES, summarizeMatches, type MatchMode, type MatchRecord } from '../../matchHistory';
 import { getRankFromRating, getRankProgress, renderRankBadgeSVG, RANK_RATING_LABEL, SPIDER_RANKS } from './rankTitle';
@@ -12,7 +13,7 @@ export function renderProfileView(slot: 'p1' | 'p2'): string {
   const unlocked = getUnlockedIds(progress);
   const looks = getLooks();
   const lk = looks[slot] || looks.p1;
-  const spiderHtml = typeof spiderSVG === 'function' ? spiderSVG(lk, '-profile') : '';
+  const spiderHtml = spiderCanvasHtml(lk);
   const spiderColor = typeof getColor === 'function' ? getColor(lk.color) : { main: '#f2a33a', light: '#ffd694', label: 'Amber' };
   const rankProgress = typeof getRankProgress === 'function'
     ? getRankProgress(progress.rating)

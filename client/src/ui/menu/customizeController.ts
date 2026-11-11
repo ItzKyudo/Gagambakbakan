@@ -1,5 +1,6 @@
 import { sound } from '../../audio';
-import { DEF_LOOK, customPatternSVG, getColor, getLevel, getLooks, getProgress, randomLook, saveLooks } from '../../gb';
+import { DEF_LOOK, getColor, getLevel, getLooks, getProgress, randomLook, saveLooks } from '../../gb';
+import { paintSpiderCanvases } from '../../game/spiderSheet';
 import { fetchPodiumChampionStatus, getCachedPodiumChampionStatus } from '../../auth';
 import { decodePatternArt, encodePatternArt, type PatternStroke } from '../../patternArt';
 
@@ -104,19 +105,19 @@ export function bindCustomizeEvents(container: HTMLElement, state: CustomizeStat
 
   if (lk.pattern === 'custom') {
     const preview = container.querySelector('#preview') as HTMLElement | null;
-    const svg = preview?.querySelector('.spider-art') as SVGSVGElement | null;
+    const canvas = preview?.querySelector<HTMLCanvasElement>('.spider-art');
     let current: PatternStroke | null = null;
     const pointFromEvent = (event: PointerEvent): [number, number] | null => {
-      if (!svg) return null;
-      const rect = svg.getBoundingClientRect();
-      const scale = Math.min(rect.width / 240, rect.height / 180);
-      const x = ((event.clientX - rect.left - (rect.width - 240 * scale) / 2) / scale - 41) / 95;
-      const y = ((event.clientY - rect.top - (rect.height - 180 * scale) / 2) / scale - 54) / 75;
+      if (!canvas) return null;
+      const rect = canvas.getBoundingClientRect();
+      const x = ((event.clientX - rect.left) / rect.width * 288 - 50) / 96;
+      const y = ((event.clientY - rect.top) / rect.height * 224 - 60) / 84;
       return ((x - .5) / .5) ** 2 + ((y - .5) / .5) ** 2 <= 1 ? [x, y] : null;
     };
     const paint = () => {
-      const group = svg?.querySelector('.custom-pattern');
-      if (group) group.innerHTML = customPatternSVG(encodePatternArt([...decodePatternArt(lk.customPattern), ...(current ? [current] : [])]));
+      if (!canvas || !preview) return;
+      canvas.dataset.customPattern = encodePatternArt([...decodePatternArt(lk.customPattern), ...(current ? [current] : [])]);
+      paintSpiderCanvases(preview);
     };
     preview?.addEventListener('pointerdown', event => {
       const point = pointFromEvent(event);

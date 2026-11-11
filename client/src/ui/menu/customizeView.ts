@@ -10,9 +10,9 @@ import {
   getLevel,
   getLooks,
   getProgress,
-  isAccessoryUnlocked,
-  spiderSVG
+  isAccessoryUnlocked
 } from '../../gb';
+import { spiderCanvasHtml } from '../../game/spiderSheet';
 import { getCachedPodiumChampionStatus } from '../../auth';
 import { renderPodiumBadge } from './leaderboardBadge';
 
@@ -47,7 +47,7 @@ export function renderCustomizeView(customizePlayer: 'p1' | 'p2', drawColor: str
 
         <div class="custom-preview-column">
           <div class="preview ${lk.pattern === 'custom' ? 'pattern-editing' : ''}" id="preview" role="img" aria-label="${name}, ${patternLabel} pattern, ${accessoryLabel} accessory" ${lk.pattern === 'custom' ? 'aria-describedby="patternHelp"' : ''}>
-            ${spiderSVG(lk, '-cust')}
+            ${spiderCanvasHtml(lk)}
             <div class="preview-caption" aria-hidden="true">
               <strong>${name}</strong>
               <span>${patternLabel} &middot; ${accessoryLabel}</span>
@@ -91,7 +91,7 @@ export function renderCustomizeView(customizePlayer: 'p1' | 'p2', drawColor: str
             <div class="opts visual-opts" id="pat">
               ${PATTERNS.map(([id, label]) => `
                 <button type="button" class="opt" data-pat="${id}" aria-label="${label} pattern" aria-pressed="${lk.pattern === id}">
-                  <span class="choice-preview" aria-hidden="true">${spiderSVG({ ...lk, pattern: id, acc: 'none' }, `-pat-${id}`)}</span>
+                  <span class="choice-preview" aria-hidden="true">${spiderCanvasHtml({ ...lk, pattern: id, acc: 'none' })}</span>
                   <span>${label}</span>
                 </button>
               `).join('')}

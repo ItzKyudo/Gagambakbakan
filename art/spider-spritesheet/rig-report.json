@@ -1,0 +1,1678 @@
+{
+  "schema": "codeart2d.rig_report.v1",
+  "route": "vector",
+  "frame_size": [
+    288,
+    224
+  ],
+  "anchor_px": [
+    128.0,
+    160.0
+  ],
+  "ground_px": 160.0,
+  "zoom": 2,
+  "palette": null,
+  "clips": {
+    "idle": {
+      "frames": [
+        {
+          "id": "idle-00",
+          "t": 0.0,
+          "qa": {
+            "visible": 12578,
+            "partial_alpha": 901,
+            "colors": 1147,
+            "off_palette": null,
+            "orphans": 3083,
+            "l_corners": null,
+            "outline_gaps": null,
+            "bbox": [
+              21,
+              58,
+              233,
+              165
+            ]
+          },
+          "ground": {
+            "grounded": false,
+            "edge": 165,
+            "gap_px": -5
+          },
+          "margin_px": 21,
+          "contacts": {},
+          "clamps": [],
+          "file": "frames/idle-00.png",
+          "stored_as": "idle-00"
+        },
+        {
+          "id": "idle-01",
+          "t": 0.25,
+          "qa": {
+            "visible": 12662,
+            "partial_alpha": 907,
+            "colors": 1211,
+            "off_palette": null,
+            "orphans": 3303,
+            "l_corners": null,
+            "outline_gaps": null,
+            "bbox": [
+              21,
+              59,
+              235,
+              165
+            ]
+          },
+          "ground": {
+            "grounded": false,
+            "edge": 165,
+            "gap_px": -5
+          },
+          "margin_px": 21,
+          "contacts": {},
+          "clamps": [],
+          "file": "frames/idle-01.png",
+          "stored_as": "idle-01"
+        },
+        {
+          "id": "idle-02",
+          "t": 0.5,
+          "qa": {
+            "visible": 12745,
+            "partial_alpha": 892,
+            "colors": 1236,
+            "off_palette": null,
+            "orphans": 3288,
+            "l_corners": null,
+            "outline_gaps": null,
+            "bbox": [
+              21,
+              60,
+              237,
+              165
+            ]
+          },
+          "ground": {
+            "grounded": false,
+            "edge": 165,
+            "gap_px": -5
+          },
+          "margin_px": 21,
+          "contacts": {},
+          "clamps": [],
+          "file": "frames/idle-02.png",
+          "stored_as": "idle-02"
+        },
+        {
+          "id": "idle-03",
+          "t": 0.75,
+          "qa": {
+            "visible": 12662,
+            "partial_alpha": 907,
+            "colors": 1211,
+            "off_palette": null,
+            "orphans": 3303,
+            "l_corners": null,
+            "outline_gaps": null,
+            "bbox": [
+              21,
+              59,
+              235,
+              165
+            ]
+          },
+          "ground": {
+            "grounded": false,
+            "edge": 165,
+            "gap_px": -5
+          },
+          "margin_px": 21,
+          "contacts": {},
+          "clamps": [],
+          "file": "frames/idle-01.png",
+          "stored_as": "idle-01"
+        }
+      ],
+      "loop": true,
+      "duration_ms": [
+        180,
+        180,
+        180,
+        180
+      ],
+      "seam": {
+        "frames": 4,
+        "seam": 1.802712,
+        "adjacent_median": 1.82807,
+        "adjacent_p95": 1.82807,
+        "adjacent_max": 1.82807,
+        "seam_over_median": 0.986128,
+        "seam_over_p95": 0.986128,
+        "method": "premultiplied RGBA mean absolute difference (0-255); seam = last -> first"
+      },
+      "contact": {},
+      "entry_frame": 0,
+      "stride_world_units": null,
+      "stride_px_per_frame": null,
+      "events": []
+    },
+    "move_right": {
+      "frames": [
+        {
+          "id": "move_right-00",
+          "t": 0.0,
+          "qa": {
+            "visible": 13898,
+            "partial_alpha": 1192,
+            "colors": 1299,
+            "off_palette": null,
+            "orphans": 3951,
+            "l_corners": null,
+            "outline_gaps": null,
+            "bbox": [
+              10,
+              60,
+              244,
+              183
+            ]
+          },
+          "ground": {
+            "grounded": false,
+            "edge": 183,
+            "gap_px": -23
+          },
+          "margin_px": 10,
+          "contacts": {},
+          "clamps": [],
+          "file": "frames/move_right-00.png",
+          "stored_as": "move_right-00"
+        },
+        {
+          "id": "move_right-01",
+          "t": 0.125,
+          "qa": {
+            "visible": 13447,
+            "partial_alpha": 1097,
+            "colors": 1291,
+            "off_palette": null,
+            "orphans": 3746,
+            "l_corners": null,
+            "outline_gaps": null,
+            "bbox": [
+              16,
+              58,
+              238,
+              174
+            ]
+          },
+          "ground": {
+            "grounded": false,
+            "edge": 174,
+            "gap_px": -14
+          },
+          "margin_px": 16,
+          "contacts": {},
+          "clamps": [],
+          "file": "frames/move_right-01.png",
+          "stored_as": "move_right-01"
+        },
+        {
+          "id": "move_right-02",
+          "t": 0.25,
+          "qa": {
+            "visible": 12578,
+            "partial_alpha": 901,
+            "colors": 1147,
+            "off_palette": null,
+            "orphans": 3083,
+            "l_corners": null,
+            "outline_gaps": null,
+            "bbox": [
+              21,
+              56,
+              233,
+              163
+            ]
+          },
+          "ground": {
+            "grounded": false,
+            "edge": 163,
+            "gap_px": -3
+          },
+          "margin_px": 21,
+          "contacts": {},
+          "clamps": [],
+          "file": "frames/move_right-02.png",
+          "stored_as": "move_right-02"
+        },
+        {
+          "id": "move_right-03",
+          "t": 0.375,
+          "qa": {
+            "visible": 13755,
+            "partial_alpha": 1168,
+            "colors": 1306,
+            "off_palette": null,
+            "orphans": 3927,
+            "l_corners": null,
+            "outline_gaps": null,
+            "bbox": [
+              14,
+              58,
+              241,
+              172
+            ]
+          },
+          "ground": {
+            "grounded": false,
+            "edge": 172,
+            "gap_px": -12
+          },
+          "margin_px": 14,
+          "contacts": {},
+          "clamps": [],
+          "file": "frames/move_right-03.png",
+          "stored_as": "move_right-03"
+        },
+        {
+          "id": "move_right-04",
+          "t": 0.5,
+          "qa": {
+            "visible": 13645,
+            "partial_alpha": 1112,
+            "colors": 1293,
+            "off_palette": null,
+            "orphans": 3896,
+            "l_corners": null,
+            "outline_gaps": null,
+            "bbox": [
+              10,
+              59,
+              247,
+              181
+            ]
+          },
+          "ground": {
+            "grounded": false,
+            "edge": 181,
+            "gap_px": -21
+          },
+          "margin_px": 10,
+          "contacts": {},
+          "clamps": [],
+          "file": "frames/move_right-04.png",
+          "stored_as": "move_right-04"
+        },
+        {
+          "id": "move_right-05",
+          "t": 0.625,
+          "qa": {
+            "visible": 13755,
+            "partial_alpha": 1168,
+            "colors": 1306,
+            "off_palette": null,
+            "orphans": 3927,
+            "l_corners": null,
+            "outline_gaps": null,
+            "bbox": [
+              14,
+              58,
+              241,
+              172
+            ]
+          },
+          "ground": {
+            "grounded": false,
+            "edge": 172,
+            "gap_px": -12
+          },
+          "margin_px": 14,
+          "contacts": {},
+          "clamps": [],
+          "file": "frames/move_right-03.png",
+          "stored_as": "move_right-03"
+        },
+        {
+          "id": "move_right-06",
+          "t": 0.75,
+          "qa": {
+            "visible": 12578,
+            "partial_alpha": 901,
+            "colors": 1147,
+            "off_palette": null,
+            "orphans": 3083,
+            "l_corners": null,
+            "outline_gaps": null,
+            "bbox": [
+              21,
+              56,
+              233,
+              163
+            ]
+          },
+          "ground": {
+            "grounded": false,
+            "edge": 163,
+            "gap_px": -3
+          },
+          "margin_px": 21,
+          "contacts": {},
+          "clamps": [],
+          "file": "frames/move_right-02.png",
+          "stored_as": "move_right-02"
+        },
+        {
+          "id": "move_right-07",
+          "t": 0.875,
+          "qa": {
+            "visible": 13447,
+            "partial_alpha": 1097,
+            "colors": 1291,
+            "off_palette": null,
+            "orphans": 3746,
+            "l_corners": null,
+            "outline_gaps": null,
+            "bbox": [
+              16,
+              58,
+              238,
+              174
+            ]
+          },
+          "ground": {
+            "grounded": false,
+            "edge": 174,
+            "gap_px": -14
+          },
+          "margin_px": 16,
+          "contacts": {},
+          "clamps": [],
+          "file": "frames/move_right-01.png",
+          "stored_as": "move_right-01"
+        }
+      ],
+      "loop": true,
+      "duration_ms": [
+        90,
+        90,
+        90,
+        90,
+        90,
+        90,
+        90,
+        90
+      ],
+      "seam": {
+        "frames": 8,
+        "seam": 12.438872,
+        "adjacent_median": 11.052655,
+        "adjacent_p95": 12.367179,
+        "adjacent_max": 12.438872,
+        "seam_over_median": 1.125419,
+        "seam_over_p95": 1.005797,
+        "method": "premultiplied RGBA mean absolute difference (0-255); seam = last -> first"
+      },
+      "contact": {},
+      "entry_frame": 2,
+      "stride_world_units": 48.0,
+      "stride_px_per_frame": 6.0,
+      "events": [
+        {
+          "at": 0,
+          "name": "step_l"
+        },
+        {
+          "at": 4,
+          "name": "step_r"
+        }
+      ]
+    },
+    "light_attack": {
+      "frames": [
+        {
+          "id": "light_attack-00",
+          "t": 0.0,
+          "qa": {
+            "visible": 12578,
+            "partial_alpha": 901,
+            "colors": 1147,
+            "off_palette": null,
+            "orphans": 3083,
+            "l_corners": null,
+            "outline_gaps": null,
+            "bbox": [
+              21,
+              58,
+              233,
+              165
+            ]
+          },
+          "ground": {
+            "grounded": false,
+            "edge": 165,
+            "gap_px": -5
+          },
+          "margin_px": 21,
+          "contacts": {},
+          "clamps": [],
+          "file": "frames/idle-00.png",
+          "stored_as": "idle-00"
+        },
+        {
+          "id": "light_attack-01",
+          "t": 0.25,
+          "qa": {
+            "visible": 13247,
+            "partial_alpha": 1060,
+            "colors": 1251,
+            "off_palette": null,
+            "orphans": 3555,
+            "l_corners": null,
+            "outline_gaps": null,
+            "bbox": [
+              21,
+              60,
+              253,
+              165
+            ]
+          },
+          "ground": {
+            "grounded": false,
+            "edge": 165,
+            "gap_px": -5
+          },
+          "margin_px": 21,
+          "contacts": {},
+          "clamps": [],
+          "file": "frames/light_attack-01.png",
+          "stored_as": "light_attack-01"
+        },
+        {
+          "id": "light_attack-02",
+          "t": 0.5,
+          "qa": {
+            "visible": 13149,
+            "partial_alpha": 945,
+            "colors": 1210,
+            "off_palette": null,
+            "orphans": 3305,
+            "l_corners": null,
+            "outline_gaps": null,
+            "bbox": [
+              21,
+              58,
+              217,
+              187
+            ]
+          },
+          "ground": {
+            "grounded": false,
+            "edge": 187,
+            "gap_px": -27
+          },
+          "margin_px": 21,
+          "contacts": {},
+          "clamps": [],
+          "file": "frames/light_attack-02.png",
+          "stored_as": "light_attack-02"
+        },
+        {
+          "id": "light_attack-03",
+          "t": 0.75,
+          "qa": {
+            "visible": 13328,
+            "partial_alpha": 1089,
+            "colors": 1234,
+            "off_palette": null,
+            "orphans": 3511,
+            "l_corners": null,
+            "outline_gaps": null,
+            "bbox": [
+              21,
+              58,
+              245,
+              170
+            ]
+          },
+          "ground": {
+            "grounded": false,
+            "edge": 170,
+            "gap_px": -10
+          },
+          "margin_px": 21,
+          "contacts": {},
+          "clamps": [],
+          "file": "frames/light_attack-03.png",
+          "stored_as": "light_attack-03"
+        },
+        {
+          "id": "light_attack-04",
+          "t": 1.0,
+          "qa": {
+            "visible": 12578,
+            "partial_alpha": 901,
+            "colors": 1147,
+            "off_palette": null,
+            "orphans": 3083,
+            "l_corners": null,
+            "outline_gaps": null,
+            "bbox": [
+              21,
+              58,
+              233,
+              165
+            ]
+          },
+          "ground": {
+            "grounded": false,
+            "edge": 165,
+            "gap_px": -5
+          },
+          "margin_px": 21,
+          "contacts": {},
+          "clamps": [],
+          "file": "frames/idle-00.png",
+          "stored_as": "idle-00"
+        }
+      ],
+      "loop": false,
+      "duration_ms": [
+        90,
+        65,
+        70,
+        90,
+        110
+      ],
+      "seam": null,
+      "contact": {},
+      "entry_frame": 0,
+      "stride_world_units": null,
+      "stride_px_per_frame": null,
+      "events": [
+        {
+          "at": 2,
+          "name": "hit"
+        }
+      ]
+    },
+    "heavy_attack": {
+      "frames": [
+        {
+          "id": "heavy_attack-00",
+          "t": 0.0,
+          "qa": {
+            "visible": 12578,
+            "partial_alpha": 901,
+            "colors": 1147,
+            "off_palette": null,
+            "orphans": 3083,
+            "l_corners": null,
+            "outline_gaps": null,
+            "bbox": [
+              21,
+              58,
+              233,
+              165
+            ]
+          },
+          "ground": {
+            "grounded": false,
+            "edge": 165,
+            "gap_px": -5
+          },
+          "margin_px": 21,
+          "contacts": {},
+          "clamps": [],
+          "file": "frames/idle-00.png",
+          "stored_as": "idle-00"
+        },
+        {
+          "id": "heavy_attack-01",
+          "t": 0.2,
+          "qa": {
+            "visible": 12580,
+            "partial_alpha": 884,
+            "colors": 1342,
+            "off_palette": null,
+            "orphans": 3267,
+            "l_corners": null,
+            "outline_gaps": null,
+            "bbox": [
+              17,
+              61,
+              251,
+              169
+            ]
+          },
+          "ground": {
+            "grounded": false,
+            "edge": 169,
+            "gap_px": -9
+          },
+          "margin_px": 17,
+          "contacts": {},
+          "clamps": [],
+          "file": "frames/heavy_attack-01.png",
+          "stored_as": "heavy_attack-01"
+        },
+        {
+          "id": "heavy_attack-02",
+          "t": 0.4,
+          "qa": {
+            "visible": 12638,
+            "partial_alpha": 911,
+            "colors": 1350,
+            "off_palette": null,
+            "orphans": 3310,
+            "l_corners": null,
+            "outline_gaps": null,
+            "bbox": [
+              13,
+              55,
+              235,
+              173
+            ]
+          },
+          "ground": {
+            "grounded": false,
+            "edge": 173,
+            "gap_px": -13
+          },
+          "margin_px": 13,
+          "contacts": {},
+          "clamps": [],
+          "file": "frames/heavy_attack-02.png",
+          "stored_as": "heavy_attack-02"
+        },
+        {
+          "id": "heavy_attack-03",
+          "t": 0.6,
+          "qa": {
+            "visible": 12734,
+            "partial_alpha": 903,
+            "colors": 1322,
+            "off_palette": null,
+            "orphans": 3278,
+            "l_corners": null,
+            "outline_gaps": null,
+            "bbox": [
+              33,
+              54,
+              212,
+              188
+            ]
+          },
+          "ground": {
+            "grounded": false,
+            "edge": 188,
+            "gap_px": -28
+          },
+          "margin_px": 33,
+          "contacts": {},
+          "clamps": [],
+          "file": "frames/heavy_attack-03.png",
+          "stored_as": "heavy_attack-03"
+        },
+        {
+          "id": "heavy_attack-04",
+          "t": 0.8,
+          "qa": {
+            "visible": 12631,
+            "partial_alpha": 907,
+            "colors": 1323,
+            "off_palette": null,
+            "orphans": 3212,
+            "l_corners": null,
+            "outline_gaps": null,
+            "bbox": [
+              27,
+              56,
+              223,
+              180
+            ]
+          },
+          "ground": {
+            "grounded": false,
+            "edge": 180,
+            "gap_px": -20
+          },
+          "margin_px": 27,
+          "contacts": {},
+          "clamps": [],
+          "file": "frames/heavy_attack-04.png",
+          "stored_as": "heavy_attack-04"
+        },
+        {
+          "id": "heavy_attack-05",
+          "t": 1.0,
+          "qa": {
+            "visible": 12578,
+            "partial_alpha": 901,
+            "colors": 1147,
+            "off_palette": null,
+            "orphans": 3083,
+            "l_corners": null,
+            "outline_gaps": null,
+            "bbox": [
+              21,
+              58,
+              233,
+              165
+            ]
+          },
+          "ground": {
+            "grounded": false,
+            "edge": 165,
+            "gap_px": -5
+          },
+          "margin_px": 21,
+          "contacts": {},
+          "clamps": [],
+          "file": "frames/idle-00.png",
+          "stored_as": "idle-00"
+        }
+      ],
+      "loop": false,
+      "duration_ms": [
+        120,
+        100,
+        100,
+        75,
+        100,
+        130
+      ],
+      "seam": null,
+      "contact": {},
+      "entry_frame": 0,
+      "stride_world_units": null,
+      "stride_px_per_frame": null,
+      "events": [
+        {
+          "at": 3,
+          "name": "hit"
+        }
+      ]
+    },
+    "block": {
+      "frames": [
+        {
+          "id": "block-00",
+          "t": 0.0,
+          "qa": {
+            "visible": 12755,
+            "partial_alpha": 950,
+            "colors": 1254,
+            "off_palette": null,
+            "orphans": 3317,
+            "l_corners": null,
+            "outline_gaps": null,
+            "bbox": [
+              21,
+              48,
+              248,
+              165
+            ]
+          },
+          "ground": {
+            "grounded": false,
+            "edge": 165,
+            "gap_px": -5
+          },
+          "margin_px": 21,
+          "contacts": {},
+          "clamps": [],
+          "file": "frames/block-00.png",
+          "stored_as": "block-00"
+        },
+        {
+          "id": "block-01",
+          "t": 0.333333,
+          "qa": {
+            "visible": 12755,
+            "partial_alpha": 950,
+            "colors": 1254,
+            "off_palette": null,
+            "orphans": 3317,
+            "l_corners": null,
+            "outline_gaps": null,
+            "bbox": [
+              21,
+              48,
+              248,
+              165
+            ]
+          },
+          "ground": {
+            "grounded": false,
+            "edge": 165,
+            "gap_px": -5
+          },
+          "margin_px": 21,
+          "contacts": {},
+          "clamps": [],
+          "file": "frames/block-00.png",
+          "stored_as": "block-00"
+        },
+        {
+          "id": "block-02",
+          "t": 0.666667,
+          "qa": {
+            "visible": 12755,
+            "partial_alpha": 950,
+            "colors": 1254,
+            "off_palette": null,
+            "orphans": 3317,
+            "l_corners": null,
+            "outline_gaps": null,
+            "bbox": [
+              21,
+              48,
+              248,
+              165
+            ]
+          },
+          "ground": {
+            "grounded": false,
+            "edge": 165,
+            "gap_px": -5
+          },
+          "margin_px": 21,
+          "contacts": {},
+          "clamps": [],
+          "file": "frames/block-00.png",
+          "stored_as": "block-00"
+        }
+      ],
+      "loop": true,
+      "duration_ms": [
+        180,
+        180,
+        180
+      ],
+      "seam": {
+        "frames": 3,
+        "seam": 0.0,
+        "adjacent_median": 0.0,
+        "adjacent_p95": 0.0,
+        "adjacent_max": 0.0,
+        "seam_over_median": 0.0,
+        "seam_over_p95": 0.0,
+        "method": "premultiplied RGBA mean absolute difference (0-255); seam = last -> first"
+      },
+      "contact": {},
+      "entry_frame": 0,
+      "stride_world_units": null,
+      "stride_px_per_frame": null,
+      "events": []
+    },
+    "block_break": {
+      "frames": [
+        {
+          "id": "block_break-00",
+          "t": 0.0,
+          "qa": {
+            "visible": 12876,
+            "partial_alpha": 912,
+            "colors": 1251,
+            "off_palette": null,
+            "orphans": 3284,
+            "l_corners": null,
+            "outline_gaps": null,
+            "bbox": [
+              21,
+              48,
+              248,
+              165
+            ]
+          },
+          "ground": {
+            "grounded": false,
+            "edge": 165,
+            "gap_px": -5
+          },
+          "margin_px": 21,
+          "contacts": {},
+          "clamps": [],
+          "file": "frames/block_break-00.png",
+          "stored_as": "block_break-00"
+        },
+        {
+          "id": "block_break-01",
+          "t": 0.333333,
+          "qa": {
+            "visible": 13067,
+            "partial_alpha": 957,
+            "colors": 1317,
+            "off_palette": null,
+            "orphans": 3383,
+            "l_corners": null,
+            "outline_gaps": null,
+            "bbox": [
+              5,
+              66,
+              191,
+              201
+            ]
+          },
+          "ground": {
+            "grounded": false,
+            "edge": 201,
+            "gap_px": -41
+          },
+          "margin_px": 5,
+          "contacts": {},
+          "clamps": [],
+          "file": "frames/block_break-01.png",
+          "stored_as": "block_break-01"
+        },
+        {
+          "id": "block_break-02",
+          "t": 0.666667,
+          "qa": {
+            "visible": 13017,
+            "partial_alpha": 1038,
+            "colors": 1323,
+            "off_palette": null,
+            "orphans": 3515,
+            "l_corners": null,
+            "outline_gaps": null,
+            "bbox": [
+              11,
+              64,
+              241,
+              171
+            ]
+          },
+          "ground": {
+            "grounded": false,
+            "edge": 171,
+            "gap_px": -11
+          },
+          "margin_px": 11,
+          "contacts": {},
+          "clamps": [],
+          "file": "frames/block_break-02.png",
+          "stored_as": "block_break-02"
+        },
+        {
+          "id": "block_break-03",
+          "t": 1.0,
+          "qa": {
+            "visible": 12578,
+            "partial_alpha": 901,
+            "colors": 1147,
+            "off_palette": null,
+            "orphans": 3083,
+            "l_corners": null,
+            "outline_gaps": null,
+            "bbox": [
+              21,
+              58,
+              233,
+              165
+            ]
+          },
+          "ground": {
+            "grounded": false,
+            "edge": 165,
+            "gap_px": -5
+          },
+          "margin_px": 21,
+          "contacts": {},
+          "clamps": [],
+          "file": "frames/idle-00.png",
+          "stored_as": "idle-00"
+        }
+      ],
+      "loop": false,
+      "duration_ms": [
+        90,
+        110,
+        130,
+        150
+      ],
+      "seam": null,
+      "contact": {},
+      "entry_frame": 3,
+      "stride_world_units": null,
+      "stride_px_per_frame": null,
+      "events": [
+        {
+          "at": 1,
+          "name": "custom:guard_break"
+        }
+      ]
+    },
+    "parry": {
+      "frames": [
+        {
+          "id": "parry-00",
+          "t": 0.0,
+          "qa": {
+            "visible": 12989,
+            "partial_alpha": 949,
+            "colors": 1247,
+            "off_palette": null,
+            "orphans": 3327,
+            "l_corners": null,
+            "outline_gaps": null,
+            "bbox": [
+              21,
+              48,
+              248,
+              165
+            ]
+          },
+          "ground": {
+            "grounded": false,
+            "edge": 165,
+            "gap_px": -5
+          },
+          "margin_px": 21,
+          "contacts": {},
+          "clamps": [],
+          "file": "frames/parry-00.png",
+          "stored_as": "parry-00"
+        },
+        {
+          "id": "parry-01",
+          "t": 0.333333,
+          "qa": {
+            "visible": 13187,
+            "partial_alpha": 1072,
+            "colors": 1359,
+            "off_palette": null,
+            "orphans": 3597,
+            "l_corners": null,
+            "outline_gaps": null,
+            "bbox": [
+              27,
+              14,
+              237,
+              161
+            ]
+          },
+          "ground": {
+            "grounded": false,
+            "edge": 161,
+            "gap_px": -1
+          },
+          "margin_px": 14,
+          "contacts": {},
+          "clamps": [],
+          "file": "frames/parry-01.png",
+          "stored_as": "parry-01"
+        },
+        {
+          "id": "parry-02",
+          "t": 0.666667,
+          "qa": {
+            "visible": 13049,
+            "partial_alpha": 971,
+            "colors": 1331,
+            "off_palette": null,
+            "orphans": 3350,
+            "l_corners": null,
+            "outline_gaps": null,
+            "bbox": [
+              25,
+              56,
+              256,
+              163
+            ]
+          },
+          "ground": {
+            "grounded": false,
+            "edge": 163,
+            "gap_px": -3
+          },
+          "margin_px": 25,
+          "contacts": {},
+          "clamps": [],
+          "file": "frames/parry-02.png",
+          "stored_as": "parry-02"
+        },
+        {
+          "id": "parry-03",
+          "t": 1.0,
+          "qa": {
+            "visible": 12578,
+            "partial_alpha": 901,
+            "colors": 1147,
+            "off_palette": null,
+            "orphans": 3083,
+            "l_corners": null,
+            "outline_gaps": null,
+            "bbox": [
+              21,
+              58,
+              233,
+              165
+            ]
+          },
+          "ground": {
+            "grounded": false,
+            "edge": 165,
+            "gap_px": -5
+          },
+          "margin_px": 21,
+          "contacts": {},
+          "clamps": [],
+          "file": "frames/idle-00.png",
+          "stored_as": "idle-00"
+        }
+      ],
+      "loop": false,
+      "duration_ms": [
+        70,
+        70,
+        110,
+        120
+      ],
+      "seam": null,
+      "contact": {},
+      "entry_frame": 3,
+      "stride_world_units": null,
+      "stride_px_per_frame": null,
+      "events": [
+        {
+          "at": 1,
+          "name": "custom:parry"
+        }
+      ]
+    },
+    "climb": {
+      "frames": [
+        {
+          "id": "climb-00",
+          "t": 0.0,
+          "qa": {
+            "visible": 6788,
+            "partial_alpha": 768,
+            "colors": 1202,
+            "off_palette": null,
+            "orphans": 2628,
+            "l_corners": null,
+            "outline_gaps": null,
+            "bbox": [
+              86,
+              26,
+              177,
+              194
+            ]
+          },
+          "ground": {
+            "grounded": false,
+            "edge": 194,
+            "gap_px": -34
+          },
+          "margin_px": 26,
+          "contacts": {},
+          "clamps": [],
+          "file": "frames/climb-00.png",
+          "stored_as": "climb-00"
+        },
+        {
+          "id": "climb-01",
+          "t": 0.166667,
+          "qa": {
+            "visible": 6726,
+            "partial_alpha": 782,
+            "colors": 1201,
+            "off_palette": null,
+            "orphans": 2674,
+            "l_corners": null,
+            "outline_gaps": null,
+            "bbox": [
+              86,
+              32,
+              166,
+              190
+            ]
+          },
+          "ground": {
+            "grounded": false,
+            "edge": 190,
+            "gap_px": -30
+          },
+          "margin_px": 32,
+          "contacts": {},
+          "clamps": [],
+          "file": "frames/climb-01.png",
+          "stored_as": "climb-01"
+        },
+        {
+          "id": "climb-02",
+          "t": 0.333333,
+          "qa": {
+            "visible": 6636,
+            "partial_alpha": 741,
+            "colors": 1187,
+            "off_palette": null,
+            "orphans": 2629,
+            "l_corners": null,
+            "outline_gaps": null,
+            "bbox": [
+              86,
+              32,
+              167,
+              187
+            ]
+          },
+          "ground": {
+            "grounded": false,
+            "edge": 187,
+            "gap_px": -27
+          },
+          "margin_px": 32,
+          "contacts": {},
+          "clamps": [],
+          "file": "frames/climb-02.png",
+          "stored_as": "climb-02"
+        },
+        {
+          "id": "climb-03",
+          "t": 0.5,
+          "qa": {
+            "visible": 6882,
+            "partial_alpha": 799,
+            "colors": 1192,
+            "off_palette": null,
+            "orphans": 2732,
+            "l_corners": null,
+            "outline_gaps": null,
+            "bbox": [
+              86,
+              23,
+              177,
+              189
+            ]
+          },
+          "ground": {
+            "grounded": false,
+            "edge": 189,
+            "gap_px": -29
+          },
+          "margin_px": 23,
+          "contacts": {},
+          "clamps": [],
+          "file": "frames/climb-03.png",
+          "stored_as": "climb-03"
+        },
+        {
+          "id": "climb-04",
+          "t": 0.666667,
+          "qa": {
+            "visible": 6636,
+            "partial_alpha": 741,
+            "colors": 1187,
+            "off_palette": null,
+            "orphans": 2629,
+            "l_corners": null,
+            "outline_gaps": null,
+            "bbox": [
+              86,
+              32,
+              167,
+              187
+            ]
+          },
+          "ground": {
+            "grounded": false,
+            "edge": 187,
+            "gap_px": -27
+          },
+          "margin_px": 32,
+          "contacts": {},
+          "clamps": [],
+          "file": "frames/climb-02.png",
+          "stored_as": "climb-02"
+        },
+        {
+          "id": "climb-05",
+          "t": 0.833333,
+          "qa": {
+            "visible": 6726,
+            "partial_alpha": 782,
+            "colors": 1201,
+            "off_palette": null,
+            "orphans": 2674,
+            "l_corners": null,
+            "outline_gaps": null,
+            "bbox": [
+              86,
+              32,
+              166,
+              190
+            ]
+          },
+          "ground": {
+            "grounded": false,
+            "edge": 190,
+            "gap_px": -30
+          },
+          "margin_px": 32,
+          "contacts": {},
+          "clamps": [],
+          "file": "frames/climb-01.png",
+          "stored_as": "climb-01"
+        }
+      ],
+      "loop": true,
+      "duration_ms": [
+        120,
+        120,
+        120,
+        120,
+        120,
+        120
+      ],
+      "seam": {
+        "frames": 6,
+        "seam": 6.404154,
+        "adjacent_median": 6.155368,
+        "adjacent_p95": 6.354397,
+        "adjacent_max": 6.404154,
+        "seam_over_median": 1.040418,
+        "seam_over_p95": 1.00783,
+        "method": "premultiplied RGBA mean absolute difference (0-255); seam = last -> first"
+      },
+      "contact": {},
+      "entry_frame": 3,
+      "stride_world_units": null,
+      "stride_px_per_frame": null,
+      "events": []
+    }
+  },
+  "ik_clamps": [],
+  "ground_failures": [],
+  "margin_failures": [],
+  "build_clips": {
+    "returncode": 0,
+    "output": "compiled-clips/animation-clips.json"
+  },
+  "review": {
+    "idle": {
+      "sheet": "review/idle.png",
+      "onion": "review/idle-onion.png"
+    },
+    "move_right": {
+      "sheet": "review/move_right.png",
+      "onion": "review/move_right-onion.png",
+      "travel": "review/move_right-travel.png"
+    },
+    "light_attack": {
+      "sheet": "review/light_attack.png",
+      "onion": "review/light_attack-onion.png"
+    },
+    "heavy_attack": {
+      "sheet": "review/heavy_attack.png",
+      "onion": "review/heavy_attack-onion.png"
+    },
+    "block": {
+      "sheet": "review/block.png",
+      "onion": "review/block-onion.png"
+    },
+    "block_break": {
+      "sheet": "review/block_break.png",
+      "onion": "review/block_break-onion.png"
+    },
+    "parry": {
+      "sheet": "review/parry.png",
+      "onion": "review/parry-onion.png"
+    },
+    "climb": {
+      "sheet": "review/climb.png",
+      "onion": "review/climb-onion.png"
+    }
+  },
+  "godot": null,
+  "qa": {
+    "status": "pass",
+    "method": "rig_animate: FK and two-bone IK sampled per clip; vector route: anti-aliased frames, pixel gates not applicable; forge_core.seam_report (premultiplied MAE, seam over median adjacent step) on each loop of 3+ frames; planted-foot drift measured on the rig geometry (ankle x + stride * t, ankle y) per run of planted frames; IK clamps; lowest alpha row of grounded frames against the ground line; transparent margin; optional build_animation_clips run",
+    "notProven": [
+      "Appeal, silhouette, anatomy and readability at game scale: look at review/*.png.",
+      "Timing, weight and acting in motion: the checks measure geometry, not feel.",
+      "Planted-foot drift is measured on rig geometry; rendered pixels may still differ by coverage rounding or anti-aliasing when the per-frame travel is not a whole number of pixels.",
+      "Vector frames are anti-aliased: partial alpha and blended edge colours are expected, so palette conformance is not proven."
+    ],
+    "checks": [
+      {
+        "id": "partial_alpha",
+        "status": "skipped",
+        "value": null,
+        "threshold": 0
+      },
+      {
+        "id": "off_palette",
+        "status": "skipped",
+        "value": null,
+        "threshold": 0
+      },
+      {
+        "id": "outline_gaps",
+        "status": "skipped",
+        "value": null,
+        "threshold": 0
+      },
+      {
+        "id": "l_corners",
+        "status": "skipped",
+        "value": null,
+        "threshold": 10
+      },
+      {
+        "id": "seam:idle",
+        "status": "pass",
+        "value": 0.9861,
+        "threshold": [
+          0.8,
+          1.25
+        ]
+      },
+      {
+        "id": "seam:move_right",
+        "status": "pass",
+        "value": 1.1254,
+        "threshold": [
+          0.8,
+          1.25
+        ]
+      },
+      {
+        "id": "seam:block",
+        "status": "pass",
+        "value": 1.0,
+        "threshold": [
+          0.8,
+          1.25
+        ]
+      },
+      {
+        "id": "seam:climb",
+        "status": "pass",
+        "value": 1.0404,
+        "threshold": [
+          0.8,
+          1.25
+        ]
+      },
+      {
+        "id": "ik_clamp",
+        "status": "pass",
+        "value": 0,
+        "threshold": 0
+      },
+      {
+        "id": "ground_row",
+        "status": "pass",
+        "value": 0,
+        "threshold": 0
+      },
+      {
+        "id": "margins",
+        "status": "pass",
+        "value": 0,
+        "threshold": 2
+      },
+      {
+        "id": "build_clips",
+        "status": "pass",
+        "value": 0,
+        "threshold": 0
+      }
+    ],
+    "inputs": [
+      {
+        "path": "../spider.rig.svg",
+        "sha256": "99ea67f76d872839ce4d9145252b2284a44f9fdb214020d8eabe45bbdb45ebde",
+        "bytes": 3136
+      },
+      {
+        "path": "../spider.anim.json",
+        "sha256": "c12072c3e1fe67428faa370de4b0bbfa212972285845776869ef9ad6e152ed20",
+        "bytes": 5112
+      }
+    ],
+    "outputs": [
+      {
+        "path": "frames/idle-00.png",
+        "sha256": "f3c20e5f9eb538bdb944a6dda4a6fb2ec346d68302c4b5da193b9654c4ba3edd",
+        "bytes": 15230
+      },
+      {
+        "path": "frames/idle-01.png",
+        "sha256": "053796f896cb491be2521c1959738ddb4636df669e75880a656a5eb6961c56db",
+        "bytes": 16217
+      },
+      {
+        "path": "frames/idle-02.png",
+        "sha256": "f8419f4f59c5f7061bb7e5adced6fdc504add81dbc7ed6fcf964f649d5327364",
+        "bytes": 16525
+      },
+      {
+        "path": "frames/move_right-00.png",
+        "sha256": "09cc13c4be32dcd8d72e7636c1beb8615b0ef04ac70ce5f3162766e06cf37119",
+        "bytes": 20424
+      },
+      {
+        "path": "frames/move_right-01.png",
+        "sha256": "5d97d3358f764cb74890ffb4c1f9a0af78bd24c0345f73deed220df7db175b01",
+        "bytes": 19441
+      },
+      {
+        "path": "frames/move_right-02.png",
+        "sha256": "bec4de29a15d8ba377916a6c33da51cdb8753ca096ff4263841ef0d3b866a830",
+        "bytes": 15230
+      },
+      {
+        "path": "frames/move_right-03.png",
+        "sha256": "4bde552ca1be8766a32f3958d14e98af16c357bfe1d3d4a323a69469092bc5dc",
+        "bytes": 20104
+      },
+      {
+        "path": "frames/move_right-04.png",
+        "sha256": "2c1d302d169e7cf64adc88020caeede3507adf735b7ef8cd9cd26ea31de640b1",
+        "bytes": 20031
+      },
+      {
+        "path": "frames/light_attack-01.png",
+        "sha256": "4e9a30d9a8ea5ac815ca415f3174f8a5423b32b3c3068540379f2816cb61019f",
+        "bytes": 17325
+      },
+      {
+        "path": "frames/light_attack-02.png",
+        "sha256": "6735cdb9b915893df9d1827031bd4d906a10d89bc115a98e321287655e745450",
+        "bytes": 16523
+      },
+      {
+        "path": "frames/light_attack-03.png",
+        "sha256": "c4808cfc3f32beff75356f5bc6aef6e350e3f9028dad597e6eddb20fc3d6ff88",
+        "bytes": 17440
+      },
+      {
+        "path": "frames/heavy_attack-01.png",
+        "sha256": "18db83a891a1273e851a8c304e41b13e6149059a77a3cb86e947743238cd53a2",
+        "bytes": 16988
+      },
+      {
+        "path": "frames/heavy_attack-02.png",
+        "sha256": "1ce0089088a0b2e0859cb6aa8f5340d307d45e957e4d36329528d503cfd9cbc1",
+        "bytes": 16297
+      },
+      {
+        "path": "frames/heavy_attack-03.png",
+        "sha256": "edbf5c41951e2bce825c58804052b05ae5222fbda55ed27d8f27b58e09b63172",
+        "bytes": 16730
+      },
+      {
+        "path": "frames/heavy_attack-04.png",
+        "sha256": "72bb64f955e717136bd0890ba3c9ae46452f61903b381f4e2540d4ce778e65de",
+        "bytes": 16701
+      },
+      {
+        "path": "frames/block-00.png",
+        "sha256": "6da9a410f6e0647874ab3bff5fd008810a31275978ca2a3d97c1fb3449821d0a",
+        "bytes": 15923
+      },
+      {
+        "path": "frames/block_break-00.png",
+        "sha256": "5d899710843f28199dd381f5861968201d62fa713297a612ba7f4482ba4f0a5b",
+        "bytes": 15749
+      },
+      {
+        "path": "frames/block_break-01.png",
+        "sha256": "b49f3aa4eb7298f6e5172a4c06c14186c982cd8ec8d4f47dab59cd69e44d9a84",
+        "bytes": 16863
+      },
+      {
+        "path": "frames/block_break-02.png",
+        "sha256": "4d220fba322fc18e582a5d9987567dacacf0ab0e089b0df1642ad36eb20b9d93",
+        "bytes": 17982
+      },
+      {
+        "path": "frames/parry-00.png",
+        "sha256": "800ddd884ffb8cd144607a9f231bc39a2a4ef71e62329825dfcf26c1666b5b2a",
+        "bytes": 15901
+      },
+      {
+        "path": "frames/parry-01.png",
+        "sha256": "445aa9b7df6b95554af89133be987f21c5de3c9f5f0b6a32d55c386b56afa67c",
+        "bytes": 18033
+      },
+      {
+        "path": "frames/parry-02.png",
+        "sha256": "8def8c37288c2fb80859e67e27a8cbd02f14c8f6fcc1068e8cf25efab328f165",
+        "bytes": 16492
+      },
+      {
+        "path": "frames/climb-00.png",
+        "sha256": "2505b47a852bb39de4fe957f22dbbecf70623b69c4613197545a41bc6d8744a8",
+        "bytes": 13078
+      },
+      {
+        "path": "frames/climb-01.png",
+        "sha256": "db22d9a667edea45b64e1e09be262d1012926692002abd2fa73dd82e42b6ca94",
+        "bytes": 13308
+      },
+      {
+        "path": "frames/climb-02.png",
+        "sha256": "8af185731b3001ba42f98b6a175fd51b8fb6d1e1a3600ddf6fb26f15638d08c6",
+        "bytes": 12954
+      },
+      {
+        "path": "frames/climb-03.png",
+        "sha256": "0ea22582107667d334a788c7345b4597064c5dbe1aad59e91630e5aeb0d08748",
+        "bytes": 13410
+      },
+      {
+        "path": "clips.json",
+        "sha256": "6198ba9d4adc1c7d5c23c334cce234467a63431ff08dda697076fe8e175a3a4f",
+        "bytes": 5608
+      }
+    ],
+    "tool": {
+      "name": "codeart2d/rig_animate.py",
+      "version": "0.4.0"
+    }
+  }
+}

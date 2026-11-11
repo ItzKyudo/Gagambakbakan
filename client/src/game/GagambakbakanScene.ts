@@ -6,7 +6,6 @@ import {
 import { keyLabel, getKeys } from '../gb';
 import { decodePatternArt } from '../patternArt';
 import { attackPose, gaitMotion, skillBurst, smoothMotion, type SkillBurst } from './spiderMotion';
-import { drawSpiderSheet, type SpiderClip } from './spiderSheet';
 
 interface Particle {
   x: number;
@@ -1581,25 +1580,9 @@ export class GagambakbakanScene extends Phaser.Scene {
       }
     }
 
-    const clip: SpiderClip = hb > 0.5 ? 'climb'
-      : s.gLock && s.stun > 0 ? 'block_break'
-      : s.parryT > 0 ? 'parry'
-      : s.blocking ? 'block'
-      : s.atkT > 0 ? (isHeavy ? 'heavy_attack' : 'light_attack')
-      : moving > 0.1 ? 'move_right' : 'idle';
-    const frame = clip === 'climb' ? Math.floor(t / 0.12) % 6
-      : clip === 'move_right' ? Math.floor((s.walkPhase || 0) * 1.1) % 8
-      : clip === 'light_attack' ? Math.min(4, Math.floor(s.atkT / 0.3 * 5))
-      : clip === 'heavy_attack' ? Math.min(5, Math.floor(s.atkT / 0.6 * 6))
-      : clip === 'parry' ? Math.min(3, Math.floor((0.25 - s.parryT) / 0.25 * 4))
-      : clip === 'block_break' ? Math.min(3, Math.floor((0.9 - s.stun) / 0.9 * 4))
-      : clip === 'block' ? 0 : Math.floor(t / 0.18) % 4;
     ctx.translate(0, byW);
     ctx.scale(1, flip);
     ctx.translate(0, -(STICK.y - BODY_H));
-    const sheetDrawn = drawSpiderSheet(ctx, clip, frame, bx, by + 29, f,
-      { color: colMain, pattern, acc, customPattern: s.customPattern || '' },
-      { main: colMain, dark: colDark, light: colLight });
     if (hb > 0.001) {
       const climbAngle = -f * (Math.PI / 2) * hb;
       ctx.translate(bx, by);
@@ -1625,15 +1608,12 @@ export class GagambakbakanScene extends Phaser.Scene {
       }
     }
 
-    const cx = bx - f * 21 - f * (pose.strike * 2 - pose.wind * 1.5);
-    const cy = by - 1 - pose.wind * 2 + pose.strike * 1.5;
-    const hx2 = bx + f * 11 + headOffsetX;
-    const hy2 = by + headOffsetY;
-    if (!sheetDrawn) {
     // Far legs
     this.drawLegs(ctx, s, bx, by, true, colMain, colDark, colLight);
 
     // Abdomen (with attack/skill pitch & squash/stretch)
+    const cx = bx - f * 21 - f * (pose.strike * 2 - pose.wind * 1.5);
+    const cy = by - 1 - pose.wind * 2 + pose.strike * 1.5;
     ctx.save();
     ctx.translate(cx, cy);
     ctx.rotate(abdomenTilt);
@@ -1928,6 +1908,8 @@ export class GagambakbakanScene extends Phaser.Scene {
     ctx.restore();
 
     // Cephalothorax (head/chest) with attack lunge & pitch
+    const hx2 = bx + f * 11 + headOffsetX;
+    const hy2 = by + headOffsetY;
     const g2 = ctx.createRadialGradient(hx2 - f * 4, hy2 - 6, 1, hx2, hy2, 17);
     g2.addColorStop(0, colMain);
     g2.addColorStop(1, colDark);
@@ -1944,8 +1926,6 @@ export class GagambakbakanScene extends Phaser.Scene {
       ctx.beginPath();
       ctx.ellipse(hx2, hy2, 15, 14, 0, 0, Math.PI * 2);
       ctx.fill();
-    }
-
     }
 
     // Carapace Skill Overlay: Crystalline metallic chitin armor plates & hexagon flash
@@ -1993,7 +1973,6 @@ export class GagambakbakanScene extends Phaser.Scene {
       ctx.restore();
     }
 
-    if (!sheetDrawn) {
     // Near legs
     this.drawLegs(ctx, s, bx, by, false, colMain, colDark, colLight);
 
@@ -2029,8 +2008,6 @@ export class GagambakbakanScene extends Phaser.Scene {
         ctx.fill();
       }
     });
-
-    }
 
     // Accessories
     if (acc === 'band') {
@@ -2540,7 +2517,6 @@ export class GagambakbakanScene extends Phaser.Scene {
       ctx.stroke();
     }
 
-    if (!sheetDrawn) {
     // Articulated Pedipalps & Dual Curved Fangs (Chelicerae)
     const fangOpen = pose.wind * 5 - pose.strike * 2.5 + cast * 3.5 + (powerBurst.active ? powerBurst.pulse * 4 : 0) + (leechBurst.active ? leechBurst.pulse * 4.5 : 0);
     const fangReach = pose.strike * 7 - pose.wind * 2 + cast * 4 + (s.power > 0 ? 2 : 0) + (s.leech > 0 ? 2 : 0);
@@ -2602,8 +2578,6 @@ export class GagambakbakanScene extends Phaser.Scene {
     ctx.moveTo(hx2 + f * (16 + fangReach * 0.5), (hy2 + 3 + nearFangTipY) * 0.5);
     ctx.lineTo(nearFangTipX, nearFangTipY);
     ctx.stroke();
-
-    }
 
     // Projectile Launch Muzzle Bursts (Venom Spit spray, Web burst, Hook flash)
     if (cast > 0.1) {

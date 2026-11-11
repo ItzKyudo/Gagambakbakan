@@ -2,6 +2,7 @@ import { createClient, type User, type SupabaseClient } from '@supabase/supabase
 import {
   getLooks,
   getProgress,
+  SPIDERS,
   saveLooks,
   saveProgress,
   registerDataPersistHook,
@@ -75,6 +76,12 @@ export async function fetchProfile(userId: string): Promise<UserProfile | null> 
     const winRate = played > 0 ? Math.round((wins / played) * 100) : 0;
     const onlineExp = typeof data?.online_exp === 'number' ? data.online_exp : 0;
     const unlockedSkills = Array.isArray(data?.unlocked_skills) ? data.unlocked_skills : undefined;
+    const spiderProgress = data?.spider_exp && data?.spider_skills
+      ? Object.fromEntries(SPIDERS.map(spider => [spider.id, {
+          exp: data.spider_exp[spider.id] || 0,
+          skills: data.spider_skills[spider.id] || ['dash', spider.skill]
+        }]))
+      : undefined;
     const rank = getRankFromRating(rating).id as SpiderRankId;
 
     // Restore database data into game state (authenticated account data is authoritative)
@@ -91,7 +98,10 @@ export async function fetchProfile(userId: string): Promise<UserProfile | null> 
       onlinePlayed: played || 0,
       onlineWins: wins || 0,
       onlineLosses: losses || 0,
-      unlockedSkills: (unlockedSkills && unlockedSkills.length > 0) ? unlockedSkills : ['dash']
+      unlockedSkills: (unlockedSkills && unlockedSkills.length > 0) ? unlockedSkills : ['dash'],
+      spiderProgress: spiderProgress || (data?.looks?.p1?.species ? {
+        [data.looks.p1.species]: { exp: onlineExp, skills: unlockedSkills || ['dash'] }
+      } : undefined)
     };
     saveProgress(finalProg);
 
@@ -127,6 +137,7 @@ export async function syncUserDataToDatabase(): Promise<void> {
     const looks = getLooks();
     const { error } = await supabase.from('profiles').update({
       unlocked_skills: prog.unlockedSkills,
+      spider_skills: Object.fromEntries(Object.entries(prog.spiderProgress || {}).map(([id, item]) => [id, item.skills])),
       looks,
       updated_at: new Date().toISOString()
     }).eq('id', currentUser.id);

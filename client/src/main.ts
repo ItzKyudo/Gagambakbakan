@@ -14,7 +14,7 @@ import { GagambakbakanScene } from './game/GagambakbakanScene';
 import { LocalGameEngine, type InputState } from './game/localGame';
 import { network } from './network';
 import { sound } from './audio';
-import { getKeys, getLooks, getColor, getProgress, getLevel, getUnlockedIds, recordOnlineMatch, applyQualityClass, spiderSkill, type PlayerKeys } from './gb';
+import { getKeys, getLooks, getColor, getProgress, getLevel, getUnlockedIds, recordOnlineMatch, applyQualityClass, SPIDERS, type PlayerKeys } from './gb';
 import { fetchProfile, getAuthUser } from './auth';
 import { RANK_RATING_LABEL } from './ui/menu/rankTitle';
 import { saveMatchHistory } from './matchHistory';
@@ -324,7 +324,15 @@ async function startOnlineGame(opts: MenuStartOptions) {
       currentScene.gameState = network.room.state;
       gamePage.updateHud(network.room.state);
 
-      if (network.room.state.status === 'draft') {
+      if (network.room.state.status === 'select') {
+        const myId = network.myPlayerId >= 0 ? network.myPlayerId : 0;
+        const selected = myId === 0 ? network.room.state.p1Selected : network.room.state.p2Selected;
+        if (selected) gamePage.showSpiderWaiting();
+        else gamePage.showSpiderSelect(myId === 0 ? network.room.state.p1.name : network.room.state.p2.name, species => {
+          network.sendSelectSpider(species);
+          gamePage?.showSpiderWaiting();
+        }, Boolean(opts.isRanked));
+      } else if (network.room.state.status === 'draft') {
         const myId = network.myPlayerId >= 0 ? network.myPlayerId : (currentScene ? currentScene.myPlayerId : 0);
         const myDrafted = myId === 0 ? network.room.state.p1Drafted : network.room.state.p2Drafted;
         const myChoices = myId === 0 ? network.room.state.draftChoicesP1 : network.room.state.draftChoicesP2;
@@ -334,7 +342,7 @@ async function startOnlineGame(opts: MenuStartOptions) {
           gamePage.showDraftModal(myChoices, network.room.state.round || 1, myName || 'Player', (skills) => {
             onlineDraftSubmitted = true;
             network.sendSelectSkills(skills);
-          }, spiderSkill((myId === 0 ? network.room.state.p1 : network.room.state.p2).species));
+          });
         }
       } else if (network.room.state.status === 'ready' || network.room.state.status === 'fight') {
         sound.music.play('duel');
@@ -450,6 +458,8 @@ function getNetworkCallbacks(isRanked: boolean) {
         currentScene.scene.pause();
       }
       sound.music.stop();
+      gamePage?.hideSpiderSelect();
+      if (gamePage?.isDraftOpen) gamePage.hideDraftModal();
       gamePage?.showDisconnectPause(data.name, data.timeoutSeconds, isMe);
     },
     onPlayerReconnected: (_data: { id: number; name: string }) => {
@@ -472,14 +482,32 @@ function getNetworkCallbacks(isRanked: boolean) {
       if (currentScene) currentScene.gameState = state;
       if (gamePage) {
         gamePage.updateHud(state);
+        if (gamePage.isDisconnectPaused) return;
 
         const statusChanged = lastHandledStatus !== state.status;
         lastHandledStatus = state.status;
 
         // Handle drafting phase in online mode
-        if (state.status === 'draft') {
+        if (state.status === 'select') {
           if (statusChanged) {
             sound.music.play('ambient');
+            gamePage.hideModal();
+            gamePage.hideDraftModal();
+          }
+          const myId = network.myPlayerId >= 0 ? network.myPlayerId : 0;
+          const selected = myId === 0 ? state.p1Selected : state.p2Selected;
+          if (selected) {
+            if (!gamePage.isSpiderSelectOpen) gamePage.showSpiderWaiting();
+          } else if (!gamePage.isSpiderSelectOpen) {
+            gamePage.showSpiderSelect(myId === 0 ? state.p1.name : state.p2.name, species => {
+              network.sendSelectSpider(species);
+              gamePage?.showSpiderWaiting();
+            }, isRanked);
+          }
+        } else if (state.status === 'draft') {
+          if (statusChanged) {
+            sound.music.play('ambient');
+            gamePage.hideSpiderSelect();
             gamePage.hideModal();
           }
           const myId = network.myPlayerId >= 0 ? network.myPlayerId : (currentScene ? currentScene.myPlayerId : 0);
@@ -491,9 +519,10 @@ function getNetworkCallbacks(isRanked: boolean) {
             gamePage.showDraftModal(myChoices, state.round || 1, myName || 'Player', (skills) => {
               onlineDraftSubmitted = true;
               network.sendSelectSkills(skills);
-            }, spiderSkill((myId === 0 ? state.p1 : state.p2).species));
+            });
           }
         } else if (state.status === 'ready' || state.status === 'fight') {
+          gamePage.hideSpiderSelect();
           onlineDraftSubmitted = false;
           if (statusChanged) {
             if (gamePage.isDraftOpen) {
@@ -527,11 +556,12 @@ function getNetworkCallbacks(isRanked: boolean) {
     onRoundWon: () => {
       // Gameplay music continues until match end
     },
-    onMatchEnd: (data: { winner: number; winnerName: string; p1Wins: number; p2Wins: number; forfeit?: boolean; disconnectForfeit?: boolean; isTimeOut?: boolean; progressSaved?: boolean }) => {
+    onMatchEnd: (data: { winner: number; winnerName: string; p1Wins: number; p2Wins: number; forfeit?: boolean; disconnectForfeit?: boolean; isTimeOut?: boolean; noContest?: boolean; progressSaved?: boolean }) => {
       if (matchRecorded) return;
       matchRecorded = true;
       sound.music.play('ambient');
       onlineDraftSubmitted = false;
+      gamePage?.hideSpiderSelect();
       if (currentScene && currentScene.scene.isPaused()) {
         currentScene.scene.resume();
       }
@@ -544,8 +574,9 @@ function getNetworkCallbacks(isRanked: boolean) {
         const myWins = myId === 0 ? data.p1Wins : data.p2Wins;
         const account = getAuthUser();
         if (data.winner < 0 || !data.progressSaved || !account) {
-          const title = data.winner < 0 ? 'DRAW!' : isMe ? 'VICTORY!' : 'DEFEAT!';
-          const detail = data.winner < 0 ? 'Five rounds ended level. No rating changed.'
+          const title = data.noContest ? 'NO CONTEST' : data.winner < 0 ? 'DRAW!' : isMe ? 'VICTORY!' : 'DEFEAT!';
+          const detail = data.noContest ? 'Match ended before combat. No EXP or rating awarded.'
+            : data.winner < 0 ? 'Five rounds ended level. No rating changed.'
             : !account ? 'Sign in to earn online EXP and rank.'
             : 'Result could not be saved. No rank or EXP was awarded.';
           gamePage.showModal(title, detail, [
@@ -556,7 +587,8 @@ function getNetworkCallbacks(isRanked: boolean) {
         }
 
         // EXP and level reward specifically for online matches
-        const reward = recordOnlineMatch(isMe, myWins, isRanked);
+        const species = myId === 0 ? network.room?.state?.p1?.species : network.room?.state?.p2?.species;
+        const reward = recordOnlineMatch(isMe, myWins, isRanked, species);
         void fetchProfile(account.id);
 
         if (reward.leveledUp) {
@@ -603,9 +635,9 @@ function getNetworkCallbacks(isRanked: boolean) {
             <div style="margin-top:12px; padding:6px 10px; background:rgba(0,0,0,0.2); border-radius:6px; font-size:12px; color:var(--muted); text-align:center;">
               Battlefields Record: <strong style="color:var(--jade);">${reward.totalWins}W</strong> - <strong style="color:var(--coral);">${reward.totalLosses}L</strong> (${reward.winRate}% Win Rate)
             </div>
-            ${reward.leveledUp ? `
+            ${reward.pointsGained > 0 ? `
               <div class="level-up-alert">
-                <div class="lua-title">🎉 LEVEL UP! Reached Level ${reward.newLevel}!</div>
+                <div class="lua-title">🎉 SPIDER LEVEL UP! Reached Level ${reward.newLevel}!</div>
                 <div class="lua-skills">
                   🕸️ +${reward.pointsGained} Ability Point earned! Visit the Abilities Web to unlock new skills.
                 </div>
@@ -649,9 +681,10 @@ function getNetworkCallbacks(isRanked: boolean) {
     },
     onDisconnect: () => {
       if (gamePage && !matchRecorded && currentScene?.gameState?.status !== 'matchEnd') {
-        const isMatchActive = ['draft', 'ready', 'fight', 'roundEnd'].includes(currentScene?.gameState?.status || '');
+        const isMatchActive = ['select', 'draft', 'ready', 'fight', 'roundEnd'].includes(currentScene?.gameState?.status || '');
         if (!isMatchActive) {
           if (gamePage.isDraftOpen) gamePage.hideDraftModal();
+          gamePage.hideSpiderSelect();
           gamePage.closeInGameMenu();
           gamePage.showModal('Disconnected', 'Lost connection to game server.', [
             { label: 'Menu', primary: true, onClick: () => {
@@ -668,6 +701,7 @@ function getNetworkCallbacks(isRanked: boolean) {
         }
         sound.music.stop();
         if (gamePage.isDraftOpen) gamePage.hideDraftModal();
+        gamePage.hideSpiderSelect();
         gamePage.closeInGameMenu();
         gamePage.showDisconnectPause('You', 30, true);
 
@@ -777,7 +811,7 @@ function startLocalGame(opts: MenuStartOptions) {
         ? 'Five rounds ended level. No winner or loss recorded.'
         : `${data.winnerName} won the match (${data.p1Wins} - ${data.p2Wins})! Run it back?`;
       gamePage.showModal(data.winner < 0 ? 'Draw!' : `${data.winnerName} Takes It!`, sub, [
-        { label: 'Rematch', primary: true, onClick: () => { localEngine?.startMatch(); gamePage?.hideModal(); } },
+        { label: 'Rematch', primary: true, onClick: () => { gamePage?.hideModal(); selectLocalSpiders(); } },
         { label: 'Menu', onClick: () => {
           try { sessionStorage.removeItem('gb_active_game'); } catch {}
           showMainMenu('play');
@@ -786,9 +820,28 @@ function startLocalGame(opts: MenuStartOptions) {
     }
   };
 
+  function selectLocalSpiders() {
+    if (!localEngine || !gamePage) return;
+    localEngine.state.status = 'select';
+    gamePage.showSpiderSelect(localEngine.state.p1.name, species => {
+      if (!localEngine || !gamePage) return;
+      localEngine.state.p1.species = species;
+      if (opts.mode === 'cpu') {
+        localEngine.state.p2.species = SPIDERS[Math.floor(Math.random() * SPIDERS.length)].id;
+        localEngine.startMatch();
+      } else {
+        gamePage.showSpiderSelect(localEngine.state.p2.name, secondSpecies => {
+          if (!localEngine) return;
+          localEngine.state.p2.species = secondSpecies;
+          localEngine.startMatch();
+        });
+      }
+    });
+  }
+
   sound.music.play('ambient');
-  localEngine.startMatch();
   gamePage.hideModal();
+  selectLocalSpiders();
 
   let lastTime = performance.now();
   function loop(now: number) {
@@ -809,8 +862,7 @@ function startLocalGame(opts: MenuStartOptions) {
               if (opts.mode === 'cpu') {
                 sound.music.play('duel');
               }
-            },
-            spiderSkill(localEngine.state.p1.species)
+            }
           );
         } else if (opts.mode === '2p' && localEngine.state.p1Drafted && !localEngine.state.p2Drafted && !gp.isDraftOpen) {
           gp.showDraftModal(
@@ -820,8 +872,7 @@ function startLocalGame(opts: MenuStartOptions) {
             (skills) => {
               localEngine?.confirmDraft(1, skills);
               sound.music.play('duel');
-            },
-            spiderSkill(localEngine.state.p2.species)
+            }
           );
         }
       } else if (localEngine.state.status === 'ready' || localEngine.state.status === 'fight') {

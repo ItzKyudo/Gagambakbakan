@@ -1,5 +1,5 @@
 import { ServerError } from 'colyseus';
-import { validateUnlockedSkills } from './abilities';
+import { validateUnlockedSkills, validateSpiderProgress, SPIDER_STARTERS, type SpiderType } from './abilities';
 import { getRankFromRating } from './ranks';
 import { validateUsername } from './auth';
 
@@ -15,6 +15,7 @@ export interface BattleIdentity {
   rank: string;
   level: number;
   unlockedSkills: string[];
+  spiderProgress: Record<SpiderType, { exp: number; skills: string[] }>;
   isRanked: boolean;
   apexCrown: boolean;
   mythicLaurel: boolean;
@@ -47,7 +48,7 @@ export async function authenticateBattle(token: string | undefined, ranked: bool
     if (ranked) throw new ServerError(401, 'Sign in to play ranked.');
     return {
       userId: null, name: 'Guest', rating: 0, rank: 'wolf-spider', level: 1,
-      unlockedSkills: validateUnlockedSkills([], 1), isRanked: false,
+      unlockedSkills: validateUnlockedSkills([], 1), spiderProgress: validateSpiderProgress(null, [], 0, 'weaver'), isRanked: false,
       apexCrown: false, mythicLaurel: false
     };
   }
@@ -59,7 +60,7 @@ export async function authenticateBattle(token: string | undefined, ranked: bool
   if (!userResponse.ok) throw new ServerError(401, 'Session expired. Sign in again.');
   const user = await userResponse.json() as { id?: string };
   if (!user.id) throw new ServerError(401, 'Session expired. Sign in again.');
-  const rows = await request(`/rest/v1/profiles?id=eq.${encodeURIComponent(user.id)}&select=id,username,rating,online_exp,unlocked_skills`, serviceKey);
+  const rows = await request(`/rest/v1/profiles?id=eq.${encodeURIComponent(user.id)}&select=id,username,rating,online_exp,unlocked_skills,spider_exp,spider_skills,looks`, serviceKey);
   const profile = rows?.[0];
   if (!profile) throw new ServerError(403, 'Account profile is missing.');
   const rating = Math.max(0, Number(profile.rating) || 0);
@@ -77,6 +78,15 @@ export async function authenticateBattle(token: string | undefined, ranked: bool
     rank: getRankFromRating(rating).id,
     level,
     unlockedSkills: validateUnlockedSkills(profile.unlocked_skills, level),
+    spiderProgress: validateSpiderProgress(
+      profile.spider_exp && profile.spider_skills
+        ? Object.fromEntries((Object.keys(SPIDER_STARTERS) as SpiderType[]).map(species => [species, {
+            exp: profile.spider_exp[species] || 0,
+            skills: profile.spider_skills[species] || []
+          }]))
+        : null,
+      profile.unlocked_skills, Number(profile.online_exp) || 0, profile.looks?.p1?.species
+    ),
     isRanked: ranked,
     apexCrown: rankLeader?.[0]?.id === user.id,
     mythicLaurel: levelLeader?.[0]?.id === user.id
@@ -90,7 +100,9 @@ export async function recordBattleResult(
   winner: number,
   p1Wins: number,
   p2Wins: number,
-  ranked: boolean
+  ranked: boolean,
+  p1Species: SpiderType,
+  p2Species: SpiderType
 ): Promise<void> {
   if (!p1Id && !p2Id) return;
   if (!serviceKey) throw new Error('SUPABASE_SERVICE_ROLE_KEY is missing.');
@@ -98,7 +110,8 @@ export async function recordBattleResult(
     method: 'POST',
     body: JSON.stringify({
       p_match_id: matchId, p_p1: p1Id, p_p2: p2Id, p_winner: winner,
-      p_p1_rounds: p1Wins, p_p2_rounds: p2Wins, p_ranked: ranked
+      p_p1_rounds: p1Wins, p_p2_rounds: p2Wins, p_ranked: ranked,
+      p_p1_species: p1Species, p_p2_species: p2Species
     })
   });
 }

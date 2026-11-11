@@ -23,7 +23,7 @@ import {
   Sparkles,
   ShieldCheck
 } from 'lucide';
-import { getAbilityPoints, getExpProgress, getProgress, getUnlockedIds } from '../../gb';
+import { getAbilityPoints, getExpProgress, getProgress, getUnlockedIds, getLooks, SPIDERS } from '../../gb';
 import { ABILITIES, SKILLS_LIST, WEB_EDGES, isNodeAvailableToUnlock, type AbilityId } from '../../game/abilities';
 import { getPlayerRankTitle } from './rankTitle';
 
@@ -34,20 +34,21 @@ function icon(node: IconNode, attrs: Record<string, string | number> = {}): stri
 /* ====================================================
    3. ABILITIES SPIDER WEB VIEW
    ==================================================== */
-export function renderDetailCardHtml(nodeId: AbilityId): string {
+export function renderDetailCardHtml(nodeId: AbilityId, species = getLooks().p1.species): string {
   const prog = getProgress();
-  const pts = getAbilityPoints(prog);
-  const unlockedIds = getUnlockedIds(prog);
+  const spider = SPIDERS.find(s => s.id === species) || SPIDERS[0];
+  const pts = getAbilityPoints(prog, species);
+  const unlockedIds = getUnlockedIds(prog, species);
   const sel = ABILITIES[nodeId] || ABILITIES.dash;
   const selUnlocked = unlockedIds.includes(sel.id);
-  const selAvailable = isNodeAvailableToUnlock(sel.id, unlockedIds);
+  const selAvailable = (spider.pool as readonly string[]).includes(sel.id) && sel.unlock.level <= getExpProgress(prog.spiderProgress?.[species]?.exp || 0).level && isNodeAvailableToUnlock(sel.id, unlockedIds);
 
   let actionHtml = '';
   if (selUnlocked) {
     actionHtml = `
       <div class="ac-acquired-banner">
         ${icon(Check, { class: 'ico mini', width: 16, height: 16, 'stroke-width': 2.5 })}
-        <span>SKILL ACQUIRED &amp; EQUIPPED</span>
+        <span>SKILL ACQUIRED</span>
       </div>
     `;
   } else if (selAvailable) {
@@ -62,7 +63,7 @@ export function renderDetailCardHtml(nodeId: AbilityId): string {
       actionHtml = `
         <div class="ac-locked-banner warning">
           <span>PATH REACHED &bull; 0 POINTS AVAILABLE</span>
-          <small>Level up in Online Matches to earn +1 Ability Point.</small>
+          <small>Play online matches with ${spider.name} to earn ability points.</small>
         </div>
       `;
     }
@@ -70,8 +71,8 @@ export function renderDetailCardHtml(nodeId: AbilityId): string {
     actionHtml = `
       <div class="ac-locked-banner">
         ${icon(Lock, { class: 'ico mini', width: 16, height: 16, 'stroke-width': 2 })}
-        <span>LOCKED &mdash; PATH NOT REACHED</span>
-        <small>Unlock adjacent connecting skills in the spider web first.</small>
+        <span>LOCKED</span>
+        <small>${sel.unlock.level > getExpProgress(prog.spiderProgress?.[species]?.exp || 0).level ? `Reach ${spider.name} level ${sel.unlock.level}.` : 'Unlock adjacent connecting skills in the spider web first.'}</small>
       </div>
     `;
   }
@@ -130,16 +131,19 @@ export function renderAbilitiesView(
   panX: number,
   panY: number,
   zoomScale: number,
-  isRespecConfirmOpen = false
+  isRespecConfirmOpen = false,
+  species = getLooks().p1.species
 ): string {
   const prog = getProgress();
-  const expInfo = getExpProgress(prog.onlineExp);
-  const pts = getAbilityPoints(prog);
-  const unlockedIds = getUnlockedIds(prog);
+  const spider = SPIDERS.find(s => s.id === species) || SPIDERS[0];
+  const expInfo = getExpProgress(prog.spiderProgress?.[spider.id]?.exp || 0);
+  const pts = getAbilityPoints(prog, species);
+  const unlockedIds = getUnlockedIds(prog, species);
   const rankTitle = getPlayerRankTitle(expInfo.level);
 
   // Edges SVG
   const edgesSVG = WEB_EDGES.map(([aId, bId]) => {
+    if (!(spider.pool as readonly string[]).includes(aId) || !(spider.pool as readonly string[]).includes(bId)) return '';
     const a = ABILITIES[aId];
     const b = ABILITIES[bId];
     if (!a || !b) return '';
@@ -150,8 +154,8 @@ export function renderAbilitiesView(
     if (aUnlocked && bUnlocked) {
       edgeClass = 'silk-edge edge-active';
     } else if (
-      (aUnlocked && isNodeAvailableToUnlock(bId, unlockedIds)) ||
-      (bUnlocked && isNodeAvailableToUnlock(aId, unlockedIds))
+      (aUnlocked && b.unlock.level <= expInfo.level && isNodeAvailableToUnlock(bId, unlockedIds)) ||
+      (bUnlocked && a.unlock.level <= expInfo.level && isNodeAvailableToUnlock(aId, unlockedIds))
     ) {
       edgeClass = 'silk-edge edge-available';
     }
@@ -160,9 +164,9 @@ export function renderAbilitiesView(
   }).join('');
 
   // Nodes SVG
-  const nodesSVG = SKILLS_LIST.map(s => {
+  const nodesSVG = SKILLS_LIST.filter(s => (spider.pool as readonly string[]).includes(s.id)).map(s => {
     const isUnlockedNode = unlockedIds.includes(s.id);
-    const isAvail = isNodeAvailableToUnlock(s.id, unlockedIds);
+    const isAvail = s.unlock.level <= expInfo.level && isNodeAvailableToUnlock(s.id, unlockedIds);
     const isSelected = selectedNodeId === s.id;
     const isCenter = s.id === 'dash';
 
@@ -271,6 +275,10 @@ export function renderAbilitiesView(
         </div>
       </header>
 
+      <nav class="swv-species-tabs" aria-label="Spider ability progress">
+        ${SPIDERS.map(s => `<button type="button" data-ability-spider="${s.id}" aria-current="${s.id === spider.id ? 'true' : 'false'}">${s.name}</button>`).join('')}
+      </nav>
+
       <!-- STAGE: SVG CANVAS & FLOATING DETAIL CARD -->
       <div class="swv-stage" id="swvStage">
         <!-- Top Left HUD: Ability Points & Reset Points (Icon and Numbers only) -->
@@ -362,7 +370,7 @@ export function renderAbilitiesView(
 
         <!-- Floating Detail Card (Assassin's Creed Origins Style) -->
         <aside class="swv-detail-panel ${isPanelCollapsed ? 'collapsed' : ''}" id="swvDetailPanel" aria-label="Selected Ability Details">
-          ${renderDetailCardHtml(selectedNodeId)}
+          ${renderDetailCardHtml(selectedNodeId, species)}
         </aside>
       </div>
 

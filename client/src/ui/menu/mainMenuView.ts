@@ -1,7 +1,5 @@
 import { createElement, BookOpen, GraduationCap, Settings, LogIn, type IconNode } from 'lucide';
-import { getColor, getExpProgress, getLooks, getProgress, getUnlockedIds, getBattlefieldsData } from '../../gb';
-import { spiderCanvasHtml } from '../../game/spiderSheet';
-import { SKILLS_LIST } from '../../game/abilities';
+import { getColor, getExpProgress, getLooks, getProgress, getBattlefieldsData, SPIDERS, spiderSVG } from '../../gb';
 import { getRankFromRating, getRankProgress, renderRankBadgeSVG, RANK_RATING_LABEL } from './rankTitle';
 import { getAuthUser } from '../../auth';
 
@@ -17,7 +15,7 @@ export function renderMainMenuView(activePanel: 'main' | 'play' = 'main'): strin
   const looks = getLooks();
   const prog = getProgress();
   const expInfo = getExpProgress(prog.onlineExp);
-  const unlockedCount = getUnlockedIds(prog).length;
+  const unlockedCount = SPIDERS.reduce((count, spider) => count + (prog.spiderProgress?.[spider.id]?.skills.length || 2), 0);
 
   const stats = getBattlefieldsData(prog);
   const rankInfo = getRankFromRating(stats.rating);
@@ -154,7 +152,7 @@ export function renderMainMenuView(activePanel: 'main' | 'play' = 'main'): strin
             <div class="showcase-podium">
               <div class="showcase-glow" style="--spider-glow:${getColor(looks.p1.color).main};"></div>
               <div class="stage" id="showcaseStage" role="button" tabindex="0" title="Click to customize your spider">
-                ${spiderCanvasHtml(looks.p1)}
+                ${spiderSVG(looks.p1, '-showcase')}
               </div>
               <div class="showcase-reflection"></div>
               <button type="button" class="showcase-customize-hint" id="btnQuickCustomize" title="Customize Spider">
@@ -194,7 +192,7 @@ export function renderMainMenuView(activePanel: 'main' | 'play' = 'main'): strin
               </div>
               <div class="mlc-sub">
                 <span class="mlc-prog-label">Skill Mastery</span>
-                <span class="mlc-skills-count">${unlockedCount} / ${SKILLS_LIST.length} Unlocked &rsaquo;</span>
+                <span class="mlc-skills-count">${unlockedCount} / ${SPIDERS.length * 5} Unlocked &rsaquo;</span>
               </div>
             </div>
           </div>

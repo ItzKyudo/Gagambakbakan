@@ -3,7 +3,7 @@ import { sound } from '../audio';
 import { LocalCombat } from './localCombat';
 import type { InputState, LocalBattleState, LocalPlayerState } from './localGameTypes';
 import { ABILITIES, drawSkills, type AbilityId } from './abilities';
-import { getUnlockedIds, recordMatch, getColor, spiderSkill } from '../gb';
+import { getUnlockedIds, recordMatch, getColor } from '../gb';
 
 export type { InputState, LocalBattleState, LocalPlayerState, LocalWebState } from './localGameTypes';
 
@@ -66,7 +66,7 @@ export class LocalGameEngine {
     );
 
     this.state = {
-      status: 'draft',
+      status: mode === 'demo' ? 'draft' : 'select',
       stateT: 0,
       round: 1,
       roundTimer: 60,
@@ -187,10 +187,8 @@ export class LocalGameEngine {
     }
 
     // Offer all unlocked skills for drafting
-    const unlocked = getUnlockedIds();
-    const choices = unlocked && unlocked.length > 0 ? unlocked : (['dash', 'web', 'surge'] as AbilityId[]);
-    this.state.draftChoicesP1 = choices.filter(skill => skill !== spiderSkill(this.state.p1.species));
-    this.state.draftChoicesP2 = choices.filter(skill => skill !== spiderSkill(this.state.p2.species));
+    this.state.draftChoicesP1 = getUnlockedIds(undefined, this.state.p1.species);
+    this.state.draftChoicesP2 = getUnlockedIds(undefined, this.state.p2.species);
     this.state.p1Drafted = false;
     this.state.p2Drafted = false;
     this.state.status = 'draft';
@@ -198,9 +196,9 @@ export class LocalGameEngine {
 
     // In CPU mode, CPU picks 2 choices (from unlocked pool or fallback pair)
     if (this.mode === 'cpu') {
-      const cpuPicked = drawSkills(this.state.draftChoicesP2, 1);
-      this.state.p2.skill1 = spiderSkill(this.state.p2.species);
-      this.state.p2.skill2 = cpuPicked[0] || '';
+      const cpuPicked = drawSkills(this.state.draftChoicesP2, 2);
+      this.state.p2.skill1 = cpuPicked[0] || 'dash';
+      this.state.p2.skill2 = cpuPicked[1] || '';
       this.state.p2.cd1max = ABILITIES[this.state.p2.skill1 as AbilityId]?.cd || 3;
       this.state.p2.cd2max = ABILITIES[this.state.p2.skill2 as AbilityId]?.cd || 5;
       this.state.p2Drafted = true;
@@ -209,9 +207,10 @@ export class LocalGameEngine {
 
   public confirmDraft(playerId: number, skills: string[]) {
     const s = playerId === 0 ? this.state.p1 : this.state.p2;
-    s.skill1 = spiderSkill(s.species);
     const choices = playerId === 0 ? this.state.draftChoicesP1 : this.state.draftChoicesP2;
-    s.skill2 = choices.includes(skills[0] as AbilityId) ? skills[0] : (choices[0] || '');
+    s.skill1 = choices.includes(skills[0] as AbilityId) ? skills[0] : (choices[0] || 'dash');
+    s.skill2 = skills[1] !== s.skill1 && choices.includes(skills[1] as AbilityId)
+      ? skills[1] : (choices.find(skill => skill !== s.skill1) || '');
     s.cd1max = ABILITIES[s.skill1 as AbilityId]?.cd || 3;
     s.cd2max = s.skill2 ? (ABILITIES[s.skill2 as AbilityId]?.cd || 5) : 0;
 

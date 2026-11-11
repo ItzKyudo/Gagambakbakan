@@ -1,7 +1,5 @@
 import { getAuthUser, supabase } from '../../auth';
-import { getColor, getExpProgress, getLevel, getLooks, getProgress, getUnlockedIds } from '../../gb';
-import { spiderCanvasHtml } from '../../game/spiderSheet';
-import { SKILLS_LIST } from '../../game/abilities';
+import { getColor, getExpProgress, getLevel, getLooks, getProgress, SPIDERS, spiderSVG } from '../../gb';
 import { fetchMatchHistory, MATCH_MODES, summarizeMatches, type MatchMode, type MatchRecord } from '../../matchHistory';
 import { getRankFromRating, getRankProgress, renderRankBadgeSVG, RANK_RATING_LABEL, SPIDER_RANKS } from './rankTitle';
 import { renderLeaderboardBadge } from './leaderboardBadge';
@@ -10,10 +8,9 @@ export function renderProfileView(slot: 'p1' | 'p2'): string {
   const progress = getProgress();
   const rank = getRankFromRating(progress.rating);
   const currentRankIndex = SPIDER_RANKS.findIndex(tier => tier.id === rank.id);
-  const unlocked = getUnlockedIds(progress);
   const looks = getLooks();
   const lk = looks[slot] || looks.p1;
-  const spiderHtml = spiderCanvasHtml(lk);
+  const spiderHtml = spiderSVG(lk, '-profile');
   const spiderColor = typeof getColor === 'function' ? getColor(lk.color) : { main: '#f2a33a', light: '#ffd694', label: 'Amber' };
   const rankProgress = typeof getRankProgress === 'function'
     ? getRankProgress(progress.rating)
@@ -127,12 +124,12 @@ export function renderProfileView(slot: 'p1' | 'p2'): string {
 
     <section class="profile-card-section" aria-labelledby="profileAbilitiesHeading">
       <div class="profile-section-header">
-        <h2 id="profileAbilitiesHeading">Unlocked Abilities <small class="profile-count-badge">${unlocked.length} / ${SKILLS_LIST.length}</small></h2>
-        <p class="note">${slot === 'p2' ? 'Uses this account’s shared ability pool. ' : ''}Read-only. Manage unlocks from the Abilities menu.</p>
+        <h2 id="profileAbilitiesHeading">Spider Abilities</h2>
+        <p class="note">Each spider gains experience and unlocks skills only when used online. Manage unlocks in Abilities.</p>
       </div>
-      <ul class="profile-abilities">${SKILLS_LIST.filter(skill => unlocked.includes(skill.id)).map(skill => `
-        <li><img class="ability-icon" src="/abilities/${skill.id}.png" alt="">
-          <div><h3>${skill.name}</h3><p>${skill.desc}</p><small>${skill.cd}s cooldown · ${skill.use === 'hang' ? 'While hanging' : 'While standing'}</small></div></li>`).join('')}</ul>
+      <ul class="profile-abilities">${SPIDERS.map(spider => `
+        <li><img class="ability-icon" src="/abilities/${spider.skill}.png" alt="">
+          <div><h3>${spider.name}</h3><p>Level ${getLevel(progress.spiderProgress?.[spider.id]?.exp || 0)}</p><small>${progress.spiderProgress?.[spider.id]?.skills.length || 2} / 5 skills unlocked</small></div></li>`).join('')}</ul>
     </section>
   </section>`;
 }

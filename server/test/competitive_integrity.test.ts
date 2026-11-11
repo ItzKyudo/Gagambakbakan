@@ -72,12 +72,13 @@ test('online results are sent to the server-only database RPC', async () => {
     assert.equal(new Headers(init?.headers).get('apikey'), 'server-test-key');
     assert.deepEqual(JSON.parse(String(init?.body)), {
       p_match_id: 'match-1', p_p1: 'user-1', p_p2: 'user-2', p_winner: 0,
-      p_p1_rounds: 2, p_p2_rounds: 1, p_ranked: true
+      p_p1_rounds: 2, p_p2_rounds: 1, p_ranked: true,
+      p_p1_species: 'wolf', p_p2_species: 'hunter'
     });
     return Response.json({ recorded: true });
   };
   try {
-    await recordBattleResult('match-1', 'user-1', 'user-2', 0, 2, 1, true);
+    await recordBattleResult('match-1', 'user-1', 'user-2', 0, 2, 1, true, 'wolf', 'hunter');
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -102,6 +103,8 @@ test('join ignores forged level, rating, skills, and exclusive accessory', async
   const room = Object.create(BattleRoom.prototype) as any;
   room.battleState = { status: 'waiting', p1: { id: 0, connected: false }, p2: { id: 1, connected: false } };
   room.playerInputs = new Map();
+  room.preferredSpecies = ['weaver', 'hunter'];
+  room.spiderProgress = [null, null];
   const client = { sessionId: 'guest-session', auth: guest, send() {} };
   room.onJoin(client, {
     name: 'Guest', level: 100, rating: 9000, rank: 'brown-widow',
@@ -111,11 +114,60 @@ test('join ignores forged level, rating, skills, and exclusive accessory', async
   assert.equal(room.battleState.p1.rating, 0);
   assert.equal(room.battleState.p1.acc, 'none');
   assert.equal(room.battleState.p1.isRanked, false);
-  assert.equal(room.battleState.p1.species, 'hunter');
+  assert.equal(room.battleState.p1.species, '');
+  assert.equal(room.preferredSpecies[0], 'hunter');
   assert.deepEqual(room.battleState.p1.unlockedSkills, ['dash', 'web', 'surge']);
   room.battleState.p1.connected = false;
   room.battleState.p1.acc = 'apex_crown';
   room.onJoin(client, { name: 'Guest', acc: 'invalid', species: 'invalid' });
   assert.equal(room.battleState.p1.acc, 'none');
-  assert.equal(room.battleState.p1.species, 'weaver');
+  assert.equal(room.preferredSpecies[0], 'weaver');
+});
+
+test('spider picks stay hidden until both players lock in, then draft uses each pool', async () => {
+  const room = Object.create(BattleRoom.prototype) as any;
+  const handlers: Record<string, Function> = {};
+  room.setMetadata = () => {};
+  room.setSimulationInterval = () => {};
+  room.onMessage = (type: string, handler: Function) => { handlers[type] = handler; };
+  room.broadcast = () => {};
+  room.lock = () => {};
+  room.onCreate({});
+  room.preferredSpecies = ['weaver', 'hunter'];
+  room.selectedSpecies = [null, null];
+  room.spiderProgress = [null, null];
+  room.playerInputs = new Map();
+  room.rematchVotes = new Set();
+  const guest = await authenticateBattle(undefined, false);
+  const p1 = { sessionId: 'p1', auth: guest, send() {} };
+  const p2 = { sessionId: 'p2', auth: guest, send() {} };
+  room.onJoin(p1, { species: 'weaver' });
+  room.onJoin(p2, { species: 'hunter' });
+  assert.equal(room.battleState.status, 'select');
+  assert.equal(room.battleState.p1.species, '');
+  handlers.selectSpider(p1, { species: 'wolf' });
+  assert.equal(room.battleState.p1Selected, true);
+  assert.equal(room.battleState.p1.species, '');
+  handlers.selectSpider(p2, { species: 'lynx' });
+  assert.equal(room.battleState.status, 'draft');
+  assert.equal(room.battleState.p1.species, 'wolf');
+  assert.equal(room.battleState.p2.species, 'lynx');
+  assert.deepEqual(room.battleState.draftChoicesP1, ['dash', 'surge']);
+  assert.deepEqual(room.battleState.draftChoicesP2, ['dash', 'hook']);
+});
+
+test('leaving before combat gives no spider XP or rating', async () => {
+  const room = Object.create(BattleRoom.prototype) as any;
+  const events: any[] = [];
+  room.broadcast = (type: string, data: any) => { if (type === 'matchEnd') events.push(data); };
+  room.battleState = {
+    winner: 1,
+    p1: { id: 0, name: 'A', species: 'wolf', wins: 0, rating: 0, isRanked: true, userId: 'user-1' },
+    p2: { id: 1, name: 'B', species: 'lynx', wins: 2, rating: 0, isRanked: true, userId: 'user-2' }
+  };
+  room.combatStarted = false;
+  await room.finishMatch(true);
+  assert.equal(events[0].noContest, true);
+  assert.equal(events[0].progressSaved, false);
+  assert.equal(events[0].p1RatingChange, 0);
 });

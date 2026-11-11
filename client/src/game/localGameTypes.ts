@@ -73,7 +73,7 @@ export interface LocalWebState {
 }
 
 export interface LocalBattleState {
-  status: 'waiting' | 'draft' | 'ready' | 'fight' | 'roundEnd' | 'matchEnd';
+  status: 'waiting' | 'select' | 'draft' | 'ready' | 'fight' | 'roundEnd' | 'matchEnd';
   stateT: number;
   round: number;
   roundTimer: number; // 60s per round

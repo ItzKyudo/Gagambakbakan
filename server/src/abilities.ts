@@ -307,17 +307,44 @@ export function isAbilityId(id: unknown): id is AbilityId {
   return typeof id === 'string' && id in ABILITIES;
 }
 
-export const SPIDER_SKILLS = { weaver: 'web', hunter: 'pounce', guardian: 'shield' } as const;
-export type SpiderType = keyof typeof SPIDER_SKILLS;
+export const SPIDER_STARTERS = { weaver: 'web', hunter: 'pounce', guardian: 'shield', wolf: 'surge', lynx: 'hook' } as const;
+export const SPIDER_POOLS: Record<keyof typeof SPIDER_STARTERS, AbilityId[]> = {
+  weaver: ['dash', 'web', 'spit', 'tremor', 'hook'],
+  hunter: ['dash', 'power', 'pounce', 'sweep', 'riposte'],
+  guardian: ['dash', 'shield', 'mend', 'carapace', 'leech'],
+  wolf: ['dash', 'surge', 'anchor', 'haste', 'sweep'],
+  lynx: ['dash', 'web', 'spit', 'hook', 'anchor']
+};
+export type SpiderType = keyof typeof SPIDER_STARTERS;
 export function isSpiderType(value: unknown): value is SpiderType {
-  return typeof value === 'string' && value in SPIDER_SKILLS;
+  return typeof value === 'string' && value in SPIDER_STARTERS;
+}
+
+export function validateSpiderProgress(value: unknown, legacySkills: unknown, legacyExp: number, legacySpecies: unknown): Record<SpiderType, { exp: number; skills: AbilityId[] }> {
+  const saved = value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, any> : null;
+  const result = {} as Record<SpiderType, { exp: number; skills: AbilityId[] }>;
+  for (const species of Object.keys(SPIDER_STARTERS) as SpiderType[]) {
+    const old = !saved && legacySpecies === species ? { exp: legacyExp, skills: legacySkills } : null;
+    const data = saved?.[species] || old;
+    const exp = Number.isFinite(data?.exp) ? Math.max(0, data.exp) : 0;
+    const skills: AbilityId[] = ['dash', SPIDER_STARTERS[species]];
+    if (Array.isArray(data?.skills)) for (const id of data.skills) {
+      if (skills.length >= Math.min(5, levelFromSpiderExp(exp) + 1)) break;
+      if (isAbilityId(id) && SPIDER_POOLS[species].includes(id) && !skills.includes(id) && ABILITIES[id].unlock.level <= levelFromSpiderExp(exp) && isNodeAvailableToUnlock(id, skills)) skills.push(id);
+    }
+    result[species] = { exp, skills };
+  }
+  return result;
+}
+
+function levelFromSpiderExp(exp: number): number {
+  const thresholds = [0, 100, 250, 450, 700];
+  return thresholds.reduce((level, threshold) => exp >= threshold ? level + 1 : level, 0);
 }
 
 export function selectSpiderAbilities(species: string, skills: unknown, choices: AbilityId[]): [AbilityId, AbilityId | ''] {
-  const signature = isSpiderType(species) ? SPIDER_SKILLS[species] : 'web';
-  const submitted = Array.isArray(skills) ? skills[0] : undefined;
-  const [, second] = selectDraftAbilities([signature, submitted], [signature, ...choices.filter(id => id !== signature)]);
-  return [signature, second];
+  const pool = isSpiderType(species) ? SPIDER_POOLS[species] : SPIDER_POOLS.weaver;
+  return selectDraftAbilities(skills, choices.filter(id => pool.includes(id)));
 }
 
 export function selectDraftAbilities(skills: unknown, choices: AbilityId[]): [AbilityId, AbilityId | ''] {

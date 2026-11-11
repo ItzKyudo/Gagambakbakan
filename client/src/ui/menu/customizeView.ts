@@ -4,15 +4,14 @@ import {
   STANDARD_ACCS,
   EXCLUSIVE_ACCS,
   COLORS,
-  SPIDERS,
   PATTERNS,
   accessorySVG,
   getLevel,
   getLooks,
   getProgress,
-  isAccessoryUnlocked
+  isAccessoryUnlocked,
+  spiderSVG
 } from '../../gb';
-import { spiderCanvasHtml } from '../../game/spiderSheet';
 import { getCachedPodiumChampionStatus } from '../../auth';
 import { renderPodiumBadge } from './leaderboardBadge';
 
@@ -47,7 +46,7 @@ export function renderCustomizeView(customizePlayer: 'p1' | 'p2', drawColor: str
 
         <div class="custom-preview-column">
           <div class="preview ${lk.pattern === 'custom' ? 'pattern-editing' : ''}" id="preview" role="img" aria-label="${name}, ${patternLabel} pattern, ${accessoryLabel} accessory" ${lk.pattern === 'custom' ? 'aria-describedby="patternHelp"' : ''}>
-            ${spiderCanvasHtml(lk)}
+            ${spiderSVG(lk, '-cust')}
             <div class="preview-caption" aria-hidden="true">
               <strong>${name}</strong>
               <span>${patternLabel} &middot; ${accessoryLabel}</span>
@@ -58,17 +57,6 @@ export function renderCustomizeView(customizePlayer: 'p1' | 'p2', drawColor: str
             <label class="lbl" for="nm">Fighter name</label>
             <input type="text" id="nm" value="${name}" maxlength="10" autocomplete="off" spellcheck="false">
           </div>
-
-          <fieldset class="field">
-            <legend class="lbl">Spider type and signature skill</legend>
-            <div class="opts visual-opts">
-              ${SPIDERS.map(spider => `
-                <button type="button" class="opt" data-species="${spider.id}" aria-pressed="${lk.species === spider.id}">
-                  <strong>${spider.name}</strong><span>${spider.description}</span>
-                </button>
-              `).join('')}
-            </div>
-          </fieldset>
 
           <fieldset class="field custom-color-field">
             <legend class="lbl">Shell color</legend>
@@ -91,7 +79,7 @@ export function renderCustomizeView(customizePlayer: 'p1' | 'p2', drawColor: str
             <div class="opts visual-opts" id="pat">
               ${PATTERNS.map(([id, label]) => `
                 <button type="button" class="opt" data-pat="${id}" aria-label="${label} pattern" aria-pressed="${lk.pattern === id}">
-                  <span class="choice-preview" aria-hidden="true">${spiderCanvasHtml({ ...lk, pattern: id, acc: 'none' })}</span>
+                  <span class="choice-preview" aria-hidden="true">${spiderSVG({ ...lk, pattern: id, acc: 'none' }, `-pat-${id}`)}</span>
                   <span>${label}</span>
                 </button>
               `).join('')}

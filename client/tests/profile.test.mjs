@@ -56,7 +56,7 @@ test('match history keeps account, slot, mode and score; fetches every page; rep
   await assert.rejects(context.fetchMatchHistory('p1'), /Sign in/);
 });
 
-test('profile abilities are visible and read-only; Player 2 has no account rank', () => {
+test('profile shows separate spider ability progress; Player 2 has no account rank', () => {
   const context = {
     SPIDER_RANKS: [
       { id: 'wolf-spider', minRating: 0 },
@@ -64,15 +64,19 @@ test('profile abilities are visible and read-only; Player 2 has no account rank'
       { id: 'philippine-tarantula', minRating: 800 },
       { id: 'brown-widow', minRating: 1600 }
     ],
-    getProgress: () => ({ rating: 400, onlineExp: 100 }),
+    getProgress: () => ({ rating: 400, onlineExp: 100, spiderProgress: { weaver: { exp: 100, skills: ['dash', 'web'] } } }),
     getLevel: () => 2,
-    getUnlockedIds: () => ['dash'],
+    getLooks: () => ({ p1: { name: 'Amber', color: 'amber' }, p2: { name: 'Jade', color: 'jade' } }),
+    getColor: () => ({ main: '#f2a33a', light: '#ffd694', label: 'Amber' }),
+    getExpProgress: () => ({ expIntoLevel: 0, expForLevel: 150 }),
+    getRankProgress: () => ({ progressPct: 50, ratingInTier: 100, ratingForTier: 500, nextRank: null }),
+    spiderSVG: () => '<svg></svg>',
+    SPIDERS: [{ id: 'weaver', name: 'Orb Weaver', skill: 'web' }, { id: 'wolf', name: 'Wolf Spider', skill: 'surge' }],
     getRankFromRating: () => ({ id: 'huntsman-spider', species: 'Huntsman Spider', title: 'Nightmare Prowler' }),
     renderRankBadgeSVG: () => '<img class="rank-badge-svg">',
     RANK_RATING_LABEL: 'Venom',
     MATCH_MODES: { cpu: 'vs AI', '2p': 'Local PvP', online: 'Casual online', ranked: 'Ranked' },
-    SKILLS_LIST: [{ id: 'dash', name: 'Dash', desc: 'A quick hop.', icon: 'ic-dash', cd: 3, use: 'stand' },
-      { id: 'web', name: 'Web', desc: 'Trap.', icon: 'ic-web', cd: 5, use: 'stand' }]
+    SKILLS_LIST: []
   };
   runInNewContext(source('../src/ui/menu/profileView.ts'), context);
   const html = context.renderProfileView('p1');
@@ -82,9 +86,10 @@ test('profile abilities are visible and read-only; Player 2 has no account rank'
   assert.match(html, /profile-rank-bottom/);
   assert.doesNotMatch(html, /profile-rank-desc/);
   const abilities = html.split('<ul class="profile-abilities">')[1];
-  assert.match(abilities, /Dash/);
-  assert.doesNotMatch(abilities, /<button|<input|<details|Trap\./);
+  assert.match(abilities, /Orb Weaver/);
+  assert.match(abilities, /Wolf Spider/);
+  assert.doesNotMatch(abilities, /<button|<input|<details/);
   const p2 = context.renderProfileView('p2');
   assert.doesNotMatch(p2, /rank-badge-svg|Nightmare Prowler|data-profile-mode="ranked"/);
-  assert.match(p2, /shared ability pool/);
+  assert.match(p2, /Each spider gains experience/);
 });

@@ -1229,3 +1229,7 @@ body.abilities-active .menu-view-container {
   border-color: #ffffff;
 }
 
+.swv-species-tabs { display: flex; gap: 8px; overflow-x: auto; padding: 8px 16px; background: #0d1b19; scrollbar-color: var(--amber) transparent; }
+.swv-species-tabs button { flex: 0 0 auto; padding: 9px 13px; color: var(--fg); background: transparent; border: 1px solid var(--line); border-radius: 8px; font: inherit; cursor: pointer; }
+.swv-species-tabs button[aria-current="true"] { color: var(--amber-light); border-color: var(--amber); background: #3a2a18; }
+.swv-species-tabs button:focus-visible { outline: 2px solid var(--jade); outline-offset: 2px; }

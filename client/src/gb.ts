@@ -1,6 +1,5 @@
 import {
   ABILITIES,
-  ALL_ABILITY_IDS,
   isNodeAvailableToUnlock,
   type AbilityId,
   shuffle
@@ -20,7 +19,7 @@ export interface SpiderColor {
 
 export interface SpiderLook {
   name: string;
-  species: 'weaver' | 'hunter' | 'guardian';
+  species: 'weaver' | 'hunter' | 'guardian' | 'wolf' | 'lynx';
   color: string;
   pattern: string;
   acc: string;
@@ -78,6 +77,7 @@ export interface ProgressData {
   onlinePlayed: number;
   onlineWins: number;
   unlockedSkills?: string[];
+  spiderProgress?: Record<string, { exp: number; skills: string[] }>;
 }
 
 let onDataPersistHook: (() => void) | null = null;
@@ -294,12 +294,14 @@ export const DEF_LOOK: { p1: SpiderLook; p2: SpiderLook } = {
 };
 
 export const SPIDERS = [
-  { id: 'weaver', name: 'Weaver', skill: 'web', description: 'Web tangles your rival.' },
-  { id: 'hunter', name: 'Hunter', skill: 'pounce', description: 'Pounce closes the distance.' },
-  { id: 'guardian', name: 'Guardian', skill: 'shield', description: 'Shield protects you from a hit.' }
+  { id: 'weaver', name: 'Orb Weaver', skill: 'web', description: 'Controls space with sticky silk.', pool: ['dash', 'web', 'spit', 'tremor', 'hook'] },
+  { id: 'hunter', name: 'Jumping Spider', skill: 'pounce', description: 'Strikes from a sudden leap.', pool: ['dash', 'power', 'pounce', 'sweep', 'riposte'] },
+  { id: 'guardian', name: 'Huntsman', skill: 'shield', description: 'Defends and counters at close range.', pool: ['dash', 'shield', 'mend', 'carapace', 'leech'] },
+  { id: 'wolf', name: 'Wolf Spider', skill: 'surge', description: 'Runs down its rival.', pool: ['dash', 'surge', 'anchor', 'haste', 'sweep'] },
+  { id: 'lynx', name: 'Lynx Spider', skill: 'hook', description: 'Climbs and catches its rival.', pool: ['dash', 'web', 'spit', 'hook', 'anchor'] }
 ] as const;
 
-export function spiderSkill(species: string): AbilityId {
+export function spiderStarter(species: string): AbilityId {
   return SPIDERS.find(spider => spider.id === species)?.skill || 'web';
 }
 
@@ -368,6 +370,139 @@ export function randomLook(playerLevel = 1, podium?: { isTop1Rank?: boolean; isT
     acc: pickedAcc,
     customPattern: ''
   };
+}
+
+export function customPatternSVG(value: string): string {
+  return decodePatternArt(value).map(stroke => {
+    const points = stroke.points.map(([x, y]) => `${(41 + x * 95).toFixed(1)},${(54 + y * 75).toFixed(1)}`).join(' ');
+    if (stroke.points.length === 1) return `<circle cx="${(41 + stroke.points[0][0] * 95).toFixed(1)}" cy="${(54 + stroke.points[0][1] * 75).toFixed(1)}" r="3.2" fill="${stroke.color}"/>`;
+    return `<polyline points="${points}" fill="none" stroke="${stroke.color}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>`;
+  }).join('');
+}
+
+export function spiderSVGraw(look: SpiderLook): string {
+  const c = getColor(look.color);
+  const OUT = 'rgba(8,16,15,.78)';
+  const body = 'M41 94 C40 70 59 55 87 54 C116 53 136 69 136 92 C136 115 115 129 87 129 C59 129 42 116 41 94 Z';
+  const head = 'M121 91 C121 73 135 62 153 63 C171 64 181 77 180 95 C179 112 165 121 147 118 C131 116 121 107 121 91 Z';
+  const far = '<path d="M65 97 L44 88 Q37 86 32 94 L15 134"/><path d="M76 108 L57 109 Q49 111 45 121 L36 144"/><path d="M112 109 L132 115 Q140 119 143 130 L146 145"/><path d="M131 98 L154 96 Q165 97 174 107 L204 136"/>';
+  const legs = '<path d="M62 102 L38 101 Q29 104 25 116 L14 143"/><path d="M75 114 L56 120 Q49 125 49 135 L47 146"/><path d="M114 113 L129 123 Q135 130 131 145"/>';
+  const foreleg = '<path d="M132 102 L158 105 Q169 108 177 119 L198 142"/>';
+
+  let pat = '';
+  if (look.pattern === 'custom') {
+    pat = customPatternSVG(look.customPattern);
+  } else if (look.pattern === 'stripes') {
+    // Tapered tiger-stripe bands with dorsal spine & light contour rim
+    pat += `<path d="M46 93 Q88 91 131 93" fill="none" stroke="${c.dark}" stroke-width="3.5" opacity=".45"/>`;
+    [66, 84, 102, 118].forEach((x, idx) => {
+      const w = idx === 1 || idx === 2 ? 7.5 : 5.5;
+      pat += `<path d="M${x + 3} 56 Q${x - 7} 93 ${x + 3} 130" fill="none" stroke="${c.light}" stroke-width="${w + 2.6}" stroke-linecap="round" opacity=".32"/>`;
+      pat += `<path d="M${x + 3} 56 Q${x - 7} 93 ${x + 3} 130" fill="none" stroke="${c.dark}" stroke-width="${w}" stroke-linecap="round"/>`;
+    });
+  } else if (look.pattern === 'dots') {
+    // Leopard / Ladybug rosettes with light halo rings and varied sizes
+    [
+      [88, 92, 8.5],
+      [66, 80, 6.2], [66, 106, 6.2],
+      [108, 78, 6.5], [108, 107, 6.5],
+      [87, 68, 5.2], [87, 117, 5.2],
+      [51, 93, 4.8]
+    ].forEach(([cx, cy, r]) => {
+      pat += `<circle cx="${cx}" cy="${cy}" r="${r + 2.2}" fill="${c.light}" opacity=".45"/>` +
+        `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${c.dark}"/>` +
+        `<circle cx="${cx - r * 0.28}" cy="${cy - r * 0.28}" r="${Math.max(1.3, r * 0.26).toFixed(1)}" fill="${c.light}" opacity=".65"/>`;
+    });
+  } else if (look.pattern === 'chevron') {
+    // Interlocking armored viper chevrons with light edge piping
+    [62, 80, 98, 114].forEach((x, idx) => {
+      const span = idx === 3 ? 19 : 25;
+      pat += `<polyline points="${x - 11},${93 - span} ${x + 5},93 ${x - 11},${93 + span}" fill="none" stroke="${c.light}" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round" opacity=".32"/>` +
+        `<polyline points="${x - 11},${93 - span} ${x + 5},93 ${x - 11},${93 + span}" fill="none" stroke="${c.dark}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>`;
+    });
+  } else if (look.pattern === 'rings') {
+    // Ocellus target bullseye with alternating dark & light rings
+    pat += `<ellipse cx="89" cy="93" rx="38" ry="28" fill="none" stroke="${c.dark}" stroke-width="5.5"/>` +
+      `<ellipse cx="89" cy="93" rx="28" ry="20.5" fill="none" stroke="${c.light}" stroke-width="3" opacity=".55"/>` +
+      `<ellipse cx="89" cy="93" rx="22" ry="16" fill="none" stroke="${c.dark}" stroke-width="5.5"/>` +
+      `<ellipse cx="89" cy="93" rx="11.5" ry="8.5" fill="${c.dark}" stroke="${c.light}" stroke-width="2.4"/>` +
+      `<circle cx="87" cy="91" r="3.2" fill="${c.light}"/>`;
+  } else if (look.pattern === 'cross') {
+    // Ornate Argiope St. Andrew's cross with flared arms and central diamond medallion
+    pat += `<path d="M82 54 L96 54 L93 86 L128 84 L128 100 L93 98 L96 130 L82 130 L85 98 L50 100 L50 84 L85 86 Z" fill="${c.dark}" stroke="${c.light}" stroke-width="2.2" stroke-linejoin="round"/>` +
+      `<polygon points="89,78 103,92 89,106 75,92" fill="${c.light}" opacity=".55"/>` +
+      `<polygon points="89,83 98,92 89,101 80,92" fill="${c.dark}"/>`;
+  } else if (look.pattern === 'split') {
+    // Harlequin dual-tone split with central crest & counter-dots
+    pat += `<rect x="40" y="52" width="100" height="41" fill="${c.dark}"/>` +
+      `<line x1="42" y1="93" x2="136" y2="93" stroke="${c.light}" stroke-width="3.5" opacity=".7"/>` +
+      `<line x1="42" y1="96" x2="136" y2="96" stroke="${c.dark}" stroke-width="3"/>` +
+      `<circle cx="70" cy="76" r="4.5" fill="${c.light}" opacity=".65"/>` +
+      `<circle cx="106" cy="76" r="4.5" fill="${c.light}" opacity=".65"/>` +
+      `<circle cx="70" cy="110" r="4.8" fill="${c.dark}"/>` +
+      `<circle cx="106" cy="110" r="4.8" fill="${c.dark}"/>`;
+  } else if (look.pattern === 'webmark') {
+    // Scalloped radial orb-web lattice with dew-drop center
+    for (let a = 0; a < 8; a++) {
+      const rad = a * Math.PI / 4;
+      const x2 = 89 + Math.cos(rad) * 46;
+      const y2 = 93 + Math.sin(rad) * 36;
+      pat += `<line x1="89" y1="93" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${c.dark}" stroke-width="3"/>`;
+    }
+    [13, 25, 37].forEach((r, idx) => {
+      let d = '';
+      for (let a = 0; a <= 8; a++) {
+        const rad = a * Math.PI / 4;
+        const px = (89 + Math.cos(rad) * r).toFixed(1);
+        const py = (93 + Math.sin(rad) * (r * 0.78)).toFixed(1);
+        if (a === 0) {
+          d += `M${px} ${py}`;
+        } else {
+          const midRad = (a - 0.5) * Math.PI / 4;
+          const cx = (89 + Math.cos(midRad) * (r * 0.86)).toFixed(1);
+          const cy = (93 + Math.sin(midRad) * (r * 0.78 * 0.86)).toFixed(1);
+          d += ` Q${cx} ${cy} ${px} ${py}`;
+        }
+      }
+      pat += `<path d="${d}" fill="none" stroke="${c.dark}" stroke-width="${idx === 2 ? 3 : 2.5}"/>`;
+    });
+    pat += `<circle cx="89" cy="93" r="4.5" fill="${c.light}" stroke="${c.dark}" stroke-width="2"/>`;
+  } else if (look.pattern === 'diamonds') {
+    // Royal Argyle diamond chain with inner light cores and flanking gems
+    [64, 89, 114].forEach((x, idx) => {
+      const h = idx === 1 ? 23 : 19;
+      const w = idx === 1 ? 13 : 10.5;
+      pat += `<polygon points="${x},${93 - h} ${x + w},93 ${x},${93 + h} ${x - w},93" fill="${c.dark}" stroke="${c.light}" stroke-width="2" stroke-linejoin="round"/>` +
+        `<polygon points="${x},${93 - h * 0.42} ${x + w * 0.42},93 ${x},${93 + h * 0.42} ${x - w * 0.42},93" fill="${c.light}" opacity=".6"/>`;
+    });
+  }
+
+  const acc = accessoryMarkup(look.acc);
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" class="spider-art" width="240" height="180" viewBox="0 0 240 180" data-codeart="inline-vector" data-anchor="120 145" data-facing="right" aria-hidden="true"><defs><radialGradient id="pb" cx=".35" cy=".25" r=".8"><stop offset="0" stop-color="${c.light}"/><stop offset=".48" stop-color="${c.main}"/><stop offset="1" stop-color="${c.dark}"/></radialGradient>` +
+    `<radialGradient id="ph" cx=".32" cy=".24" r=".82"><stop offset="0" stop-color="${c.light}"/><stop offset=".42" stop-color="${c.main}"/><stop offset="1" stop-color="${c.dark}"/></radialGradient><clipPath id="pc"><path d="${body}"/></clipPath></defs>` +
+    `<g id="perch-twig"><rect x="8" y="145" width="224" height="22" rx="11" fill="#6d4c2f" stroke="${OUT}" stroke-width="1.8"/>` +
+    `<rect x="12" y="146" width="216" height="5.5" rx="2.7" fill="#9e744d"/>` +
+    `<path d="M26 156 Q62 153 98 156 M136 156 Q176 158 212 155 M76 161 Q116 163 156 161" stroke="#4a331e" stroke-width="1.4" fill="none" stroke-linecap="round"/>` +
+    `<path d="M216 144 C220 137 228 139 227 146 C223 147 218 145 216 144 Z" fill="#2ed573" stroke="${OUT}" stroke-width="1.2"/></g>` +
+    `<g class="spider-rig"><g class="spider-legs spider-legs-far" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity=".72"><g stroke="${OUT}" stroke-width="6.4">${far}</g><g stroke="${c.dark}" stroke-width="3.5">${far}</g></g>` +
+    `<g class="spider-abdomen"><path d="${body}" fill="url(#pb)"/><g class="custom-pattern" clip-path="url(#pc)" opacity="${look.pattern === 'custom' ? 1 : .68}">${pat}</g><path d="${body}" fill="none" stroke="${OUT}" stroke-width="2.3"/>` +
+    `<path d="M54 77 C68 59 96 57 117 68" fill="none" stroke="${c.light}" stroke-width="2.6" stroke-linecap="round" opacity=".26"/>` +
+    `<g fill="none" stroke="${c.dark}" stroke-width="1.1" stroke-linecap="round" opacity=".7"><path d="M50 70 l-5 -5 M60 62 l-3 -6 M73 57 l-1 -7 M101 57 l2 -7 M115 63 l4 -6 M128 74 l6 -4 M45 105 l-6 3 M56 120 l-4 6 M72 127 l-1 7 M105 126 l3 7 M122 117 l6 5"/></g></g>` +
+    `<g class="spider-legs spider-legs-near" fill="none" stroke-linecap="round" stroke-linejoin="round"><g stroke="${OUT}" stroke-width="6.6">${legs}</g><g stroke="${c.main}" stroke-width="3.7">${legs}</g></g>` +
+    `<g class="spider-foreleg" fill="none" stroke-linecap="round" stroke-linejoin="round"><g stroke="${OUT}" stroke-width="6.6">${foreleg}</g><g stroke="${c.main}" stroke-width="3.7">${foreleg}</g></g>` +
+    `<g class="spider-head"><g class="spider-head-motion"><path d="${head}" fill="url(#ph)" stroke="${OUT}" stroke-width="2.5"/>` +
+    `<path d="M132 78 C142 66 160 66 170 77" fill="none" stroke="${c.light}" stroke-width="2.3" stroke-linecap="round" opacity=".24"/>` +
+    `<g fill="none" stroke="${c.dark}" stroke-width="1" stroke-linecap="round" opacity=".75"><path d="M128 75 l-4 -5 M139 67 l-2 -6 M153 64 l0 -6 M167 69 l4 -5 M177 82 l6 -2 M176 104 l6 3 M164 115 l3 6 M138 114 l-2 6"/></g>` +
+    `<g class="spider-eyes" fill="#07100f" stroke="${c.light}" stroke-width="1.2"><circle cx="151" cy="88" r="5.1"/><circle cx="164" cy="89" r="4.7"/><circle cx="142" cy="89" r="2.8"/><circle cx="173" cy="93" r="2.7"/><circle cx="143" cy="78" r="2.2"/><circle cx="151" cy="75" r="2.3"/><circle cx="161" cy="76" r="2.2"/><circle cx="170" cy="81" r="2"/></g>` +
+    `<g class="spider-eye-glints" fill="#f4f7ee"><circle cx="149.3" cy="86.3" r="1.35"/><circle cx="162.5" cy="87.4" r="1.2"/><circle cx="141.2" cy="88" r=".7"/><circle cx="172.2" cy="92.2" r=".65"/><circle cx="150.3" cy="74.3" r=".55"/><circle cx="160.4" cy="75.4" r=".5"/></g>` +
+    `<g class="spider-palps" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M166 103 Q180 103 182 112 Q182 119 176 119 M163 106 Q175 109 175 117" stroke="${OUT}" stroke-width="5.4"/><path d="M166 103 Q180 103 182 112 Q182 119 176 119 M163 106 Q175 109 175 117" stroke="${c.dark}" stroke-width="2.8"/><path d="M173 105 L181 109 L176 113" stroke="#d9d2bd" stroke-width="1.8"/></g>${acc}</g></g></g></svg>`;
+}
+
+export function spiderSVG(look: SpiderLook, u: string = ''): string {
+  return spiderSVGraw(look)
+    .replace(/id="(pb|ph|pc)"/g, `id="$1${u}"`)
+    .replace(/url\(#(pb|ph|pc)\)/g, `url(#$1${u})`);
 }
 
 function accessoryMarkup(accId: string): string {
@@ -673,17 +808,17 @@ export function getExpProgress(totalExp: number): ExpProgressInfo {
 export function getProgress(): ProgressData {
   const p = lsGet<any>('progress', {}) || {};
   const onlineExp = Math.max(0, p.onlineExp | 0);
-  const lvl = getLevel(onlineExp);
-  const maxSkills = lvl + 2;
-
-  const unlockedSkills: string[] = ['dash'];
-  if (Array.isArray(p.unlockedSkills)) {
-    for (const id of p.unlockedSkills) {
-      if (unlockedSkills.length >= maxSkills) break;
-      if (id !== 'dash' && ALL_ABILITY_IDS.includes(id) && !unlockedSkills.includes(id) && isNodeAvailableToUnlock(id as AbilityId, unlockedSkills as AbilityId[])) {
-        unlockedSkills.push(id);
-      }
+  const legacySpecies = getLooks().p1.species;
+  const spiderProgress: NonNullable<ProgressData['spiderProgress']> = {};
+  for (const spider of SPIDERS) {
+    const saved = p.spiderProgress?.[spider.id] || (p.spiderProgress ? null : spider.id === legacySpecies ? { exp: onlineExp, skills: p.unlockedSkills } : null);
+    const exp = Number.isFinite(saved?.exp) ? Math.max(0, saved.exp) : 0;
+    const skills: string[] = ['dash', spider.skill];
+    if (Array.isArray(saved?.skills)) for (const id of saved.skills) {
+      if (skills.length >= getLevel(exp) + 1) break;
+      if ((spider.pool as readonly string[]).includes(id) && !skills.includes(id) && ABILITIES[id as AbilityId].unlock.level <= getLevel(exp) && isNodeAvailableToUnlock(id as AbilityId, skills as AbilityId[])) skills.push(id);
     }
+    spiderProgress[spider.id] = { exp, skills };
   }
   const played = Math.max(0, (p.played ?? p.onlinePlayed) | 0);
   const wins = Math.max(0, (p.wins ?? p.onlineWins) | 0);
@@ -691,14 +826,6 @@ export function getProgress(): ProgressData {
   const winRate = played > 0 ? Math.round((wins / played) * 100) : 0;
   const rating = Number.isFinite(p.rating) ? Math.max(0, p.rating) : 0;
   const rank = getRankFromRating(rating).id;
-
-  if (unlockedSkills.length === 1) {
-    (['web', 'surge'] as AbilityId[]).forEach(d => {
-      if (unlockedSkills.length < maxSkills && isNodeAvailableToUnlock(d, unlockedSkills as AbilityId[])) {
-        unlockedSkills.push(d);
-      }
-    });
-  }
 
   return {
     played,
@@ -712,7 +839,8 @@ export function getProgress(): ProgressData {
     onlineExp,
     onlinePlayed: Math.max(0, p.onlinePlayed | 0),
     onlineWins: Math.min(Math.max(0, p.onlinePlayed | 0), Math.max(0, p.onlineWins | 0)),
-    unlockedSkills
+    unlockedSkills: Array.isArray(p.unlockedSkills) ? p.unlockedSkills : ['dash'],
+    spiderProgress
   };
 }
 
@@ -721,27 +849,27 @@ export function saveProgress(p: ProgressData): void {
   onDataPersistHook?.();
 }
 
-export function getAbilityPoints(p?: ProgressData): { total: number; spent: number; available: number } {
+export function getAbilityPoints(p?: ProgressData, species = getLooks().p1.species): { total: number; spent: number; available: number } {
   p = p || getProgress();
-  const currentLvl = getLevel(p.onlineExp);
-  const total = currentLvl + 1;
-  const unlocked = p.unlockedSkills && p.unlockedSkills.length > 0 ? p.unlockedSkills : ['dash'];
-  const spent = Math.max(0, unlocked.filter(id => id !== 'dash').length);
+  const spider = SPIDERS.find(s => s.id === species) || SPIDERS[0];
+  const progress = p.spiderProgress?.[spider.id];
+  const total = Math.min(3, getLevel(progress?.exp || 0) - 1);
+  const spent = (progress?.skills || []).filter(id => id !== 'dash' && id !== spider.skill).length;
   const available = Math.max(0, total - spent);
   return { total, spent, available };
 }
 
-export function isUnlocked(id: AbilityId, p?: ProgressData): boolean {
+export function isUnlocked(id: AbilityId, p?: ProgressData, species = getLooks().p1.species): boolean {
   p = p || getProgress();
-  if (p.unlockAll) return true;
-  const list = p.unlockedSkills || ['dash', 'web', 'surge'];
+  if (p.unlockAll) return !!(SPIDERS.find(s => s.id === species)?.pool as readonly string[] | undefined)?.includes(id);
+  const list = p.spiderProgress?.[species]?.skills || ['dash', spiderStarter(species)];
   return list.includes(id);
 }
 
-export function getUnlockNeed(id: AbilityId): { have: number; need: number; text: string } {
+export function getUnlockNeed(id: AbilityId, species = getLooks().p1.species): { have: number; need: number; text: string } {
   const s = ABILITIES[id];
   const p = getProgress();
-  const currentLvl = getLevel(p.onlineExp);
+  const currentLvl = getLevel(p.spiderProgress?.[species]?.exp || 0);
   const reqLvl = s.unlock.level ?? 1;
   if (reqLvl <= 1) {
     return { have: 1, need: 1, text: 'Unlocked from Level 1' };
@@ -753,34 +881,39 @@ export function getUnlockNeed(id: AbilityId): { have: number; need: number; text
   };
 }
 
-export function getUnlockedIds(p?: ProgressData): AbilityId[] {
+export function getUnlockedIds(p?: ProgressData, species: string = getLooks().p1.species): AbilityId[] {
   p = p || getProgress();
-  if (p.unlockAll) return ALL_ABILITY_IDS;
-  return (p.unlockedSkills || ['dash', 'web', 'surge']) as AbilityId[];
+  if (p.unlockAll) return [...(SPIDERS.find(s => s.id === species) || SPIDERS[0]).pool] as AbilityId[];
+  return (p.spiderProgress?.[species]?.skills || ['dash', spiderStarter(species)]) as AbilityId[];
 }
 
-export function acquireSkill(id: AbilityId): { success: boolean; reason?: string } {
+export function acquireSkill(id: AbilityId, species = getLooks().p1.species): { success: boolean; reason?: string } {
   const p = getProgress();
-  const unlocked = p.unlockedSkills || ['dash'];
+  const spider = SPIDERS.find(s => s.id === species);
+  if (!spider || !(spider.pool as readonly string[]).includes(id)) return { success: false, reason: 'This skill belongs to another spider' };
+  const unlocked = p.spiderProgress![species].skills;
   if (unlocked.includes(id)) {
     return { success: false, reason: 'Already unlocked' };
   }
   if (!isNodeAvailableToUnlock(id, unlocked as AbilityId[])) {
     return { success: false, reason: 'Path not connected' };
   }
-  const pts = getAbilityPoints(p);
+  if (ABILITIES[id].unlock.level > getLevel(p.spiderProgress![species].exp)) {
+    return { success: false, reason: `Requires spider level ${ABILITIES[id].unlock.level}` };
+  }
+  const pts = getAbilityPoints(p, species);
   if (pts.available <= 0) {
     return { success: false, reason: 'No ability points available' };
   }
   unlocked.push(id);
-  p.unlockedSkills = unlocked;
+  p.spiderProgress![species].skills = unlocked;
   saveProgress(p);
   return { success: true };
 }
 
-export function respecWeb(): void {
+export function respecWeb(species = getLooks().p1.species): void {
   const p = getProgress();
-  p.unlockedSkills = ['dash'];
+  p.spiderProgress![species].skills = ['dash', spiderStarter(species)];
   p.unlockAll = false;
   saveProgress(p);
 }
@@ -832,9 +965,10 @@ export interface OnlineMatchReward {
   winRate: number;
 }
 
-export function recordOnlineMatch(won: boolean, myRoundsWon: number, isRanked: boolean): OnlineMatchReward {
+export function recordOnlineMatch(won: boolean, myRoundsWon: number, isRanked: boolean, species = getLooks().p1.species): OnlineMatchReward {
   const p = getProgress();
-  const oldExp = p.onlineExp;
+  const spider = p.spiderProgress![species] || p.spiderProgress!.weaver;
+  const oldExp = spider.exp;
   const oldLevel = getLevel(oldExp);
 
   const matchExp = 60;
@@ -843,6 +977,7 @@ export function recordOnlineMatch(won: boolean, myRoundsWon: number, isRanked: b
   const expGained = matchExp + winExp + roundExp;
 
   p.onlineExp += expGained;
+  spider.exp += expGained;
   p.onlinePlayed++;
   p.played++;
   if (won) {
@@ -866,9 +1001,9 @@ export function recordOnlineMatch(won: boolean, myRoundsWon: number, isRanked: b
   p.rank = currentRank.id;
   saveProgress(p);
 
-  const newLevel = getLevel(p.onlineExp);
+  const newLevel = getLevel(spider.exp);
   const leveledUp = newLevel > oldLevel;
-  const pointsGained = leveledUp ? (newLevel - oldLevel) : 0;
+  const pointsGained = Math.min(3, newLevel - 1) - Math.min(3, oldLevel - 1);
 
   return {
     expGained,
@@ -879,7 +1014,7 @@ export function recordOnlineMatch(won: boolean, myRoundsWon: number, isRanked: b
     newLevel,
     leveledUp,
     pointsGained,
-    progress: getExpProgress(p.onlineExp),
+    progress: getExpProgress(spider.exp),
     oldRating,
     newRating,
     ratingChange,

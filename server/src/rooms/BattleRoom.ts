@@ -1,7 +1,7 @@
 import { Room, Client, ServerError, type AuthContext } from 'colyseus';
 import { BattleStateData, PlayerStateData, WebStateData } from './schema/BattleState';
 import { BattleCombat, type PlayerInput } from './BattleCombat';
-import { ABILITIES, getRandomAbilities, isAbilityId, isSpiderType, SPIDER_SKILLS, selectSpiderAbilities, AbilityId } from '../abilities';
+import { ABILITIES, isAbilityId, isSpiderType, SPIDER_STARTERS, SPIDER_POOLS, selectSpiderAbilities, type SpiderType, AbilityId } from '../abilities';
 import { getRankFromRating, normalizeRankId, calculateRatingChange } from '../ranks';
 import { validateUsername } from '../auth';
 import { checkMatchmakingRateLimit } from '../matchmakingRateLimit';
@@ -47,6 +47,10 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
   private rematchVotes: Set<string> = new Set();
   private matchId = randomUUID();
   private resultPending = false;
+  private combatStarted = false;
+  private preferredSpecies: [SpiderType, SpiderType] = ['weaver', 'hunter'];
+  private selectedSpecies: [SpiderType | null, SpiderType | null] = [null, null];
+  private spiderProgress: [BattleIdentity['spiderProgress'] | null, BattleIdentity['spiderProgress'] | null] = [null, null];
 
   onCreate(options: any) {
     const rating = Number.isFinite(options?.rating) ? Math.max(0, Number(options.rating) | 0) : 0;
@@ -67,6 +71,8 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
       draftChoicesP2: [],
       p1Drafted: false,
       p2Drafted: false,
+      p1Selected: false,
+      p2Selected: false,
       isPaused: false,
       disconnectPause: null,
       p1: {} as PlayerStateData,
@@ -91,6 +97,16 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
       if (typeof data.reel === 'number' && Number.isFinite(data.reel) && data.reel > 0) current.reel += Math.min(10, data.reel);
       if (typeof data.ab1 === 'number' && Number.isFinite(data.ab1) && data.ab1 > 0) current.ab1 += Math.min(1, data.ab1);
       if (typeof data.ab2 === 'number' && Number.isFinite(data.ab2) && data.ab2 > 0) current.ab2 += Math.min(1, data.ab2);
+    });
+
+    this.onMessage('selectSpider', (client, data: { species?: unknown }) => {
+      if (this.battleState.status !== 'select' || !isSpiderType(data?.species)) return;
+      const slot: 0 | 1 | null = this.battleState.p1.sessionId === client.sessionId ? 0 : this.battleState.p2.sessionId === client.sessionId ? 1 : null;
+      if (slot === null || this.selectedSpecies[slot]) return;
+      this.selectedSpecies[slot] = data.species;
+      if (slot === 0) this.battleState.p1Selected = true;
+      else this.battleState.p2Selected = true;
+      if (this.selectedSpecies[0] && this.selectedSpecies[1]) this.startDraft();
     });
 
     this.onMessage('selectSkills', (client, data: { skills?: unknown }) => {
@@ -175,7 +191,9 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
     player.connected = true;
     player.userId = identity.userId;
     player.name = identity.userId ? identity.name : 'Guest';
-    player.species = isSpiderType(options.species) ? options.species : 'weaver';
+    this.preferredSpecies[player.id] = isSpiderType(options.species) ? options.species : 'weaver';
+    player.species = '';
+    this.spiderProgress[player.id] = identity.spiderProgress;
     player.acc = 'none';
     if (!identity.userId && typeof options.name === 'string') {
       const v = validateUsername(options.name);
@@ -233,8 +251,12 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
     const isP2 = this.battleState.p2.sessionId === sessionId;
     if (!isP1 && !isP2) return;
 
-    const activeStatuses = ['draft', 'ready', 'fight', 'roundEnd'];
+    const activeStatuses = ['select', 'draft', 'ready', 'fight', 'roundEnd'];
     if (activeStatuses.includes(this.battleState.status)) {
+      if (this.battleState.status === 'select') {
+        this.battleState.p1.species = this.selectedSpecies[0] || this.preferredSpecies[0];
+        this.battleState.p2.species = this.selectedSpecies[1] || this.preferredSpecies[1];
+      }
       this.battleState.disconnectPause = null;
       this.battleState.isPaused = false;
       const winner = isP1 ? this.battleState.p2 : this.battleState.p1;
@@ -255,7 +277,7 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
     this.playerInputs.delete(client.sessionId);
     this.rematchVotes.delete(client.sessionId);
 
-    const activeStatuses = ['draft', 'ready', 'fight', 'roundEnd'];
+    const activeStatuses = ['select', 'draft', 'ready', 'fight', 'roundEnd'];
     if (activeStatuses.includes(this.battleState.status)) {
       // Intentional consented leave
       if (code === 4000) {
@@ -344,16 +366,28 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
     this.battleState.p2.falls = 0;
     this.battleState.roundTimer = 60;
     this.battleState.matchTimer = 60;
+    this.combatStarted = false;
 
-    // Offer all unlocked skills for each player based on their validated unlocked web skills
-    const p1Skills = this.battleState.p1.unlockedSkills && this.battleState.p1.unlockedSkills.length > 0
-      ? this.battleState.p1.unlockedSkills
-      : getRandomAbilities(16, [], this.battleState.p1.level || 1);
-    const p2Skills = this.battleState.p2.unlockedSkills && this.battleState.p2.unlockedSkills.length > 0
-      ? this.battleState.p2.unlockedSkills
-      : getRandomAbilities(16, [], this.battleState.p2.level || 1);
-    this.battleState.draftChoicesP1 = p1Skills.filter(skill => skill !== SPIDER_SKILLS[this.battleState.p1.species as keyof typeof SPIDER_SKILLS]);
-    this.battleState.draftChoicesP2 = p2Skills.filter(skill => skill !== SPIDER_SKILLS[this.battleState.p2.species as keyof typeof SPIDER_SKILLS]);
+    this.selectedSpecies = [null, null];
+    this.battleState.p1Selected = false;
+    this.battleState.p2Selected = false;
+    this.battleState.p1.species = '';
+    this.battleState.p2.species = '';
+    this.battleState.status = 'select';
+    this.battleState.stateT = 0;
+  }
+
+  private startDraft() {
+    for (const player of [this.battleState.p1, this.battleState.p2]) {
+      player.species = this.selectedSpecies[player.id] || this.preferredSpecies[player.id];
+    }
+    const choices = (player: PlayerStateData) => {
+      const species = player.species as SpiderType;
+      const unlocked = player.isRanked ? SPIDER_POOLS[species] : this.spiderProgress[player.id]?.[species]?.skills || ['dash', SPIDER_STARTERS[species]];
+      return unlocked.filter(id => SPIDER_POOLS[species].includes(id as AbilityId));
+    };
+    this.battleState.draftChoicesP1 = choices(this.battleState.p1);
+    this.battleState.draftChoicesP2 = choices(this.battleState.p2);
     this.battleState.p1Drafted = false;
     this.battleState.p2Drafted = false;
     this.battleState.status = 'draft';
@@ -460,6 +494,15 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
 
     this.battleState.stateT += dt;
 
+    if (this.battleState.status === 'select' && this.battleState.stateT >= 17) {
+      this.selectedSpecies[0] ||= this.preferredSpecies[0];
+      this.selectedSpecies[1] ||= this.preferredSpecies[1];
+      this.battleState.p1Selected = true;
+      this.battleState.p2Selected = true;
+      this.startDraft();
+      return;
+    }
+
     // 17s server timeout provides 2s grace over 15s client countdown to absorb network latency
     if (this.battleState.status === 'draft' && this.battleState.stateT >= 17) {
       if (!this.battleState.p1Drafted) this.autoDraft(this.battleState.p1, this.battleState.draftChoicesP1);
@@ -470,6 +513,7 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
 
     if (this.battleState.status === 'ready' && this.battleState.stateT >= 1.5) {
       this.battleState.status = 'fight';
+      this.combatStarted = true;
       this.battleState.stateT = 0;
     }
 
@@ -529,10 +573,10 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
     this.resultPending = true;
     const { p1, p2, winner } = this.battleState;
     let progressSaved = false;
-    if (winner >= 0) {
+    if (winner >= 0 && this.combatStarted) {
       try {
         await recordBattleResult(this.matchId, p1.userId || null, p2.userId || null,
-          winner, p1.wins, p2.wins, Boolean(p1.isRanked && p2.isRanked));
+          winner, p1.wins, p2.wins, Boolean(p1.isRanked && p2.isRanked), p1.species as SpiderType, p2.species as SpiderType);
         progressSaved = true;
       } catch (error) {
         console.error('Battle result could not be saved:', error);
@@ -555,7 +599,7 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
       p1Wins: p1.wins, p2Wins: p2.wins,
       p1RatingChange: p1Delta.delta, p2RatingChange: p2Delta.delta,
       p1NewRating: p1.rating, p2NewRating: p2.rating,
-      forfeit, disconnectForfeit, isTimeOut: winner < 0, progressSaved
+      forfeit, disconnectForfeit, isTimeOut: winner < 0, noContest: winner >= 0 && !this.combatStarted, progressSaved
     });
     this.resultPending = false;
   }

@@ -12,7 +12,7 @@ export interface NetworkCallbacks {
   onDraftStart?: (data: { choicesP1: string[]; choicesP2: string[] }) => void;
   onPlayerDrafted?: (data: { id: number; skill1: string; skill2: string }) => void;
   onRoundWon?: (data: { winner: number; round: number; p1Wins: number; p2Wins: number }) => void;
-  onMatchEnd?: (data: { winner: number; winnerName: string; p1Wins: number; p2Wins: number; forfeit?: boolean; disconnectForfeit?: boolean; isTimeOut?: boolean; progressSaved?: boolean }) => void;
+  onMatchEnd?: (data: { winner: number; winnerName: string; p1Wins: number; p2Wins: number; forfeit?: boolean; disconnectForfeit?: boolean; isTimeOut?: boolean; noContest?: boolean; progressSaved?: boolean }) => void;
   onRematchVote?: (data: { count: number; ready: boolean }) => void;
   onPlayerLeft?: (data: { winner?: number; sessionId?: string }) => void;
   onPlayerDisconnected?: (data: { id: number; name: string; timeoutSeconds: number }) => void;
@@ -76,8 +76,9 @@ export class NetworkManager {
       return (import.meta as any).env.VITE_SERVER_URL;
     }
 
-    // 4. Default to Render production server
-    return PRODUCTION_SERVER_URL;
+    // 4. Local client uses the local game server by default
+    return typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname)
+      ? LOCAL_SERVER_URL : PRODUCTION_SERVER_URL;
   }
 
   public setServerUrl(url: string) {
@@ -232,6 +233,10 @@ export class NetworkManager {
     if (this.room) {
       this.room.send('selectSkills', { skills });
     }
+  }
+
+  public sendSelectSpider(species: string) {
+    this.room?.send('selectSpider', { species });
   }
 
   public async tryReconnect(callbacks?: NetworkCallbacks): Promise<Room | null> {

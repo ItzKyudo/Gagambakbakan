@@ -100,7 +100,7 @@ export interface DisconnectPauseData {
 
 export interface BattleStateData {
   mode: string;         // 'pvp'
-  status: 'waiting' | 'draft' | 'ready' | 'fight' | 'roundEnd' | 'matchEnd';
+  status: 'waiting' | 'select' | 'draft' | 'ready' | 'fight' | 'roundEnd' | 'matchEnd';
   stateT: number;
   round: number;
   roundTimer: number;   // 60s countdown per round
@@ -114,6 +114,8 @@ export interface BattleStateData {
   draftChoicesP2: string[];
   p1Drafted: boolean;
   p2Drafted: boolean;
+  p1Selected: boolean;
+  p2Selected: boolean;
 
   p1: PlayerStateData;
   p2: PlayerStateData;

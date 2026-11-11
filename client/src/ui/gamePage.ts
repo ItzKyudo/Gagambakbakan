@@ -1,7 +1,7 @@
 import { sound } from '../audio';
 import { ABILITIES, type AbilityId } from '../game/abilities';
 import { MAX_GRIP } from '../game/constants';
-import { getKeys, keyLabel, getColor, getLooks, getSettings, saveSettings, applyQualityClass, type GraphicQuality } from '../gb';
+import { getKeys, keyLabel, getColor, getLooks, getSettings, getProgress, getLevel, SPIDERS, saveSettings, applyQualityClass, type GraphicQuality } from '../gb';
 
 export interface GamePageCallbacks {
   onBackToMenu: () => void;
@@ -77,9 +77,9 @@ export class GamePage {
   private pkGo!: HTMLButtonElement;
   private selectedDraftSlots: number[] = [];
   private currentDraftOffer: AbilityId[] = [];
-  private fixedDraftSkill = '';
   private draftConfirmCallback: ((skills: string[]) => void) | null = null;
   public isDraftOpen: boolean = false;
+  public isSpiderSelectOpen = false;
   private isDraftLeaving: boolean = false;
   private draftKeyHandler?: (e: KeyboardEvent) => void;
   private draftTimerInterval: number | null = null;
@@ -349,6 +349,15 @@ export class GamePage {
       </div>
 
       <!-- CARD PICK MODAL -->
+      <div class="spider-select" id="spiderPick" hidden role="dialog" aria-modal="true" aria-labelledby="spiderPickTitle">
+        <div class="spider-select-inner">
+          <h2 id="spiderPickTitle" tabindex="-1">Choose your spider</h2>
+          <p id="spiderPickSub">Choose your fighter for this match.</p>
+          <div class="spider-select-grid" id="spiderPickGrid"></div>
+        </div>
+      </div>
+
+      <!-- CARD PICK MODAL -->
       <div class="pick" id="pick" hidden role="dialog" aria-modal="true" aria-labelledby="pkTitle">
         <div class="pick-in">
           <div class="pk-head">
@@ -476,7 +485,7 @@ export class GamePage {
     // In-game Menu: Quit button
     this.igmBtnQuit.addEventListener('click', () => {
       this.closeInGameMenu();
-      const isMatchActive = this.lastStateStatus === 'draft' || this.lastStateStatus === 'ready' || this.lastStateStatus === 'fight' || this.lastStateStatus === 'roundEnd';
+      const isMatchActive = this.lastStateStatus === 'select' || this.lastStateStatus === 'draft' || this.lastStateStatus === 'ready' || this.lastStateStatus === 'fight' || this.lastStateStatus === 'roundEnd';
       if (this.gameMode === 'online' && isMatchActive) {
         this.showSurrenderConfirmModal();
       } else {
@@ -523,7 +532,7 @@ export class GamePage {
     // Escape key toggles in-game menu
     window.addEventListener('keydown', (e: KeyboardEvent) => {
       if (e.code === 'Escape') {
-        if (this.isDraftOpen) return;
+        if (this.isDraftOpen || this.isSpiderSelectOpen) return;
         this.togglePause();
       }
     });
@@ -685,38 +694,77 @@ export class GamePage {
     this.rootElement.querySelectorAll<HTMLElement>('.p2').forEach(e => e.style.setProperty('--c', c2.main));
   }
 
-  /* ---------- CARD PICK MODAL (Fanned cards, 3 draw keep 2, or 1 keep 1) ---------- */
+  /* ---------- CARD PICK MODAL ---------- */
+  public showSpiderSelect(playerName: string, onConfirm: (species: string) => void, ranked = false) {
+    const modal = this.rootElement.querySelector<HTMLElement>('#spiderPick')!;
+    const grid = this.rootElement.querySelector<HTMLElement>('#spiderPickGrid')!;
+    this.rootElement.querySelector<HTMLElement>('#spiderPickTitle')!.textContent = `${playerName}, choose your spider`;
+    const timerHint = this.gameMode === 'online' ? ' Choose within 15 seconds; otherwise a spider is picked for you.' : '';
+    this.rootElement.querySelector<HTMLElement>('#spiderPickSub')!.textContent = (ranked
+      ? 'All five spiders and their skills are available in ranked.'
+      : 'Only this spider earns ability experience from the match.') + timerHint;
+    grid.innerHTML = '';
+    const progress = getProgress();
+    for (const spider of SPIDERS) {
+      const item = progress.spiderProgress?.[spider.id];
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'spider-select-card';
+      button.innerHTML = `<img src="/abilities/${spider.skill}.png" alt="" />
+        <strong>${spider.name}</strong><span>${spider.description}</span>
+        <span class="spider-select-kit">Skills: ${spider.pool.map(id => ABILITIES[id as AbilityId].name).join(', ')}</span>
+        <small>${ranked ? 'All skills ready' : `Level ${getLevel(item?.exp || 0)} · ${item?.skills.length || 2} skills ready`}</small>`;
+      button.addEventListener('click', () => {
+        this.hideSpiderSelect();
+        onConfirm(spider.id);
+      });
+      grid.appendChild(button);
+    }
+    this.isSpiderSelectOpen = true;
+    modal.hidden = false;
+    grid.querySelector<HTMLButtonElement>('button')?.focus();
+  }
+
+  public showSpiderWaiting() {
+    this.rootElement.querySelector<HTMLElement>('#spiderPickTitle')!.textContent = 'Spider locked in';
+    this.rootElement.querySelector<HTMLElement>('#spiderPickSub')!.textContent = 'Waiting for your opponent to choose.';
+    this.rootElement.querySelector<HTMLElement>('#spiderPickGrid')!.hidden = true;
+    this.rootElement.querySelector<HTMLElement>('#spiderPick')!.hidden = false;
+    this.isSpiderSelectOpen = true;
+    this.rootElement.querySelector<HTMLElement>('#spiderPickTitle')!.focus();
+  }
+
+  public hideSpiderSelect() {
+    this.rootElement.querySelector<HTMLElement>('#spiderPick')!.hidden = true;
+    this.rootElement.querySelector<HTMLElement>('#spiderPickGrid')!.hidden = false;
+    this.isSpiderSelectOpen = false;
+  }
+
   public showDraftModal(
     choices: string[],
     round: number,
     playerName: string,
-    onConfirm: (skills: string[]) => void,
-    fixedSkill = ''
+    onConfirm: (skills: string[]) => void
   ) {
     this.clearDraftTimer();
     this.isDraftLeaving = false;
     this.isDraftOpen = true;
-    this.currentDraftOffer = (choices && choices.length > 0 ? choices : ['dash']) as AbilityId[];
-    this.fixedDraftSkill = fixedSkill;
+    if (!choices || choices.length < 2) {
+      this.showModal('Two skills required', 'This match offered fewer than two skills. Return to the menu and try again.', [
+        { label: 'Menu', primary: true, onClick: this.callbacks.onBackToMenu }
+      ]);
+      return;
+    }
+    this.currentDraftOffer = choices as AbilityId[];
     this.draftConfirmCallback = onConfirm;
-
-    const targetCount = this.targetDraftCount;
 
     this.pkWho.textContent = `${playerName} · Round ${round}`;
     this.pkWho.style.setProperty('--c', 'var(--amber)');
 
-    if (targetCount === 1) {
-      this.pkTitle.textContent = fixedSkill ? 'Pick your second skill' : 'Pick your skill';
-      this.pkSub.textContent = fixedSkill
-        ? `${ABILITIES[fixedSkill as AbilityId]?.name || fixedSkill} is your spider's signature skill. Choose one more skill for this match.`
-        : 'You have 1 ability unlocked. Equip your card for the match. Press 1 or click to choose.';
-      this.selectedDraftSlots = this.currentDraftOffer.length === 1 ? [0] : [];
-    } else {
-      this.pkTitle.textContent = 'Pick 2 skills';
-      const keyHint = choices.length <= 3 ? 'Press 1, 2 or 3 to choose.' : `Press 1-${Math.min(9, choices.length)} or click to choose.`;
-      this.pkSub.textContent = `Choose 2 of these ${choices.length} cards. You keep them for the whole match. ${keyHint}`;
-      this.selectedDraftSlots = [];
-    }
+    this.pkTitle.textContent = 'Pick 2 skills';
+    const keyHint = choices.length <= 3 ? 'Press 1, 2 or 3 to choose.' : `Press 1-${Math.min(9, choices.length)} or click to choose.`;
+    this.pkSub.textContent = `Choose 2 of these ${choices.length} cards. You keep them for the whole match. ${keyHint}`;
+    this.selectedDraftSlots = [];
 
     if (this.currentDraftOffer.length > 3) {
       this.pkCards.classList.add('has-scroll');
@@ -799,7 +847,7 @@ export class GamePage {
   }
 
   private get targetDraftCount(): number {
-    return this.fixedDraftSkill ? 1 : Math.min(2, Math.max(1, this.currentDraftOffer.length));
+    return 2;
   }
 
   private toggleCard(k: number) {
@@ -932,7 +980,7 @@ export class GamePage {
     this.isDraftLeaving = false;
     this.pickModal.hidden = false;
     this.pkTitle.textContent = 'Waiting for Opponent...';
-    const names = [...(this.fixedDraftSkill ? [this.fixedDraftSkill] : []), ...chosen].map(id => ABILITIES[id as AbilityId]?.name || id).join(' & ');
+    const names = chosen.map(id => ABILITIES[id as AbilityId]?.name || id).join(' & ');
     this.pkSub.textContent = `You picked ${names}. Waiting for your opponent to choose their abilities...`;
     this.pkCount.textContent = 'Ready ✓';
     this.pkGo.disabled = true;

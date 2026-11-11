@@ -1,9 +1,10 @@
 import { sound } from '../../audio';
-import { acquireSkill, respecWeb } from '../../gb';
+import { acquireSkill, respecWeb, getLooks, SPIDERS, type SpiderLook } from '../../gb';
 import { ABILITIES, SKILLS_LIST, WEB_EDGES, type AbilityId } from '../../game/abilities';
 import { renderDetailCardHtml } from './abilitiesView';
 
 export interface AbilitiesViewState {
+  selectedSpecies: SpiderLook['species'];
   selectedNodeId: AbilityId;
   panX: number;
   panY: number;
@@ -15,6 +16,7 @@ export interface AbilitiesViewState {
 
 export function createAbilitiesViewState(): AbilitiesViewState {
   return {
+    selectedSpecies: getLooks().p1.species,
     selectedNodeId: 'dash',
     panX: -40,
     panY: 0,
@@ -36,6 +38,15 @@ export function clearAbilitiesKeyHandler(state: AbilitiesViewState) {
 export function bindAbilitiesEvents(container: HTMLElement, state: AbilitiesViewState, render: () => void) {
   document.body.classList.add('abilities-active');
   document.documentElement.classList.add('abilities-active');
+  container.querySelectorAll<HTMLButtonElement>('[data-ability-spider]').forEach(button => {
+    button.addEventListener('click', () => {
+      const spider = SPIDERS.find(s => s.id === button.dataset.abilitySpider);
+      if (!spider) return;
+      state.selectedSpecies = spider.id;
+      state.selectedNodeId = spider.skill as AbilityId;
+      render();
+    });
+  });
   const stage = container.querySelector<HTMLElement>('#swvStage');
   const detailPanel = container.querySelector<HTMLElement>('#swvDetailPanel');
   const openCardTab = container.querySelector<HTMLElement>('#btnOpenCardTab');
@@ -85,7 +96,7 @@ export function bindAbilitiesEvents(container: HTMLElement, state: AbilitiesView
     if (btnAcquire) {
       btnAcquire.onclick = () => {
         const targetId = (btnAcquire.dataset.id as AbilityId) || state.selectedNodeId;
-        const res = acquireSkill(targetId);
+        const res = acquireSkill(targetId, state.selectedSpecies);
         if (res.success) {
           state.selectedNodeId = targetId;
           sound.playTone(520, 0.1, 'triangle', 0.05, 200);
@@ -114,7 +125,8 @@ export function bindAbilitiesEvents(container: HTMLElement, state: AbilitiesView
   });
 
   const selectNode = (id: AbilityId, panTo = true) => {
-    if (!id || !ABILITIES[id]) return;
+    const spider = SPIDERS.find(s => s.id === state.selectedSpecies) || SPIDERS[0];
+    if (!id || !ABILITIES[id] || !(spider.pool as readonly string[]).includes(id)) return;
     state.selectedNodeId = id;
 
     if (state.isPanelCollapsed) {
@@ -126,7 +138,7 @@ export function bindAbilitiesEvents(container: HTMLElement, state: AbilitiesView
     });
 
     if (detailPanel) {
-      detailPanel.innerHTML = renderDetailCardHtml(id);
+      detailPanel.innerHTML = renderDetailCardHtml(id, state.selectedSpecies);
       bindDetailCardActions();
     }
 
@@ -281,7 +293,7 @@ export function bindAbilitiesEvents(container: HTMLElement, state: AbilitiesView
     // Hover: preview skill in details panel without losing selection halo
     node.addEventListener('mouseenter', () => {
       if (detailPanel) {
-        detailPanel.innerHTML = renderDetailCardHtml(id);
+        detailPanel.innerHTML = renderDetailCardHtml(id, state.selectedSpecies);
         bindDetailCardActions();
       }
     });
@@ -297,11 +309,13 @@ export function bindAbilitiesEvents(container: HTMLElement, state: AbilitiesView
   const getNextNodeInDirection = (currentId: AbilityId, dir: 'up' | 'down' | 'left' | 'right'): AbilityId | null => {
     const current = ABILITIES[currentId];
     if (!current) return null;
+    const spider = SPIDERS.find(s => s.id === state.selectedSpecies) || SPIDERS[0];
 
     let bestId: AbilityId | null = null;
     let bestScore = Infinity;
 
     for (const candidate of SKILLS_LIST) {
+      if (!(spider.pool as readonly string[]).includes(candidate.id)) continue;
       if (candidate.id === currentId) continue;
       const dx = candidate.x - current.x;
       const dy = candidate.y - current.y;
@@ -385,7 +399,7 @@ export function bindAbilitiesEvents(container: HTMLElement, state: AbilitiesView
 
   // Modal Confirm Reset action
   container.querySelector('#btnConfirmRespec')?.addEventListener('click', () => {
-    respecWeb();
+    respecWeb(state.selectedSpecies);
     state.selectedNodeId = 'dash';
     state.isRespecConfirmOpen = false;
     sound.playTone(380, 0.12, 'triangle', 0.05, 180);
@@ -436,7 +450,7 @@ export function bindAbilitiesEvents(container: HTMLElement, state: AbilitiesView
       if (next) selectNode(next, true);
     } else if (k === ' ' || k === 'Enter') {
       e.preventDefault();
-      const res = acquireSkill(state.selectedNodeId);
+      const res = acquireSkill(state.selectedNodeId, state.selectedSpecies);
       if (res.success) {
         sound.playTone(520, 0.1, 'triangle', 0.05, 200);
         setTimeout(() => sound.playTone(780, 0.18, 'triangle', 0.05, 100), 100);

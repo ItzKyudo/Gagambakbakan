@@ -14,6 +14,8 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   win_rate INTEGER DEFAULT 0 NOT NULL,
   online_exp INTEGER DEFAULT 0 NOT NULL,
   unlocked_skills JSONB DEFAULT '["dash"]'::jsonb,
+  spider_exp JSONB NOT NULL DEFAULT '{}'::jsonb,
+  spider_skills JSONB NOT NULL DEFAULT '{}'::jsonb,
   looks JSONB DEFAULT NULL,
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -27,6 +29,8 @@ ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS matches INTEGER DEFAULT 0;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS win_rate INTEGER DEFAULT 0;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS online_exp INTEGER DEFAULT 0;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS unlocked_skills JSONB DEFAULT '["dash"]'::jsonb;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS spider_exp JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS spider_skills JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS looks JSONB DEFAULT NULL;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
 
@@ -93,7 +97,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
 
 REVOKE INSERT, UPDATE ON public.profiles FROM PUBLIC, anon, authenticated;
 GRANT SELECT ON public.profiles TO anon, authenticated;
-GRANT UPDATE (username, looks, unlocked_skills, updated_at) ON public.profiles TO authenticated;
+GRANT UPDATE (username, looks, unlocked_skills, spider_skills, updated_at) ON public.profiles TO authenticated;
 
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created

@@ -31,8 +31,8 @@
   "outputs": [
     {
       "path": "spider-sheet.png",
-      "sha256": "f606819f590db33631dc5a482079e2f90d1a7f2fc7d2d866e090d534fac22dd9",
-      "bytes": 446267
+      "sha256": "21f576ca785a6e5f7342cbd3fca952dcf91f2a977e60629e6452a5bfc47ba5a9",
+      "bytes": 540684
     },
     {
       "path": "spider-sheet.json",
@@ -77,7 +77,7 @@
       {
         "id": "seam:idle",
         "status": "pass",
-        "value": 0.9861,
+        "value": 0.9928,
         "threshold": [
           0.8,
           1.25
@@ -86,7 +86,7 @@
       {
         "id": "seam:move_right",
         "status": "pass",
-        "value": 1.1254,
+        "value": 0.982,
         "threshold": [
           0.8,
           1.25
@@ -104,7 +104,7 @@
       {
         "id": "seam:climb",
         "status": "pass",
-        "value": 1.0404,
+        "value": 0.9558,
         "threshold": [
           0.8,
           1.25
@@ -138,8 +138,8 @@
     "inputs": [
       {
         "path": "../spider.rig.svg",
-        "sha256": "99ea67f76d872839ce4d9145252b2284a44f9fdb214020d8eabe45bbdb45ebde",
-        "bytes": 3136
+        "sha256": "559da0aae349a240a6b1b7407650178a6f7e35ab67035f7250a78ec6fab39791",
+        "bytes": 3138
       },
       {
         "path": "../spider.anim.json",
@@ -150,137 +150,137 @@
     "outputs": [
       {
         "path": "frames/idle-00.png",
-        "sha256": "f3c20e5f9eb538bdb944a6dda4a6fb2ec346d68302c4b5da193b9654c4ba3edd",
-        "bytes": 15230
+        "sha256": "45555a6f80d26c4beb271194cf1dc63a99c90e573c73be3cbd81837a09e69041",
+        "bytes": 19835
       },
       {
         "path": "frames/idle-01.png",
-        "sha256": "053796f896cb491be2521c1959738ddb4636df669e75880a656a5eb6961c56db",
-        "bytes": 16217
+        "sha256": "e7b46038a6a065309a7bceed6950f38e5dea398ef50638aeabd02e8a5ca2ae5a",
+        "bytes": 20475
       },
       {
         "path": "frames/idle-02.png",
-        "sha256": "f8419f4f59c5f7061bb7e5adced6fdc504add81dbc7ed6fcf964f649d5327364",
-        "bytes": 16525
+        "sha256": "1eea211a42ab65b57746bb59b8359fd067666cd25238a07a45e25a9282eaaa63",
+        "bytes": 20637
       },
       {
         "path": "frames/move_right-00.png",
-        "sha256": "09cc13c4be32dcd8d72e7636c1beb8615b0ef04ac70ce5f3162766e06cf37119",
-        "bytes": 20424
+        "sha256": "a51a2841384195370ed4f1cd402477488923fc70f709c83b5c8ab61b504578f4",
+        "bytes": 20885
       },
       {
         "path": "frames/move_right-01.png",
-        "sha256": "5d97d3358f764cb74890ffb4c1f9a0af78bd24c0345f73deed220df7db175b01",
-        "bytes": 19441
+        "sha256": "65cd45dd3329153bda50fad5a86a0e8f14528ae0edc487f2f2f661a174e0879c",
+        "bytes": 20917
       },
       {
         "path": "frames/move_right-02.png",
-        "sha256": "bec4de29a15d8ba377916a6c33da51cdb8753ca096ff4263841ef0d3b866a830",
-        "bytes": 15230
+        "sha256": "9a0f7108182451fa4cbeb6f0e304a4b20e03601a93659c138853e808f3266c4d",
+        "bytes": 19835
       },
       {
         "path": "frames/move_right-03.png",
-        "sha256": "4bde552ca1be8766a32f3958d14e98af16c357bfe1d3d4a323a69469092bc5dc",
-        "bytes": 20104
+        "sha256": "7539e89e26724b0aa49731d8fb0ea025eae6c2348fd621c97c94add38a89b1af",
+        "bytes": 21126
       },
       {
         "path": "frames/move_right-04.png",
-        "sha256": "2c1d302d169e7cf64adc88020caeede3507adf735b7ef8cd9cd26ea31de640b1",
-        "bytes": 20031
+        "sha256": "1cb959069b2ca69cf4ced699e9e170deeb1b3eb13b975f599c56d000eae25643",
+        "bytes": 21596
       },
       {
         "path": "frames/light_attack-01.png",
-        "sha256": "4e9a30d9a8ea5ac815ca415f3174f8a5423b32b3c3068540379f2816cb61019f",
-        "bytes": 17325
+        "sha256": "7a9ef66c22257ff601579b3311b3221a99bb72fa8eec36658ba0ae7da2b7d0fe",
+        "bytes": 21281
       },
       {
         "path": "frames/light_attack-02.png",
-        "sha256": "6735cdb9b915893df9d1827031bd4d906a10d89bc115a98e321287655e745450",
-        "bytes": 16523
+        "sha256": "58375c274e1aeaa2b1ca1e5269b040d94ff2829f9653be0aa9fc125ce99d9cf5",
+        "bytes": 19650
       },
       {
         "path": "frames/light_attack-03.png",
-        "sha256": "c4808cfc3f32beff75356f5bc6aef6e350e3f9028dad597e6eddb20fc3d6ff88",
-        "bytes": 17440
+        "sha256": "6339cc971c942829e044ef6b09a698210853873d9fbcbc4de304b9109ada6b90",
+        "bytes": 20473
       },
       {
         "path": "frames/heavy_attack-01.png",
-        "sha256": "18db83a891a1273e851a8c304e41b13e6149059a77a3cb86e947743238cd53a2",
-        "bytes": 16988
+        "sha256": "a068bbd36afdeb379b4dcb61f59d6917da1f50e5bf9c5c3e102fb257869b29bc",
+        "bytes": 22132
       },
       {
         "path": "frames/heavy_attack-02.png",
-        "sha256": "1ce0089088a0b2e0859cb6aa8f5340d307d45e957e4d36329528d503cfd9cbc1",
-        "bytes": 16297
+        "sha256": "c6c36335b7ffdb516a55d76f03324f03d340115bfd77e0444ac22b5e719ccdb0",
+        "bytes": 19654
       },
       {
         "path": "frames/heavy_attack-03.png",
-        "sha256": "edbf5c41951e2bce825c58804052b05ae5222fbda55ed27d8f27b58e09b63172",
-        "bytes": 16730
+        "sha256": "7ae70b4ce35f4ac15a78828a83ade6af385dcae93251ed4542ba9c074b82c501",
+        "bytes": 20711
       },
       {
         "path": "frames/heavy_attack-04.png",
-        "sha256": "72bb64f955e717136bd0890ba3c9ae46452f61903b381f4e2540d4ce778e65de",
-        "bytes": 16701
+        "sha256": "6008733c9c8542002bfc00c4a8ba36ce94cafbd47f17c62969570fb7264c7e9a",
+        "bytes": 19066
       },
       {
         "path": "frames/block-00.png",
-        "sha256": "6da9a410f6e0647874ab3bff5fd008810a31275978ca2a3d97c1fb3449821d0a",
-        "bytes": 15923
+        "sha256": "3edaa965745cdac43750fcef524627be4e1156ac6d67e7057f17d7d1de3bac42",
+        "bytes": 19359
       },
       {
         "path": "frames/block_break-00.png",
-        "sha256": "5d899710843f28199dd381f5861968201d62fa713297a612ba7f4482ba4f0a5b",
-        "bytes": 15749
+        "sha256": "49e8cfe8e48d1a3f0a6a24872ebcfb3382a63d838cb2d08836dd29eadf8fd9b4",
+        "bytes": 19357
       },
       {
         "path": "frames/block_break-01.png",
-        "sha256": "b49f3aa4eb7298f6e5172a4c06c14186c982cd8ec8d4f47dab59cd69e44d9a84",
-        "bytes": 16863
+        "sha256": "2e5e106b045645238682c8ad92bfb312d2e2a1e1d472417355c4be7ac9ae6c73",
+        "bytes": 21280
       },
       {
         "path": "frames/block_break-02.png",
-        "sha256": "4d220fba322fc18e582a5d9987567dacacf0ab0e089b0df1642ad36eb20b9d93",
-        "bytes": 17982
+        "sha256": "92778d53308100aa45ba32c83b31ce88221a0ce38f2d6d051004a9b5ce26c831",
+        "bytes": 21955
       },
       {
         "path": "frames/parry-00.png",
-        "sha256": "800ddd884ffb8cd144607a9f231bc39a2a4ef71e62329825dfcf26c1666b5b2a",
-        "bytes": 15901
+        "sha256": "c411d0200ee5a01ab14120caa09ebfd5169dffe1e7114c668196aada8e2956ff",
+        "bytes": 19001
       },
       {
         "path": "frames/parry-01.png",
-        "sha256": "445aa9b7df6b95554af89133be987f21c5de3c9f5f0b6a32d55c386b56afa67c",
-        "bytes": 18033
+        "sha256": "5941b9e51fa6ec5e3a205a1bbdf89f54f8c0b650d98ce46a0af97b4c9e29ec11",
+        "bytes": 19878
       },
       {
         "path": "frames/parry-02.png",
-        "sha256": "8def8c37288c2fb80859e67e27a8cbd02f14c8f6fcc1068e8cf25efab328f165",
-        "bytes": 16492
+        "sha256": "56c438f766258520a781508af3cffdb9547c738c3eeb44b9ee3f6607def0d54c",
+        "bytes": 20464
       },
       {
         "path": "frames/climb-00.png",
-        "sha256": "2505b47a852bb39de4fe957f22dbbecf70623b69c4613197545a41bc6d8744a8",
-        "bytes": 13078
+        "sha256": "3337ffe5143e1ee32668f3455e19175177c8f80a4f10ac9d5242b2ac12bc9f5f",
+        "bytes": 14499
       },
       {
         "path": "frames/climb-01.png",
-        "sha256": "db22d9a667edea45b64e1e09be262d1012926692002abd2fa73dd82e42b6ca94",
-        "bytes": 13308
+        "sha256": "18a4cd47cb9193b226618641320eb7a289de9dd80af1ea1bc57b908def10bbee",
+        "bytes": 13705
       },
       {
         "path": "frames/climb-02.png",
-        "sha256": "8af185731b3001ba42f98b6a175fd51b8fb6d1e1a3600ddf6fb26f15638d08c6",
-        "bytes": 12954
+        "sha256": "011a5058031ab1be9a33bdc782ad09f7908903c27d9a0c1e18c1c710f9b8c42e",
+        "bytes": 13953
       },
       {
         "path": "frames/climb-03.png",
-        "sha256": "0ea22582107667d334a788c7345b4597064c5dbe1aad59e91630e5aeb0d08748",
-        "bytes": 13410
+        "sha256": "24b69d9b4fde2a5fd2df2271106cb25514b85f23acb434e0f75b5b62d9dac96e",
+        "bytes": 14737
       },
       {
         "path": "clips.json",
-        "sha256": "6198ba9d4adc1c7d5c23c334cce234467a63431ff08dda697076fe8e175a3a4f",
+        "sha256": "b7b3e9d0ef1e5463063fc0fc4d135d155babc6d793ba759ffb1d7aa68f4e7f0b",
         "bytes": 5608
       }
     ],
@@ -292,8 +292,8 @@
   "route": "vector",
   "rig": {
     "path": "../spider.rig.svg",
-    "sha256": "99ea67f76d872839ce4d9145252b2284a44f9fdb214020d8eabe45bbdb45ebde",
-    "bytes": 3136
+    "sha256": "559da0aae349a240a6b1b7407650178a6f7e35ab67035f7250a78ec6fab39791",
+    "bytes": 3138
   },
   "anim": {
     "path": "../spider.anim.json",

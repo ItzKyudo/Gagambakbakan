@@ -55,28 +55,30 @@ function drawPattern(ctx: CanvasRenderingContext2D, look: Look, colors: Colors):
   if (look.pattern === 'stripes') return;
   ctx.save();
   ctx.beginPath();
-  ctx.ellipse(-15, -29, 22, 19, 0, 0, Math.PI * 2);
+  ctx.ellipse(-21, -29, 20, 15, 0, 0, Math.PI * 2);
   ctx.clip();
   ctx.fillStyle = colors.main;
-  ctx.fillRect(-40, -52, 50, 46);
+  ctx.fillRect(-44, -46, 46, 34);
   ctx.strokeStyle = colors.dark;
   ctx.fillStyle = colors.dark;
   ctx.lineWidth = 2.5;
   if (look.pattern === 'custom') {
     for (const stroke of decodePatternArt(look.customPattern)) {
       ctx.beginPath();
-      stroke.points.forEach(([x, y], i) => i ? ctx.lineTo(-39 + x * 48, -50 + y * 42) : ctx.moveTo(-39 + x * 48, -50 + y * 42));
+      stroke.points.forEach(([x, y], i) => i ? ctx.lineTo(-42 + x * 42, -46 + y * 34) : ctx.moveTo(-42 + x * 42, -46 + y * 34));
       ctx.strokeStyle = stroke.color;
       ctx.lineWidth = 2.2;
       ctx.stroke();
     }
   } else if (look.pattern === 'dots' || look.pattern === 'rings') {
+    ctx.translate(-6, 0);
     for (const [x, y] of [[-28, -37], [-12, -42], [-3, -30], [-24, -21], [-10, -17]]) {
       ctx.beginPath();
       ctx.arc(x, y, look.pattern === 'rings' ? 4 : 3, 0, Math.PI * 2);
       look.pattern === 'rings' ? ctx.stroke() : ctx.fill();
     }
   } else if (look.pattern !== 'plain') {
+    ctx.translate(-6, 0);
     for (const x of [-29, -17, -5]) {
       ctx.beginPath();
       if (look.pattern === 'chevron' || look.pattern === 'diamonds') {

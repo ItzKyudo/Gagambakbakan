@@ -8,7 +8,7 @@ from PIL import Image
 
 
 HERE = Path(__file__).resolve().parent
-RENDER = HERE / "render-v1"
+RENDER = HERE / "render-v3"
 source = json.loads((RENDER / "clips.json").read_text(encoding="utf-8"))
 files = {frame["name"]: RENDER / frame["file"] for frame in source["frames"]}
 clips = source["clips"]

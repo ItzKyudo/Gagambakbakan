@@ -110,8 +110,8 @@ export function bindCustomizeEvents(container: HTMLElement, state: CustomizeStat
     const pointFromEvent = (event: PointerEvent): [number, number] | null => {
       if (!canvas) return null;
       const rect = canvas.getBoundingClientRect();
-      const x = ((event.clientX - rect.left) / rect.width * 288 - 50) / 96;
-      const y = ((event.clientY - rect.top) / rect.height * 224 - 60) / 84;
+      const x = ((event.clientX - rect.left) / rect.width * 288 - 44) / 84;
+      const y = ((event.clientY - rect.top) / rect.height * 224 - 68) / 68;
       return ((x - .5) / .5) ** 2 + ((y - .5) / .5) ** 2 <= 1 ? [x, y] : null;
     };
     const paint = () => {

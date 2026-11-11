@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="144" height="112" viewBox="0 0 144 112" data-codeart="rig.v1" data-anchor="64 80" data-facing="right" data-outline="#101818">
   <style>
-    .c-outline{stroke:#101818;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;fill:none}
-    .c-far{stroke:#8f4f14;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;fill:none}
-    .c-near{stroke:#f2a33a;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;fill:none}
+    .c-outline{stroke:#101818;stroke-width:6;stroke-linecap:round;stroke-linejoin:round;fill:none}
+    .c-far{stroke:#8f4f14;stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round;fill:none}
+    .c-near{stroke:#f2a33a;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;fill:none}
     .c-body{fill:#f2a33a;stroke:#101818;stroke-width:2}
     .c-light{fill:#ffd694}
     .c-dark{fill:#8f4f14}
@@ -12,27 +12,28 @@
     .c-fang{fill:#d9d2bd;stroke:#101818;stroke-width:1}
   </style>
   <g id="root" data-pivot="64 80">
-    <g id="far_rear" data-pivot="44 50" data-z="10"><path class="c-outline" d="M44 50 L30 49 L20 63 L14 80"/><path class="c-far" d="M44 50 L30 49 L20 63 L14 80"/></g>
-    <g id="far_mid" data-pivot="52 58" data-z="11"><path class="c-outline" d="M52 58 L38 62 L32 72 L30 80"/><path class="c-far" d="M52 58 L38 62 L32 72 L30 80"/></g>
-    <g id="far_front" data-pivot="73 57" data-z="12"><path class="c-outline" d="M73 57 L84 62 L91 72 L92 80"/><path class="c-far" d="M73 57 L84 62 L91 72 L92 80"/></g>
-    <g id="far_lead" data-pivot="78 49" data-z="13"><path class="c-outline" d="M78 49 L92 47 L103 60 L113 79"/><path class="c-far" d="M78 49 L92 47 L103 60 L113 79"/></g>
-    <g id="abdomen" data-pivot="52 52" data-z="30">
-      <ellipse class="c-body" cx="49" cy="51" rx="24" ry="21"/>
-      <ellipse class="c-light" cx="42" cy="39" rx="9" ry="3"/>
-      <path class="c-stripe" d="M38 32 Q31 51 38 70 M48 31 Q42 51 48 72 M58 32 Q55 52 59 70 M67 39 Q66 53 68 63"/>
-      <ellipse class="c-dark" cx="48" cy="54" rx="3" ry="1"/>
+    <g id="far_rear" data-pivot="53 56" data-z="10"><path class="c-outline" d="M53 56 L42 32 L35 80"/><path class="c-far" d="M53 56 L42 32 L35 80"/></g>
+    <g id="far_mid" data-pivot="57 56" data-z="11"><path class="c-outline" d="M57 56 L59 31 L62 80"/><path class="c-far" d="M57 56 L59 31 L62 80"/></g>
+    <g id="far_front" data-pivot="61 56" data-z="12"><path class="c-outline" d="M61 56 L80 32 L89 80"/><path class="c-far" d="M61 56 L80 32 L89 80"/></g>
+    <g id="far_lead" data-pivot="63 56" data-z="13"><path class="c-outline" d="M63 56 L103 32 L116 80"/><path class="c-far" d="M63 56 L103 32 L116 80"/></g>
+    <g id="abdomen" data-pivot="43 51" data-z="30">
+      <ellipse class="c-body" cx="43" cy="51" rx="22" ry="17"/>
+      <ellipse class="c-light" cx="37" cy="42" rx="8" ry="2.5"/>
+      <path class="c-stripe" d="M32 38 Q27 51 32 64 M41 35 Q37 51 41 67 M50 36 Q48 52 51 66 M58 41 Q58 52 59 61"/>
+      <ellipse class="c-dark" cx="42" cy="54" rx="3" ry="1"/>
     </g>
-    <g id="near_rear" data-pivot="42 56" data-z="60"><path class="c-outline" d="M42 56 L25 56 L19 66 L13 80"/><path class="c-near" d="M42 56 L25 56 L19 66 L13 80"/></g>
-    <g id="near_mid" data-pivot="53 60" data-z="61"><path class="c-outline" d="M53 60 L41 66 L39 75 L39 80"/><path class="c-near" d="M53 60 L41 66 L39 75 L39 80"/></g>
-    <g id="near_front" data-pivot="73 60" data-z="62"><path class="c-outline" d="M73 60 L83 65 L86 74 L85 80"/><path class="c-near" d="M73 60 L83 65 L86 74 L85 80"/></g>
-    <g id="near_lead" data-pivot="81 51" data-z="70"><path class="c-outline" d="M81 51 L95 51 L105 61 L114 80"/><path class="c-near" d="M81 51 L95 51 L105 61 L114 80"/></g>
-    <g id="head" data-pivot="78 51" data-z="65">
-      <ellipse class="c-body" cx="78" cy="51" rx="15" ry="16"/>
-      <ellipse class="c-light" cx="73" cy="40" rx="6" ry="2.5"/>
-      <circle class="c-eye" cx="78" cy="49" r="4"/><circle class="c-eye" cx="87" cy="50" r="3.7"/>
-      <circle class="c-eye" cx="69" cy="49" r="2"/><circle class="c-eye" cx="94" cy="53" r="2"/>
-      <circle class="c-glint" cx="77" cy="48" r="1"/><circle class="c-glint" cx="86" cy="49" r="1"/>
-      <path class="c-fang" d="M88 61 L94 65 L90 69 Z M83 63 L87 68 L83 70 Z"/>
+    <g id="thorax" data-pivot="59 54" data-z="50"><ellipse class="c-body" cx="59" cy="54" rx="11" ry="10"/></g>
+    <g id="near_rear" data-pivot="51 56" data-z="20"><path class="c-outline" d="M51 56 L32 32 L25 80"/><path class="c-near" d="M51 56 L32 32 L25 80"/></g>
+    <g id="near_mid" data-pivot="55 56" data-z="21"><path class="c-outline" d="M55 56 L49 31 L52 80"/><path class="c-near" d="M55 56 L49 31 L52 80"/></g>
+    <g id="near_front" data-pivot="59 56" data-z="62"><path class="c-outline" d="M59 56 L76 32 L79 80"/><path class="c-near" d="M59 56 L76 32 L79 80"/></g>
+    <g id="near_lead" data-pivot="61 56" data-z="63"><path class="c-outline" d="M61 56 L96 32 L106 80"/><path class="c-near" d="M61 56 L96 32 L106 80"/></g>
+    <g id="head" data-pivot="75 51" data-z="65">
+      <ellipse class="c-body" cx="75" cy="51" rx="15" ry="14"/>
+      <ellipse class="c-light" cx="70" cy="41" rx="6" ry="2.5"/>
+      <circle class="c-eye" cx="75" cy="49" r="4"/><circle class="c-eye" cx="84" cy="50" r="3.7"/>
+      <circle class="c-eye" cx="66" cy="49" r="2"/><circle class="c-eye" cx="91" cy="53" r="2"/>
+      <circle class="c-glint" cx="74" cy="48" r="1"/><circle class="c-glint" cx="83" cy="49" r="1"/>
+      <path class="c-fang" d="M85 61 L91 65 L87 69 Z M80 63 L84 68 L80 70 Z"/>
     </g>
   </g>
 </svg>

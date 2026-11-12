@@ -25,7 +25,7 @@ import {
 } from 'lucide';
 import { getAbilityPoints, getExpProgress, getProgress, getUnlockedIds, getLooks, SPIDERS } from '../../gb';
 import { ABILITIES, SKILLS_LIST, WEB_EDGES, getSpiderAbility, isNodeAvailableToUnlock, type AbilityId } from '../../game/abilities';
-import { spiderAbilityIcon } from '../../game/spiderIcons';
+import { spiderAbilityIcon, spiderIconHue } from '../../game/spiderIcons';
 import { getPlayerRankTitle } from './rankTitle';
 
 function icon(node: IconNode, attrs: Record<string, string | number> = {}): string {
@@ -88,7 +88,7 @@ export function renderDetailCardHtml(nodeId: AbilityId, species = getLooks().p1.
 
     <div class="ac-card-head">
       <div class="ac-gem-preview">
-        <img src="${spiderAbilityIcon(species, sel.id)}" alt="" class="ac-gem-img" />
+        <img src="${spiderAbilityIcon(species, sel.id)}" alt="" class="ac-gem-img" style="--spider-icon-hue:${spiderIconHue(species)}" />
       </div>
       <div>
         <h2 class="ac-name">${sel.name}</h2>
@@ -205,7 +205,7 @@ export function renderAbilitiesView(
           `}
 
           <!-- Extracted Ability Card Art -->
-          <image href="${spiderAbilityIcon(species, s.id)}" x="-22" y="-24" width="44" height="48" preserveAspectRatio="xMidYMid meet" style="opacity:${isUnlockedNode ? 1 : (isAvail ? 0.95 : 0.4)}; filter:${isUnlockedNode ? `drop-shadow(0 0 6px ${strokeCol})` : (isAvail ? 'contrast(1.08) brightness(0.95)' : 'grayscale(1) brightness(0.4)')};" />
+          <image href="${spiderAbilityIcon(species, s.id)}" x="-22" y="-24" width="44" height="48" preserveAspectRatio="xMidYMid meet" style="opacity:${isUnlockedNode ? 1 : (isAvail ? 0.95 : 0.4)}; filter:hue-rotate(${spiderIconHue(species)}) ${isUnlockedNode ? `drop-shadow(0 0 6px ${strokeCol})` : (isAvail ? 'contrast(1.08) brightness(0.95)' : 'grayscale(1) brightness(0.4)')};" />
 
           <!-- Corner Badges -->
           ${!isUnlockedNode && !isAvail ? `

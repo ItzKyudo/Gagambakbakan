@@ -1,6 +1,6 @@
 import { sound } from '../audio';
 import { ABILITIES, getSpiderAbility, type AbilityId } from '../game/abilities';
-import { spiderAbilityIcon } from '../game/spiderIcons';
+import { spiderAbilityIcon, spiderIconHue } from '../game/spiderIcons';
 import { MAX_GRIP } from '../game/constants';
 import { getKeys, keyLabel, getColor, getLooks, getSettings, getProgress, getLevel, SPIDERS, spiderSVG, saveSettings, applyQualityClass, type GraphicQuality } from '../gb';
 
@@ -222,7 +222,7 @@ export class GamePage {
             <button class="gem" id="g1a" data-slot="0" tabindex="-1" type="button" aria-label="Skill 1">
               <svg class="shape bg" viewBox="0 0 100 100" aria-hidden="true"><polygon points="50,3 91,26.5 91,73.5 50,97 9,73.5 9,26.5"/></svg>
               <div class="gem-icon-frame">
-                <img class="gem-ability-icon" id="gi1a" src="${spiderAbilityIcon('weaver', 'dash')}" alt="Dash" />
+                <img class="gem-ability-icon" id="gi1a" src="${spiderAbilityIcon('weaver', 'dash')}" style="--spider-icon-hue:${spiderIconHue('weaver')}" alt="Dash" />
                 <div class="gem-cd-wipe" id="gw1a"></div>
               </div>
               <span class="gem-cd-num" id="gcd1a"></span>
@@ -231,7 +231,7 @@ export class GamePage {
             <button class="gem" id="g1b" data-slot="1" tabindex="-1" type="button" aria-label="Skill 2">
               <svg class="shape bg" viewBox="0 0 100 100" aria-hidden="true"><polygon points="50,3 91,26.5 91,73.5 50,97 9,73.5 9,26.5"/></svg>
               <div class="gem-icon-frame">
-                <img class="gem-ability-icon" id="gi1b" src="${spiderAbilityIcon('weaver', 'web')}" alt="Web" />
+                <img class="gem-ability-icon" id="gi1b" src="${spiderAbilityIcon('weaver', 'web')}" style="--spider-icon-hue:${spiderIconHue('weaver')}" alt="Web" />
                 <div class="gem-cd-wipe" id="gw1b"></div>
               </div>
               <span class="gem-cd-num" id="gcd1b"></span>
@@ -244,7 +244,7 @@ export class GamePage {
             <div class="gem" id="g2a">
               <svg class="shape bg" viewBox="0 0 100 100" aria-hidden="true"><polygon points="50,3 91,26.5 91,73.5 50,97 9,73.5 9,26.5"/></svg>
               <div class="gem-icon-frame">
-                <img class="gem-ability-icon" id="gi2a" src="${spiderAbilityIcon('weaver', 'dash')}" alt="Dash" />
+                <img class="gem-ability-icon" id="gi2a" src="${spiderAbilityIcon('weaver', 'dash')}" style="--spider-icon-hue:${spiderIconHue('weaver')}" alt="Dash" />
                 <div class="gem-cd-wipe" id="gw2a"></div>
               </div>
               <span class="gem-cd-num" id="gcd2a"></span>
@@ -253,7 +253,7 @@ export class GamePage {
             <div class="gem" id="g2b">
               <svg class="shape bg" viewBox="0 0 100 100" aria-hidden="true"><polygon points="50,3 91,26.5 91,73.5 50,97 9,73.5 9,26.5"/></svg>
               <div class="gem-icon-frame">
-                <img class="gem-ability-icon" id="gi2b" src="${spiderAbilityIcon('weaver', 'web')}" alt="Web" />
+                <img class="gem-ability-icon" id="gi2b" src="${spiderAbilityIcon('weaver', 'web')}" style="--spider-icon-hue:${spiderIconHue('weaver')}" alt="Web" />
                 <div class="gem-cd-wipe" id="gw2b"></div>
               </div>
               <span class="gem-cd-num" id="gcd2b"></span>
@@ -802,7 +802,7 @@ export class GamePage {
         </svg>
         <span class="num">${k + 1}</span>
         <span class="pgem">
-          <img src="${spiderAbilityIcon(species, s.id)}" alt="" class="card-icon-img" />
+          <img src="${spiderAbilityIcon(species, s.id)}" alt="" class="card-icon-img" style="--spider-icon-hue:${spiderIconHue(species)}" />
         </span>
         <div>
           <h3>${s.name}</h3>
@@ -1153,6 +1153,7 @@ export class GamePage {
       if (this.gemSeen[tag] !== `${s1.species}:${sd.id}`) {
         this.gemSeen[tag] = `${s1.species}:${sd.id}`;
         (gi as HTMLImageElement).src = spiderAbilityIcon(s1.species, sd.id);
+        gi.style.setProperty('--spider-icon-hue', spiderIconHue(s1.species));
         (gi as HTMLImageElement).alt = sd.name;
         g.title = `${sd.name} (${keyLabel(bindCode)})${sd.use === 'hang' ? ' - only while dangling' : ''}`;
         g.setAttribute('aria-label', sd.name);
@@ -1201,6 +1202,7 @@ export class GamePage {
       if (this.gemSeen[tag] !== `${s2.species}:${sd.id}`) {
         this.gemSeen[tag] = `${s2.species}:${sd.id}`;
         (gi as HTMLImageElement).src = spiderAbilityIcon(s2.species, sd.id);
+        gi.style.setProperty('--spider-icon-hue', spiderIconHue(s2.species));
         (gi as HTMLImageElement).alt = sd.name;
         g.title = `${sd.name}${human ? ` (${keyLabel(bindCode)})` : ''}${sd.use === 'hang' ? ' - only while dangling' : ''}`;
       }

@@ -573,6 +573,7 @@
   object-fit: contain;
   border-radius: 6px;
   margin-top: 2px;
+  filter: hue-rotate(var(--spider-icon-hue, 0deg));
 }
 
 .profile-abilities h3 {

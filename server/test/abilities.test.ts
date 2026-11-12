@@ -5,7 +5,7 @@ import { ALL_ABILITY_IDS as clientAbilityIds, getSpiderAbility, SPIDER_SKILL_STY
 import { BattleCombat } from '../src/rooms/BattleCombat';
 import { SPIDER_VARIANTS, spiderVariant } from '../src/spiderVariants';
 import { SPIDER_VARIANTS as clientVariants, spiderVariant as clientVariant } from '../../client/src/game/spiderVariants';
-import { spiderAbilityIcon } from '../../client/src/game/spiderIcons';
+import { spiderAbilityIcon, spiderIconHue } from '../../client/src/game/spiderIcons';
 
 test('server rejects invalid and duplicate client ability ids', () => {
   assert.deepEqual(getRandomAbilities(3, [], ['bogus']), ['dash']);
@@ -34,7 +34,7 @@ test('each spider has 16 named skill variants and can unlock its full kit', () =
     assert.equal(new Set(SPIDER_POOLS[species]).size, 16);
     for (const id of SPIDER_POOLS[species]) {
       names.add(getSpiderAbility(species, id).name);
-      icons.add(spiderAbilityIcon(species, id));
+      icons.add(`${spiderAbilityIcon(species, id)}|${spiderIconHue(species)}`);
       assert.equal(spiderVariant(species, id), clientVariant(species, id));
     }
     const progress = validateSpiderProgress({ [species]: { exp: 5950, skills: ALL_ABILITY_IDS } }, [], 0, species);
@@ -43,7 +43,8 @@ test('each spider has 16 named skill variants and can unlock its full kit', () =
   assert.equal(names.size, 80);
   assert.equal(icons.size, 80);
   for (const id of ALL_ABILITY_IDS) assert.equal(new Set(Object.keys(SPIDER_STARTERS).map(species => spiderVariant(species, id))).size, 5);
-  assert.match(decodeURIComponent(spiderAbilityIcon('weaver', 'web')), /#7551c6/);
+  assert.equal(spiderAbilityIcon('weaver', 'web'), '/abilities/web.png');
+  assert.equal(new Set(Object.keys(SPIDER_STARTERS).map(spiderIconHue)).size, 5);
 });
 
 test('spider control skills have distinct combat effects', () => {

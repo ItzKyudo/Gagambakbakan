@@ -687,6 +687,7 @@ body.abilities-active .menu-view-container {
   height: 100%;
   object-fit: contain;
   display: block;
+  filter: hue-rotate(var(--spider-icon-hue, 0deg));
 }
 
 .ac-name {

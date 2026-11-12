@@ -7,7 +7,7 @@ import { keyLabel, getKeys } from '../gb';
 import { decodePatternArt } from '../patternArt';
 import { attackPose, gaitMotion, skillBurst, smoothMotion, type SkillBurst } from './spiderMotion';
 import { ALL_ABILITY_IDS, getSpiderAbility, type AbilityId } from './abilities';
-import { spiderAbilityIcon } from './spiderIcons';
+import { spiderAbilityIcon, spiderIconHue } from './spiderIcons';
 
 interface Particle {
   x: number;
@@ -698,7 +698,10 @@ export class GagambakbakanScene extends Phaser.Scene {
         for (let i = 0; i < 7 + index % 3; i++) { const a = i * Math.PI * 2 / (7 + index % 3) + p; ctx.moveTo(Math.cos(a) * (radius - 10), Math.sin(a) * (radius - 10)); ctx.lineTo(Math.cos(a) * (radius + 5), Math.sin(a) * (radius + 5)); }
       }
       ctx.stroke();
-      if (cast.image.complete && cast.image.naturalWidth) ctx.drawImage(cast.image, -17, -17, 34, 34);
+      if (cast.image.complete && cast.image.naturalWidth) {
+        ctx.filter = `hue-rotate(${spiderIconHue(cast.species)})`;
+        ctx.drawImage(cast.image, -17, -17, 34, 34);
+      }
       ctx.restore();
     }
   }

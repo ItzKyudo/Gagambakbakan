@@ -667,6 +667,7 @@ body.game-active::-webkit-scrollbar {
   object-fit: contain;
   display: block;
   opacity: 1;
+  filter: hue-rotate(var(--spider-icon-hue, 0deg));
   transition: opacity 0.15s ease, filter 0.15s ease;
 }
 
@@ -728,7 +729,7 @@ body.game-active::-webkit-scrollbar {
 
 .rail .gem.ready .gem-ability-icon {
   opacity: 1;
-  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.25));
+  filter: hue-rotate(var(--spider-icon-hue, 0deg)) drop-shadow(0 0 4px rgba(255, 255, 255, 0.25));
 }
 
 /* DISABLED STATE (OFF - e.g. hang ability while clinging) */
@@ -737,7 +738,7 @@ body.game-active::-webkit-scrollbar {
 }
 
 .rail .gem.off .gem-ability-icon {
-  filter: grayscale(0.85) brightness(0.6);
+  filter: hue-rotate(var(--spider-icon-hue, 0deg)) grayscale(0.85) brightness(0.6);
 }
 
 .rail .gem.off .bg polygon {

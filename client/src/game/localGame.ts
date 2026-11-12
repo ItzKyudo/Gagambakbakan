@@ -142,6 +142,8 @@ export class LocalGameEngine {
       cd2max: 5,
       snare: 0,
       venom: 0,
+      soak: 0,
+      burn: 0,
       dashT: 0,
       dashDir: 0,
       pounce: false,
@@ -271,6 +273,8 @@ export class LocalGameEngine {
     s.cd2max = ABILITIES[s.skill2 as AbilityId]?.cd || 5;
     s.snare = 0;
     s.venom = 0;
+    s.soak = 0;
+    s.burn = 0;
     s.dashT = 0;
     s.dashDir = 0;
     s.pounce = false;

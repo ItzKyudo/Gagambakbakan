@@ -435,6 +435,27 @@ export class GagambakbakanScene extends Phaser.Scene {
       webs.forEach((w: any) => {
         const sg = Math.sign(w.vx) || 1;
         if (w.k === 'spit') {
+          if (w.species === 'weaver') {
+            ctx.save();
+            ctx.translate(w.x, w.y);
+            ctx.fillStyle = 'rgba(90,210,246,.35)';
+            for (let d = 1; d <= 3; d++) {
+              ctx.beginPath();
+              ctx.arc(-sg * d * 8, Math.sin(t * 22 + d) * 3, 4 - d * .8, 0, Math.PI * 2);
+              ctx.fill();
+            }
+            ctx.fillStyle = '#65d9f5';
+            ctx.strokeStyle = '#d7faff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(sg * 12, 0);
+            ctx.quadraticCurveTo(0, -11, -sg * 8, 0);
+            ctx.quadraticCurveTo(0, 11, sg * 12, 0);
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+            return;
+          }
           ctx.save();
           ctx.translate(w.x, w.y);
 
@@ -800,6 +821,8 @@ export class GagambakbakanScene extends Phaser.Scene {
       if (s.quake && s.quake > 0) {
         const k = 1 - s.quake / 0.5;
         const colLight = s.colorLight || (s.id === 0 ? COLORS.amberLight : COLORS.jadeLight);
+        const elementColor: Record<string, string> = { weaver: '#7bdcff', hunter: '#d4f5ff', guardian: '#e8d9b0', wolf: '#ff9b43', lynx: '#b3dd72' };
+        const waveColor = elementColor[s.species] || colLight;
         const baseY = STICK.y + STICK.th + 4;
         ctx.save();
         ctx.lineCap = 'round';
@@ -809,7 +832,7 @@ export class GagambakbakanScene extends Phaser.Scene {
           const radiusX = k * 280 * scale;
           const radiusY = (10 + k * 10) * scale;
           ctx.globalAlpha = (1 - k) * (idx === 0 ? 0.9 : 0.65);
-          ctx.strokeStyle = idx === 0 ? '#e8d9b0' : colLight;
+          ctx.strokeStyle = idx === 0 ? waveColor : colLight;
           ctx.lineWidth = idx === 0 ? 4 : 2.5;
           ctx.beginPath();
           ctx.ellipse(s.x, baseY + 2, radiusX, radiusY, 0, 0, Math.PI * 2);
@@ -821,7 +844,7 @@ export class GagambakbakanScene extends Phaser.Scene {
         [-1, 1].forEach((dir) => {
           const wx = clamp(s.x + dir * waveDist, STICK.l, STICK.r);
           ctx.globalAlpha = (1 - k) * 0.85;
-          ctx.strokeStyle = '#fff3d1';
+          ctx.strokeStyle = waveColor;
           ctx.lineWidth = 2.6;
           ctx.beginPath();
           for (let j = -2; j <= 2; j++) {
@@ -3167,6 +3190,35 @@ export class GagambakbakanScene extends Phaser.Scene {
         ctx.globalAlpha = (1 - ph) * 0.8 * Math.min(1, s.venom * 2);
         ctx.beginPath();
         ctx.arc(vx, vy, 2.6 - ph * 1.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    if (s.soak > 0 && !s.hang) {
+      ctx.save();
+      ctx.strokeStyle = '#83e5ff';
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = Math.min(.9, s.soak);
+      for (let q = 0; q < 3; q++) {
+        const phase = (t * 2 + q / 3) % 1;
+        ctx.beginPath();
+        ctx.arc(bx + (q - 1) * 17, by + 13 - phase * 25, 2 + phase * 3, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    if (s.burn > 0 && !s.hang) {
+      ctx.save();
+      ctx.globalAlpha = Math.min(.9, s.burn);
+      ctx.fillStyle = '#ff9b43';
+      for (let q = 0; q < 4; q++) {
+        const phase = (t * 3 + q / 4) % 1;
+        ctx.beginPath();
+        ctx.moveTo(bx + (q - 1.5) * 13, by + 9);
+        ctx.quadraticCurveTo(bx + (q - 1.5) * 13 - 5, by - 5 - phase * 14, bx + (q - 1.5) * 13 + 3, by - 9 - phase * 17);
+        ctx.quadraticCurveTo(bx + (q - 1.5) * 13 + 7, by - 1, bx + (q - 1.5) * 13, by + 9);
         ctx.fill();
       }
       ctx.restore();

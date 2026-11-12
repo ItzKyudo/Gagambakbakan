@@ -446,6 +446,8 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
     s.cd2max = s.skill2 ? (ABILITIES[s.skill2 as AbilityId]?.cd || 5) : 0;
     s.snare = 0;
     s.venom = 0;
+    s.soak = 0;
+    s.burn = 0;
     s.dashT = 0;
     s.dashDir = 0;
     s.pounce = false;

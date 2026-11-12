@@ -1,5 +1,5 @@
-import { ABILITIES, spiderSkillStrength, type AbilityId } from '../abilities';
-import { spiderVariant } from '../spiderVariants';
+import { ABILITIES, type AbilityId } from '../abilities';
+import { spiderMove, type SpiderPulse } from '../spiderMoves';
 import type { BattleStateData, PlayerStateData } from './schema/BattleState';
 
 const STICK = { l: 100, r: 1100, y: 240, th: 22 };
@@ -96,6 +96,8 @@ private fall(s: PlayerStateData) {
   s.dashT = 0;
   s.snare = 0;
   s.venom = 0;
+  s.soak = 0;
+  s.burn = 0;
   s.pounce = false;
   s.power = 0;
   s.shield = 0;
@@ -352,249 +354,76 @@ private doStrike(a: PlayerStateData, b: PlayerStateData) {
   }
 }
 
-private applySpiderVariant(s: PlayerStateData, o: PlayerStateData, id: AbilityId) {
-  const bonus = spiderVariant(s.species, id);
-  const near = !s.hang && !o.hang && !o.ko && o.inv <= 0 && Math.abs(o.x - s.x) < 135;
-  const exposed = near && !o.blocking && o.shield <= 0;
-  switch (bonus) {
-    case 'thread': if (exposed) o.snare = Math.max(o.snare, 0.32); break;
-    case 'silkguard': s.shield = Math.max(s.shield, 0.8); break;
-    case 'focus': s.power = Math.max(s.power, 1.8); break;
-    case 'evade': s.inv = Math.max(s.inv, 0.16); break;
-    case 'brace': s.guard = Math.min(100, s.guard + 10); break;
-    case 'clamp': if (exposed) o.snare = Math.max(o.snare, 0.4); break;
-    case 'chase': s.hasteT = Math.max(s.hasteT, 1); break;
-    case 'fang': if (exposed) o.venom = Math.max(o.venom, 1.2); break;
-    case 'draw': if (exposed) this.kb[o.id] = (s.x > o.x ? 1 : -1) * 170; break;
-    case 'shove': if (exposed) this.kb[o.id] = (o.x > s.x ? 1 : -1) * 180; break;
-    case 'reel': if (s.hang) s.drop = Math.max(0, s.drop - 15); break;
-    case 'recover': s.grip = Math.min(MAX_GRIP, s.grip + 7); break;
-    case 'counter': s.riposte = Math.max(s.riposte, 0.22); break;
-    case 'spring': if (!s.hang) { s.dashT = Math.max(s.dashT, 0.09); s.dashDir = s.face; } break;
-    case 'stun': if (exposed) o.stun = Math.max(o.stun, 0.2); break;
-    case 'guardbreak': if (near && o.shield <= 0) o.guard = Math.max(1, o.guard - 9); break;
-    case 'leech': if (near) s.grip = Math.min(MAX_GRIP, s.grip + 9); break;
+private applySpiderPulse(s: PlayerStateData, o: PlayerStateData, pulse: SpiderPulse) {
+  const distance = (o.x - s.x) * s.face;
+  if (s.hang || o.hang || o.ko || o.inv > 0 || Math.abs(o.x - s.x) > pulse.range || (pulse.front && distance < 0)) return;
+  if (o.blocking && o.blockT <= PARRY) {
+    s.stun = Math.max(s.stun, .45);
+    this.emitFx({ type: 'txt', x: o.x, y: LBL_Y, text: 'PARRY!', col: '#ffffff' });
+    return;
   }
+  if (o.shield > 0) { this.absorb(o); return; }
+  if (o.riposte > 0) { this.counter(o, s); return; }
+  if (o.blocking) {
+    o.guard -= pulse.guard || (pulse.damage ? 12 : 0);
+    if (o.guard <= 0) this.guardBreak(o);
+    else this.emitFx({ type: 'txt', x: o.x, y: LBL_Y, text: 'BLOCK', col: o.colorLight });
+    return;
+  }
+  if (pulse.damage) o.grip -= pulse.damage;
+  if (pulse.guard) { o.guard -= pulse.guard; if (o.guard <= 0) this.guardBreak(o); }
+  if (pulse.snare) { o.snare = Math.max(o.snare, pulse.snare); o.atkT = 0; }
+  if (pulse.venom) o.venom = Math.max(o.venom, pulse.venom);
+  if (pulse.soak) { o.soak = Math.max(o.soak, pulse.soak); o.burn = 0; }
+  if (pulse.burn && o.soak <= 0) o.burn = Math.max(o.burn, pulse.burn);
+  if (pulse.stun) { o.stun = Math.max(o.stun, pulse.stun); o.atkT = 0; }
+  if (pulse.push) this.kb[o.id] = (o.x >= s.x ? 1 : -1) * pulse.push;
+  if (pulse.pull) this.kb[o.id] = (s.x >= o.x ? 1 : -1) * pulse.pull;
+  o.hitFlash = Math.max(o.hitFlash, .14);
+  this.emitFx({ type: 'spark', x: o.x, y: BODY_Y, col: s.colorLight, count: 12, sp: 190 });
+  if (o.grip <= 0) this.fall(o);
 }
 
 private useSkill(s: PlayerStateData, o: PlayerStateData, slotIndex: number, inp: PlayerInput): boolean {
   const id = slotIndex === 0 ? s.skill1 : s.skill2;
-  const def = ABILITIES[id as AbilityId];
-  if (!def) return false;
-  const strength = spiderSkillStrength(s.species, id as AbilityId);
-
-  if (slotIndex === 0) {
-    s.cd1 = def.cd;
-    s.cd1max = def.cd;
-  } else {
-    s.cd2 = def.cd;
-    s.cd2max = def.cd;
-  }
-
-
-  this.applySpiderVariant(s, o, id as AbilityId);
+  if (!ABILITIES[id as AbilityId]) return false;
+  const move = spiderMove(s.species, id as AbilityId);
+  const effect = move.effect;
+  const cd = ABILITIES[id as AbilityId].cd;
+  if (slotIndex === 0) { s.cd1 = cd; s.cd1max = cd; }
+  else { s.cd2 = cd; s.cd2max = cd; }
   this.emitFx({ type: 'ability', x: s.x, y: BODY_Y + (s.hang ? s.drop : 0), species: s.species, id });
 
-  switch (id) {
-    case 'dash':
-      s.dashT = 0.16 * strength;
-      s.dashDir = inp.right ? 1 : (inp.left ? -1 : -s.face);
-      s.pounce = false;
-      s.inv = Math.max(s.inv, 0.2 * strength);
-      s.blocking = false;
-      s.atkT = 0;
-      this.emitSound('dash');
-      return true;
-
-    case 'pounce':
-      s.dashT = 0.14 * strength;
-      s.dashDir = s.face;
-      s.pounce = true;
-      s.inv = Math.max(s.inv, 0.14 * strength);
-      s.blocking = false;
-      s.atkT = 0;
-      this.emitSound('pounce');
-      return true;
-
-    case 'web':
-      if (s.species !== 'weaver') {
-        const d = (o.x - s.x) * s.face;
-        if (s.species === 'hunter') { s.power = Math.max(s.power, 3); if (d > 0 && d < 240 && o.blocking && o.inv <= 0 && o.shield <= 0) o.guard = Math.max(1, o.guard - 12); }
-        if (s.species === 'guardian') { s.guard = Math.min(100, s.guard + 14); if (d > 0 && d < 105 && o.inv <= 0 && !o.blocking && o.shield <= 0) o.snare = Math.max(o.snare, 0.85); }
-        if (s.species === 'wolf') { s.hasteT = Math.max(s.hasteT, 2); if (d > 0 && d < 175 && o.inv <= 0 && !o.blocking && o.shield <= 0) o.snare = Math.max(o.snare, 0.35); }
-        if (s.species === 'lynx' && d > 0 && d < 135 && o.inv <= 0 && !o.blocking && o.shield <= 0) o.snare = Math.max(o.snare, 1.1);
-        this.emitSound('web');
-        return false;
-      }
-      this.battleState.webs.push({
-        id: `web_${Date.now()}_${Math.random()}`,
-        x: s.x + s.face * 30,
-        y: BODY_Y - 4,
-        vx: s.face * 560 * strength,
-        owner: s.id,
-        life: 1.6,
-        k: 'web'
-      });
-      this.emitSound('web');
-      return false;
-
-    case 'spit':
-      if (s.species !== 'weaver' && s.species !== 'lynx') {
-        const d = (o.x - s.x) * s.face;
-        if (s.species === 'hunter') { s.dashT = Math.max(s.dashT, 0.11); s.dashDir = s.face; if (d > 0 && d < 110 && o.inv <= 0 && !o.blocking && o.shield <= 0) o.venom = Math.max(o.venom, 1.5); }
-        if (s.species === 'guardian' && d > 0 && d < 135 && o.inv <= 0 && o.shield <= 0) o.guard = Math.max(1, o.guard - 22);
-        if (s.species === 'wolf') { s.dashT = Math.max(s.dashT, 0.13); s.dashDir = s.face; if (d > 0 && d < 115 && o.inv <= 0 && !o.blocking && o.shield <= 0) o.venom = Math.max(o.venom, 1.4); }
-        this.emitSound('spit');
-        return false;
-      }
-      this.battleState.webs.push({
-        id: `spit_${Date.now()}_${Math.random()}`,
-        x: s.x + s.face * 30,
-        y: BODY_Y - 4,
-        vx: s.face * 780 * strength,
-        owner: s.id,
-        life: 1.2,
-        k: 'spit'
-      });
-      this.emitSound('spit');
-      return false;
-
-    case 'power':
-      s.power = 5 * strength;
-      this.emitFx({ type: 'txt', x: s.x, y: LBL_Y, text: 'POWER UP', col: '#ffb347' });
-      this.emitFx({ type: 'spark', x: s.x, y: BODY_Y, col: '#ffb347', count: 10, sp: 180 });
-      this.emitSound('power_up');
-      return false;
-
-    case 'shield':
-      s.shield = 4 * strength;
-      this.emitFx({ type: 'txt', x: s.x, y: LBL_Y, text: 'IRON SILK', col: '#cfe9ff' });
-      this.emitFx({ type: 'spark', x: s.x, y: BODY_Y, col: '#cfe9ff', count: 10, sp: 160 });
-      this.emitSound('shield');
-      return false;
-
-    case 'mend':
-      s.grip = Math.min(MAX_GRIP, s.grip + 35 * strength);
-      this.emitFx({ type: 'txt', x: s.x, y: LBL_Y, text: `+${Math.round(35 * strength)} GRIP`, col: '#9cf0a8' });
-      this.emitFx({ type: 'spark', x: s.x, y: BODY_Y, col: '#9cf0a8', count: 12, sp: 150 });
-      this.emitSound('mend');
-      return false;
-
-    case 'riposte':
-      s.riposte = strength;
-      s.blocking = false;
-      this.emitFx({ type: 'txt', x: s.x, y: LBL_Y, text: 'RIPOSTE', col: '#ffffff' });
-      this.emitSound('riposte');
-      return false;
-
-    case 'leech':
-      s.leech = 5 * strength;
-      this.emitFx({ type: 'txt', x: s.x, y: LBL_Y, text: 'LEECH FANG', col: '#d24a5a' });
-      this.emitSound('leech');
-      return false;
-
-    case 'carapace':
-      s.guard = Math.min(100, s.guard + 100 * strength);
-      s.gLock = false;
-      this.emitFx({ type: 'txt', x: s.x, y: LBL_Y, text: 'CARAPACE', col: '#8fb7d6' });
-      this.emitFx({ type: 'spark', x: s.x, y: BODY_Y, col: '#8fb7d6', count: 12, sp: 170 });
-      this.emitSound('carapace');
-      return false;
-
-    case 'hook':
-      if (s.species !== 'weaver') {
-        const d = (o.x - s.x) * s.face;
-        if (s.species === 'hunter') { s.dashT = Math.max(s.dashT, 0.18); s.dashDir = s.face; s.pounce = true; }
-        if (d > 0 && d < 170 && o.inv <= 0 && !o.blocking && o.shield <= 0) {
-          if (s.species === 'guardian') { this.kb[o.id] = -s.face * 360; o.stun = Math.max(o.stun, 0.3); }
-          if (s.species === 'wolf') { this.kb[o.id] = -s.face * 420; o.venom = Math.max(o.venom, 0.8); }
-          if (s.species === 'lynx') { this.kb[o.id] = -s.face * 280; o.snare = Math.max(o.snare, 0.55); }
-        }
-        this.emitSound('hook');
-        return s.species === 'hunter';
-      }
-      this.battleState.webs.push({
-        id: `hook_${Date.now()}_${Math.random()}`,
-        x: s.x + s.face * 30,
-        y: BODY_Y - 4,
-        vx: s.face * 700 * strength,
-        owner: s.id,
-        life: 1.0,
-        k: 'hook'
-      });
-      this.emitSound('hook');
-      return false;
-
-    case 'sweep': {
-      const dd = (o.x - s.x) * s.face;
-      s.stun = 0.25;
-      s.atkT = 0;
-      s.blocking = false;
-      this.emitSound('sweep');
-      if (!o.hang && !o.ko && dd >= 0 && dd < REACH + 20 && o.inv <= 0) {
-        if (o.riposte > 0) {
-          this.counter(o, s);
-        } else if (o.shield > 0) {
-          this.absorb(o);
-        } else if (o.blocking) {
-          o.guard -= 15 * strength;
-          this.kb[o.id] = s.face * 300 * strength;
-          this.emitFx({ type: 'txt', x: o.x, y: LBL_Y, text: 'BLOCK', col: o.colorLight });
-          if (o.guard <= 0) this.guardBreak(o);
-        } else {
-          o.grip -= 10 * strength;
-          this.kb[o.id] = s.face * 650 * strength;
-          o.stun = 0.3;
-          o.atkT = 0;
-          o.hitFlash = 0.2;
-          this.emitFx({ type: 'txt', x: o.x, y: LBL_Y, text: 'SWEPT!', col: s.colorLight });
-          this.emitFx({ type: 'spark', x: o.x, y: BODY_Y, col: '#ffffff', count: 10, sp: 240 });
-          this.emitShake(8);
-          if (o.grip <= 0) this.fall(o);
-        }
-      }
-      return false;
-    }
-
-    case 'haste':
-      s.hasteT = 3.5 * strength;
-      this.emitFx({ type: 'txt', x: s.x, y: LBL_Y, text: 'HASTE', col: s.colorLight });
-      this.emitSound('haste');
-      return false;
-
-    case 'tremor':
-      s.quake = 0.5;
-      this.emitShake(9);
-      this.emitSound('tremor');
-      if (!o.hang && !o.ko && Math.abs(o.x - s.x) < 260 * strength && o.inv <= 0) {
-        if (o.shield > 0) {
-          this.absorb(o);
-        } else if (o.blocking) {
-          this.emitFx({ type: 'txt', x: o.x, y: LBL_Y, text: 'HELD', col: o.colorLight });
-        } else {
-          o.stun = Math.max(o.stun, 0.9 * strength);
-          o.atkT = 0;
-          o.hitFlash = 0.15;
-          this.emitFx({ type: 'txt', x: o.x, y: LBL_Y, text: 'SHAKEN!', col: s.colorLight });
-        }
-      }
-      return false;
-
-    case 'surge':
-      s.drop = Math.max(0, s.drop - SURGE_LIFT * strength);
-      this.emitFx({ type: 'txt', x: s.x, y: BODY_Y + s.drop + 20, text: 'SURGE!', col: s.colorLight });
-      this.emitFx({ type: 'spark', x: s.x, y: BODY_Y + s.drop + 20, col: s.colorLight, count: 8, sp: 180 });
-      this.emitSound('surge');
-      return false;
-
-    case 'anchor':
-      s.anchorT = 2.5 * strength;
-      this.emitFx({ type: 'txt', x: s.x, y: BODY_Y + s.drop + 20, text: 'ANCHORED', col: s.colorLight });
-      this.emitFx({ type: 'spark', x: s.x, y: BODY_Y + s.drop + 14, col: s.colorLight, count: 8, sp: 140 });
-      this.emitSound('anchor');
-      return false;
+  if (effect.heal) s.grip = Math.min(MAX_GRIP, s.grip + effect.heal);
+  if (effect.cleanse) { s.burn = 0; s.venom = 0; }
+  if (effect.guard) { s.guard = Math.min(100, s.guard + effect.guard); if (s.guard >= 100) s.gLock = false; }
+  if (effect.shield) s.shield = Math.max(s.shield, effect.shield);
+  if (effect.power) s.power = Math.max(s.power, effect.power);
+  if (effect.haste) s.hasteT = Math.max(s.hasteT, effect.haste);
+  if (effect.counter) { s.riposte = Math.max(s.riposte, effect.counter); s.blocking = false; }
+  if (effect.leech) s.leech = Math.max(s.leech, effect.leech);
+  if (effect.inv) s.inv = Math.max(s.inv, effect.inv);
+  if (effect.lift) s.drop = Math.max(0, s.drop - effect.lift);
+  if (effect.anchor) s.anchorT = Math.max(s.anchorT, effect.anchor);
+  if (id === 'tremor') s.quake = .5;
+  if (effect.pulse) this.applySpiderPulse(s, o, effect.pulse);
+  if (effect.shot) {
+    this.battleState.webs.push({
+      id: `${effect.shot}_${Date.now()}_${Math.random()}`,
+      x: s.x + s.face * 30, y: BODY_Y - 4,
+      vx: s.face * (effect.shotSpeed || 650), owner: s.id,
+      life: effect.shotLife || 1.2, k: effect.shot, species: s.species
+    });
   }
-  return false;
+  if (effect.dash) {
+    s.dashT = effect.dashTime || .12;
+    s.dashDir = effect.dash === 'back' ? -s.face : effect.dash === 'forward' ? s.face : inp.right ? 1 : inp.left ? -1 : -s.face;
+    s.pounce = !!effect.pounce;
+    s.blocking = false;
+    s.atkT = 0;
+  }
+  this.emitSound(effect.shot || (effect.dash ? 'dash' : effect.pulse ? 'sweep' : effect.shield ? 'shield' : effect.heal ? 'mend' : 'power_up'));
+  return !!effect.dash;
 }
 
 private stepWebs(dt: number) {
@@ -618,7 +447,8 @@ private stepWebs(dt: number) {
           vx: -w.vx,
           owner: t.id,
           life: 1.6,
-          k: w.k
+          k: w.k,
+          species: w.species
         });
         t.parryT = 0.25;
         this.emitFx({ type: 'txt', x: t.x, y: LBL_Y + 4, text: 'REFLECT!', col: '#ffffff' });
@@ -641,15 +471,24 @@ private stepWebs(dt: number) {
         this.emitFx({ type: 'spark', x: t.x, y: BODY_Y, col: '#f3f7ee', count: 8, sp: 180 });
         this.emitSound('hook');
       } else if (w.k === 'spit') {
+        if (w.species === 'weaver') {
+          t.soak = Math.max(t.soak, 1.5);
+          t.burn = 0;
+          t.hitFlash = 0.15;
+          this.emitFx({ type: 'txt', x: t.x, y: LBL_Y, text: 'SOAKED!', col: '#7bdcff' });
+          this.emitFx({ type: 'spark', x: t.x, y: BODY_Y, col: '#7bdcff', count: 10, sp: 180 });
+        } else {
         // Venom: no stun, poisons grip over time instead
         t.venom = VENOM_DUR;
         t.hitFlash = 0.15;
         this.emitFx({ type: 'txt', x: t.x, y: LBL_Y, text: 'VENOM!', col: '#9cf06a' });
         this.emitFx({ type: 'spark', x: t.x, y: BODY_Y, col: '#9cf06a', count: 10, sp: 180 });
+        }
         this.emitSound('spit');
       } else {
         // Tangled: slowed and cannot attack (blocking still allowed)
         t.snare = WEB_SNARE;
+        if (w.species === 'weaver') { t.soak = Math.max(t.soak, 1); t.burn = 0; }
         t.atkT = 0;
         t.isHeavy = false;
         t.grip = Math.max(1, t.grip - 4);
@@ -682,6 +521,11 @@ private stepSpider(s: PlayerStateData, o: PlayerStateData, inp: PlayerInput, dt:
   s.anchorT = Math.max(0, s.anchorT - dt);
   this.reelCd[id] = Math.max(0, this.reelCd[id] - dt);
   s.snare = Math.max(0, s.snare - dt);
+  s.soak = Math.max(0, s.soak - dt);
+  if (s.burn > 0 && !s.hang && !s.ko) {
+    s.burn = Math.max(0, s.burn - dt);
+    s.grip = Math.max(1, s.grip - 4 * dt);
+  } else if (s.hang) s.burn = 0;
   s.pump = Math.max(0, (s.pump || 0) - dt * 6);
   if (s.venom > 0 && !s.hang && !s.ko) {
     s.venom = Math.max(0, s.venom - dt);
@@ -820,12 +664,12 @@ private stepSpider(s: PlayerStateData, o: PlayerStateData, inp: PlayerInput, dt:
   // Stand abilities
   if (free) {
     if (inp.ab1 > 0 && s.cd1 <= 0 && ABILITIES[s.skill1 as AbilityId]?.use === 'stand') {
-      if (!(s.snare > 0 && (s.skill1 === 'dash' || s.skill1 === 'pounce'))) {
+      if (!(s.snare > 0 && spiderMove(s.species, s.skill1 as AbilityId).effect.dash)) {
         if (this.useSkill(s, o, 0, inp)) return;
       }
     }
     if (inp.ab2 > 0 && s.cd2 <= 0 && ABILITIES[s.skill2 as AbilityId]?.use === 'stand') {
-      if (!(s.snare > 0 && (s.skill2 === 'dash' || s.skill2 === 'pounce'))) {
+      if (!(s.snare > 0 && spiderMove(s.species, s.skill2 as AbilityId).effect.dash)) {
         if (this.useSkill(s, o, 1, inp)) return;
       }
     }
@@ -849,7 +693,7 @@ private stepSpider(s: PlayerStateData, o: PlayerStateData, inp: PlayerInput, dt:
   // Movement
   let v = 0;
   if (free && s.stun <= 0) {
-    v = ((inp.right ? 1 : 0) - (inp.left ? 1 : 0)) * SPEED * (s.blocking ? 0.35 : 1) * (s.snare > 0 ? 0.4 : 1) * (s.hasteT > 0 ? 1.5 : 1);
+    v = ((inp.right ? 1 : 0) - (inp.left ? 1 : 0)) * SPEED * (s.blocking ? 0.35 : 1) * (s.snare > 0 ? 0.4 : 1) * (s.soak > 0 ? 0.75 : 1) * (s.hasteT > 0 ? 1.5 : 1);
   }
   if (wait && free && s.stun <= 0) {
     let wtx = s.id === 0 ? 440 : 760;

@@ -57,6 +57,8 @@ export interface PlayerStateData {
   
   snare: number;        // tangled by web
   venom: number;        // poison damage over time from venom spit
+  soak: number;
+  burn: number;
   dashT: number;
   dashDir: number;
   pounce: boolean;
@@ -91,6 +93,7 @@ export interface WebStateData {
   owner: number;
   life: number;
   k: string;            // 'web' | 'spit' | 'hook'
+  species?: string;
 }
 
 export interface DisconnectPauseData {

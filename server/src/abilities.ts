@@ -303,19 +303,6 @@ export const SKILLS_LIST: AbilityDef[] = [
 
 export const ALL_ABILITY_IDS: AbilityId[] = SKILLS_LIST.map(s => s.id);
 
-export const SPIDER_SKILL_STYLES = {
-  weaver: { aerial: 1.1, control: 1.25, assault: 0.9, vitality: 0.9, center: 1.05 },
-  hunter: { aerial: 1.1, control: 0.85, assault: 1.25, vitality: 0.85, center: 1.15 },
-  guardian: { aerial: 0.85, control: 0.9, assault: 1, vitality: 1.3, center: 0.9 },
-  wolf: { aerial: 1.2, control: 0.9, assault: 1.15, vitality: 0.9, center: 1.1 },
-  lynx: { aerial: 1.25, control: 1.1, assault: 1.05, vitality: 0.85, center: 1 }
-} as const;
-export type SpiderSkillSpecies = keyof typeof SPIDER_SKILL_STYLES;
-export function spiderSkillStrength(species: string, id: AbilityId): number {
-  const style = SPIDER_SKILL_STYLES[species as SpiderSkillSpecies] || SPIDER_SKILL_STYLES.weaver;
-  return style[ABILITIES[id].sector];
-}
-
 export function isAbilityId(id: unknown): id is AbilityId {
   return typeof id === 'string' && id in ABILITIES;
 }

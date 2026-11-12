@@ -1,6 +1,7 @@
 import { sound } from '../audio';
 import { ABILITIES, getSpiderAbility, type AbilityId } from '../game/abilities';
 import { spiderAbilityIcon, spiderIconHue } from '../game/spiderIcons';
+import { SPIDER_ELEMENTS, type SpiderSpecies } from '../game/spiderMoves';
 import { MAX_GRIP } from '../game/constants';
 import { getKeys, keyLabel, getColor, getLooks, getSettings, getProgress, getLevel, SPIDERS, spiderSVG, saveSettings, applyQualityClass, type GraphicQuality } from '../gb';
 
@@ -715,7 +716,7 @@ export class GamePage {
       const palette = { weaver: 'amber', hunter: 'jade', guardian: 'bone', wolf: 'ruby', lynx: 'lime' }[spider.id] || 'amber';
       button.innerHTML = `${spiderSVG({ ...getLooks().p1, species: spider.id, color: palette, acc: 'none' }, `-select-${spider.id}`, getLevel(item?.exp || 0))}
         <strong>${spider.name}</strong><span>${spider.description}</span>
-        <span class="spider-select-kit">16 unique skills · Starts with ${getSpiderAbility(spider.id, spider.skill).name}</span>
+        <span class="spider-select-kit">${SPIDER_ELEMENTS[spider.id as SpiderSpecies]} affinity · 16 unique skills · Starts with ${getSpiderAbility(spider.id, spider.skill).name}</span>
         <small>${ranked ? 'All skills ready' : `Level ${getLevel(item?.exp || 0)} · ${item?.skills.length || 2} skills ready`}</small>`;
       button.addEventListener('click', () => {
         this.hideSpiderSelect();

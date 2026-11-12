@@ -39,6 +39,8 @@ export interface LocalPlayerState {
   cd2max: number;
   snare: number;
   venom: number;
+  soak: number;
+  burn: number;
   dashT: number;
   dashDir: number;
   pounce: boolean;
@@ -71,6 +73,7 @@ export interface LocalWebState {
   owner: number;
   life: number;
   k: 'web' | 'spit' | 'hook';
+  species?: string;
 }
 
 export interface LocalBattleState {

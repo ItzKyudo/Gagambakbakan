@@ -1,4 +1,4 @@
-import { spiderVariant, VARIANT_DESCRIPTIONS } from './spiderVariants';
+import { spiderMove } from './spiderMoves';
 
 export type AbilityId =
   | 'dash'
@@ -305,27 +305,6 @@ export const SKILLS_LIST: AbilityDef[] = [
 
 export const ALL_ABILITY_IDS: AbilityId[] = SKILLS_LIST.map(s => s.id);
 
-export const SPIDER_SKILL_STYLES = {
-  weaver: { aerial: 1.1, control: 1.25, assault: 0.9, vitality: 0.9, center: 1.05 },
-  hunter: { aerial: 1.1, control: 0.85, assault: 1.25, vitality: 0.85, center: 1.15 },
-  guardian: { aerial: 0.85, control: 0.9, assault: 1, vitality: 1.3, center: 0.9 },
-  wolf: { aerial: 1.2, control: 0.9, assault: 1.15, vitality: 0.9, center: 1.1 },
-  lynx: { aerial: 1.25, control: 1.1, assault: 1.05, vitality: 0.85, center: 1 }
-} as const;
-export type SpiderSkillSpecies = keyof typeof SPIDER_SKILL_STYLES;
-export function spiderSkillStrength(species: string, id: AbilityId): number {
-  const style = SPIDER_SKILL_STYLES[species as SpiderSkillSpecies] || SPIDER_SKILL_STYLES.weaver;
-  return style[ABILITIES[id].sector];
-}
-
-const SPIDER_SKILL_NAMES: Record<SpiderSkillSpecies, string[]> = {
-  weaver: ['Silk Slip', 'Orb Snare', 'Thread Reel', 'Loom Strike', 'Silk Veil', 'Web Mend', 'Cocoon Shell', 'Snare Lunge', 'Thread Sweep', 'Venom Dew', 'Anchor Knot', 'Silk Counter', 'Web Quake', 'Orb Rush', 'Capture Line', 'Drain Thread'],
-  hunter: ['Flash Step', 'Focus Lock', 'Spring Reel', 'Fang Burst', 'Reflex Guard', 'Quick Mend', 'Spring Shell', 'Ambush Pounce', 'Leg Scythe', 'Fang Flick', 'Rescue Leap', 'Blink Counter', 'Stomp Shock', 'Sprint Bound', 'Grapple Jump', 'Fang Feast'],
-  guardian: ['Side Guard', 'Side Clamp', 'Body Lift', 'Huntsman Blow', 'Iron Guard', 'Shell Repair', 'Stone Carapace', 'Broad Pounce', 'Sprawl Sweep', 'Guard Crush', 'Safe Anchor', 'Counter Clamp', 'Bark Tremor', 'Brace Run', 'Catching Arm', 'Recovery Fang'],
-  wolf: ['Pack Skitter', 'Pursuit Feint', 'Scramble Lift', 'Pursuit Fang', 'Trail Shield', 'Field Mend', 'Hide Armor', 'Pursuit Pounce', 'Running Sweep', 'Running Bite', 'Grip Anchor', 'Chase Counter', 'Ground Pound', 'Long Sprint', 'Drag Bite', 'Predatory Bite'],
-  lynx: ['Thorn Step', 'Spine Catch', 'Thorn Climb', 'Needle Strike', 'Thorn Guard', 'Leaf Mend', 'Spiny Shell', 'Needle Pounce', 'Hooked Sweep', 'Venom Thorn', 'Climbing Anchor', 'Thorn Counter', 'Twig Tremor', 'Leaf Dash', 'Thorn Hook', 'Barb Fang']
-};
-
 const spiderAbilityCache = new Map<string, AbilityDef>();
 
 export function getSpiderAbility(species: string, id: AbilityId): AbilityDef {
@@ -333,40 +312,8 @@ export function getSpiderAbility(species: string, id: AbilityId): AbilityDef {
   const key = `${species}:${base.id}`;
   const cached = spiderAbilityCache.get(key);
   if (cached) return cached;
-  const names = SPIDER_SKILL_NAMES[species as SpiderSkillSpecies] || SPIDER_SKILL_NAMES.weaver;
-  const strength = spiderSkillStrength(species, base.id);
-  const scaled = (value: number) => Math.round(value * strength * 10) / 10;
-  const descriptions: Record<AbilityId, string> = {
-    dash: `Slip through an attack with ${scaled(0.2)}s of invulnerability.`,
-    web: `Fire sticky silk at ${scaled(560)} speed. A hit snares for 1.6s.`,
-    surge: `Pull yourself ${scaled(50)} units toward the twig while dangling.`,
-    power: `Charge your next heavy strike for ${scaled(5)}s.`,
-    shield: `Absorb the next hit within ${scaled(4)}s.`,
-    mend: `Restore ${scaled(35)} grip instantly.`,
-    carapace: `Restore up to ${Math.min(100, scaled(100))} guard and clear guard break.`,
-    pounce: `Leap into a strike with ${scaled(0.14)}s of invulnerability.`,
-    sweep: `Sweep for ${scaled(10)} grip damage and shove the rival toward an edge.`,
-    spit: `Fire venom at ${scaled(780)} speed; a hit drains grip over 3s.`,
-    anchor: `Hold your climbing thread steady for ${scaled(2.5)}s.`,
-    riposte: `Cancel the next incoming hit within ${scaled(1)}s and stun the attacker.`,
-    tremor: `Stun an unguarded rival within ${scaled(260)} range.`,
-    haste: `Move faster for ${scaled(3.5)}s.`,
-    hook: `Fire a silk hook at ${scaled(700)} speed and pull the rival toward you.`,
-    leech: `Your next hit within ${scaled(5)}s restores 20 grip.`
-  };
-  const controlDescriptions: Partial<Record<SpiderSkillSpecies, Partial<Record<AbilityId, string>>>> = {
-    hunter: { web: 'Focus on the rival. Prime a heavy follow-up and chip a distant block.', spit: 'Burst forward and deliver a close venom flick.', hook: 'Spring forward into a striking leap.' },
-    guardian: { web: 'Clamp a nearby rival with wide forelegs and restore guard.', spit: 'Crush a nearby rival’s guard with a broad strike.', hook: 'Catch and pull a nearby rival with a foreleg.' },
-    wolf: { web: 'Shoulder past a nearby rival and accelerate into pursuit.', spit: 'Rush forward and bite at close range.', hook: 'Drag a nearby rival toward you and poison them.' },
-    lynx: { web: 'Catch a nearby rival with hooked leg spines.', hook: 'Pull and snag a nearby rival with spined forelegs.' }
-  };
-  const desc = `${controlDescriptions[species as SpiderSkillSpecies]?.[base.id] || descriptions[base.id]} ${VARIANT_DESCRIPTIONS[spiderVariant(species, base.id)]}`;
-  const ability = {
-    ...base,
-    name: names[ALL_ABILITY_IDS.indexOf(base.id)],
-    desc,
-    tip: desc
-  };
+  const move = spiderMove(species, base.id);
+  const ability = { ...base, name: move.name, desc: move.desc, tip: move.desc };
   spiderAbilityCache.set(key, ability);
   return ability;
 }

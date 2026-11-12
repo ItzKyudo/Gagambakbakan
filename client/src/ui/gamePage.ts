@@ -1,7 +1,8 @@
 import { sound } from '../audio';
-import { ABILITIES, type AbilityId } from '../game/abilities';
+import { ABILITIES, getSpiderAbility, type AbilityId } from '../game/abilities';
+import { spiderAbilityIcon } from '../game/spiderIcons';
 import { MAX_GRIP } from '../game/constants';
-import { getKeys, keyLabel, getColor, getLooks, getSettings, getProgress, getLevel, SPIDERS, saveSettings, applyQualityClass, type GraphicQuality } from '../gb';
+import { getKeys, keyLabel, getColor, getLooks, getSettings, getProgress, getLevel, SPIDERS, spiderSVG, saveSettings, applyQualityClass, type GraphicQuality } from '../gb';
 
 export interface GamePageCallbacks {
   onBackToMenu: () => void;
@@ -77,6 +78,7 @@ export class GamePage {
   private pkGo!: HTMLButtonElement;
   private selectedDraftSlots: number[] = [];
   private currentDraftOffer: AbilityId[] = [];
+  private currentDraftSpecies = 'weaver';
   private draftConfirmCallback: ((skills: string[]) => void) | null = null;
   public isDraftOpen: boolean = false;
   public isSpiderSelectOpen = false;
@@ -220,7 +222,7 @@ export class GamePage {
             <button class="gem" id="g1a" data-slot="0" tabindex="-1" type="button" aria-label="Skill 1">
               <svg class="shape bg" viewBox="0 0 100 100" aria-hidden="true"><polygon points="50,3 91,26.5 91,73.5 50,97 9,73.5 9,26.5"/></svg>
               <div class="gem-icon-frame">
-                <img class="gem-ability-icon" id="gi1a" src="/abilities/dash.png" alt="Dash" />
+                <img class="gem-ability-icon" id="gi1a" src="${spiderAbilityIcon('weaver', 'dash')}" alt="Dash" />
                 <div class="gem-cd-wipe" id="gw1a"></div>
               </div>
               <span class="gem-cd-num" id="gcd1a"></span>
@@ -229,7 +231,7 @@ export class GamePage {
             <button class="gem" id="g1b" data-slot="1" tabindex="-1" type="button" aria-label="Skill 2">
               <svg class="shape bg" viewBox="0 0 100 100" aria-hidden="true"><polygon points="50,3 91,26.5 91,73.5 50,97 9,73.5 9,26.5"/></svg>
               <div class="gem-icon-frame">
-                <img class="gem-ability-icon" id="gi1b" src="/abilities/web.png" alt="Web" />
+                <img class="gem-ability-icon" id="gi1b" src="${spiderAbilityIcon('weaver', 'web')}" alt="Web" />
                 <div class="gem-cd-wipe" id="gw1b"></div>
               </div>
               <span class="gem-cd-num" id="gcd1b"></span>
@@ -242,7 +244,7 @@ export class GamePage {
             <div class="gem" id="g2a">
               <svg class="shape bg" viewBox="0 0 100 100" aria-hidden="true"><polygon points="50,3 91,26.5 91,73.5 50,97 9,73.5 9,26.5"/></svg>
               <div class="gem-icon-frame">
-                <img class="gem-ability-icon" id="gi2a" src="/abilities/dash.png" alt="Dash" />
+                <img class="gem-ability-icon" id="gi2a" src="${spiderAbilityIcon('weaver', 'dash')}" alt="Dash" />
                 <div class="gem-cd-wipe" id="gw2a"></div>
               </div>
               <span class="gem-cd-num" id="gcd2a"></span>
@@ -251,7 +253,7 @@ export class GamePage {
             <div class="gem" id="g2b">
               <svg class="shape bg" viewBox="0 0 100 100" aria-hidden="true"><polygon points="50,3 91,26.5 91,73.5 50,97 9,73.5 9,26.5"/></svg>
               <div class="gem-icon-frame">
-                <img class="gem-ability-icon" id="gi2b" src="/abilities/web.png" alt="Web" />
+                <img class="gem-ability-icon" id="gi2b" src="${spiderAbilityIcon('weaver', 'web')}" alt="Web" />
                 <div class="gem-cd-wipe" id="gw2b"></div>
               </div>
               <span class="gem-cd-num" id="gcd2b"></span>
@@ -710,9 +712,10 @@ export class GamePage {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'spider-select-card';
-      button.innerHTML = `<img src="/abilities/${spider.skill}.png" alt="" />
+      const palette = { weaver: 'amber', hunter: 'jade', guardian: 'bone', wolf: 'ruby', lynx: 'lime' }[spider.id] || 'amber';
+      button.innerHTML = `${spiderSVG({ ...getLooks().p1, species: spider.id, color: palette, acc: 'none' }, `-select-${spider.id}`, getLevel(item?.exp || 0))}
         <strong>${spider.name}</strong><span>${spider.description}</span>
-        <span class="spider-select-kit">Skills: ${spider.pool.map(id => ABILITIES[id as AbilityId].name).join(', ')}</span>
+        <span class="spider-select-kit">16 unique skills · Starts with ${getSpiderAbility(spider.id, spider.skill).name}</span>
         <small>${ranked ? 'All skills ready' : `Level ${getLevel(item?.exp || 0)} · ${item?.skills.length || 2} skills ready`}</small>`;
       button.addEventListener('click', () => {
         this.hideSpiderSelect();
@@ -744,7 +747,8 @@ export class GamePage {
     choices: string[],
     round: number,
     playerName: string,
-    onConfirm: (skills: string[]) => void
+    onConfirm: (skills: string[]) => void,
+    species = 'weaver'
   ) {
     this.clearDraftTimer();
     this.isDraftLeaving = false;
@@ -756,13 +760,14 @@ export class GamePage {
       return;
     }
     this.currentDraftOffer = choices as AbilityId[];
+    this.currentDraftSpecies = species;
     this.draftConfirmCallback = onConfirm;
 
     this.pkWho.textContent = `${playerName} · Round ${round}`;
     this.pkWho.style.setProperty('--c', 'var(--amber)');
 
     this.pkTitle.textContent = 'Pick 2 skills';
-    const keyHint = choices.length <= 3 ? 'Press 1, 2 or 3 to choose.' : `Press 1-${Math.min(9, choices.length)} or click to choose.`;
+    const keyHint = choices.length > 9 ? 'Scroll for more cards. Use Tab or click to choose.' : choices.length <= 3 ? 'Press 1, 2 or 3 to choose.' : `Press 1-${choices.length} or click to choose.`;
     this.pkSub.textContent = `Choose 2 of these ${choices.length} cards. You keep them for the whole match. ${keyHint}`;
     this.selectedDraftSlots = [];
 
@@ -777,7 +782,7 @@ export class GamePage {
     this.pkCards.innerHTML = '';
 
     this.currentDraftOffer.forEach((id, k) => {
-      const s = ABILITIES[id as AbilityId] || ABILITIES.dash;
+      const s = getSpiderAbility(species, id as AbilityId);
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'skill card-pick';
@@ -797,7 +802,7 @@ export class GamePage {
         </svg>
         <span class="num">${k + 1}</span>
         <span class="pgem">
-          <img src="/abilities/${s.id}.png" alt="${s.name}" class="card-icon-img" />
+          <img src="${spiderAbilityIcon(species, s.id)}" alt="" class="card-icon-img" />
         </span>
         <div>
           <h3>${s.name}</h3>
@@ -827,7 +832,7 @@ export class GamePage {
     });
 
     this.syncPickUI();
-    this.startDraftTimer(15);
+    this.startDraftTimer(choices.length > 9 ? 30 : 15);
     this.pickModal.classList.remove('leave');
     this.pickModal.hidden = false;
 
@@ -980,7 +985,7 @@ export class GamePage {
     this.isDraftLeaving = false;
     this.pickModal.hidden = false;
     this.pkTitle.textContent = 'Waiting for Opponent...';
-    const names = chosen.map(id => ABILITIES[id as AbilityId]?.name || id).join(' & ');
+    const names = chosen.map(id => getSpiderAbility(this.currentDraftSpecies, id as AbilityId).name).join(' & ');
     this.pkSub.textContent = `You picked ${names}. Waiting for your opponent to choose their abilities...`;
     this.pkCount.textContent = 'Ready ✓';
     this.pkGo.disabled = true;
@@ -1138,16 +1143,16 @@ export class GamePage {
       }
       if (g.style.display !== '') g.style.display = '';
 
-      const sd = ABILITIES[id];
+      const sd = getSpiderAbility(s1.species, id);
       const tag = '1' + (j ? 'b' : 'a');
       const gi = j === 0 ? this.gi1a : this.gi1b;
       const cdEl = j === 0 ? this.gcd1a : this.gcd1b;
       const kbEl = j === 0 ? this.gkb1a : this.gkb1b;
       const bindCode = j === 0 ? kb.p1.s1 : kb.p1.s2;
 
-      if (this.gemSeen[tag] !== sd.id) {
-        this.gemSeen[tag] = sd.id;
-        (gi as HTMLImageElement).src = `/abilities/${sd.id}.png`;
+      if (this.gemSeen[tag] !== `${s1.species}:${sd.id}`) {
+        this.gemSeen[tag] = `${s1.species}:${sd.id}`;
+        (gi as HTMLImageElement).src = spiderAbilityIcon(s1.species, sd.id);
         (gi as HTMLImageElement).alt = sd.name;
         g.title = `${sd.name} (${keyLabel(bindCode)})${sd.use === 'hang' ? ' - only while dangling' : ''}`;
         g.setAttribute('aria-label', sd.name);
@@ -1185,7 +1190,7 @@ export class GamePage {
       }
       if (g.style.display !== '') g.style.display = '';
 
-      const sd = ABILITIES[id];
+      const sd = getSpiderAbility(s2.species, id);
       const tag = '2' + (j ? 'b' : 'a');
       const gi = j === 0 ? this.gi2a : this.gi2b;
       const cdEl = j === 0 ? this.gcd2a : this.gcd2b;
@@ -1193,9 +1198,9 @@ export class GamePage {
       const bindCode = j === 0 ? kb.p2.s1 : kb.p2.s2;
       const human = this.gameMode === '2p';
 
-      if (this.gemSeen[tag] !== sd.id) {
-        this.gemSeen[tag] = sd.id;
-        (gi as HTMLImageElement).src = `/abilities/${sd.id}.png`;
+      if (this.gemSeen[tag] !== `${s2.species}:${sd.id}`) {
+        this.gemSeen[tag] = `${s2.species}:${sd.id}`;
+        (gi as HTMLImageElement).src = spiderAbilityIcon(s2.species, sd.id);
         (gi as HTMLImageElement).alt = sd.name;
         g.title = `${sd.name}${human ? ` (${keyLabel(bindCode)})` : ''}${sd.use === 'hang' ? ' - only while dangling' : ''}`;
       }

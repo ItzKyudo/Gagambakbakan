@@ -303,17 +303,30 @@ export const SKILLS_LIST: AbilityDef[] = [
 
 export const ALL_ABILITY_IDS: AbilityId[] = SKILLS_LIST.map(s => s.id);
 
+export const SPIDER_SKILL_STYLES = {
+  weaver: { aerial: 1.1, control: 1.25, assault: 0.9, vitality: 0.9, center: 1.05 },
+  hunter: { aerial: 1.1, control: 0.85, assault: 1.25, vitality: 0.85, center: 1.15 },
+  guardian: { aerial: 0.85, control: 0.9, assault: 1, vitality: 1.3, center: 0.9 },
+  wolf: { aerial: 1.2, control: 0.9, assault: 1.15, vitality: 0.9, center: 1.1 },
+  lynx: { aerial: 1.25, control: 1.1, assault: 1.05, vitality: 0.85, center: 1 }
+} as const;
+export type SpiderSkillSpecies = keyof typeof SPIDER_SKILL_STYLES;
+export function spiderSkillStrength(species: string, id: AbilityId): number {
+  const style = SPIDER_SKILL_STYLES[species as SpiderSkillSpecies] || SPIDER_SKILL_STYLES.weaver;
+  return style[ABILITIES[id].sector];
+}
+
 export function isAbilityId(id: unknown): id is AbilityId {
   return typeof id === 'string' && id in ABILITIES;
 }
 
 export const SPIDER_STARTERS = { weaver: 'web', hunter: 'pounce', guardian: 'shield', wolf: 'surge', lynx: 'hook' } as const;
 export const SPIDER_POOLS: Record<keyof typeof SPIDER_STARTERS, AbilityId[]> = {
-  weaver: ['dash', 'web', 'spit', 'tremor', 'hook'],
-  hunter: ['dash', 'power', 'pounce', 'sweep', 'riposte'],
-  guardian: ['dash', 'shield', 'mend', 'carapace', 'leech'],
-  wolf: ['dash', 'surge', 'anchor', 'haste', 'sweep'],
-  lynx: ['dash', 'web', 'spit', 'hook', 'anchor']
+  weaver: ALL_ABILITY_IDS,
+  hunter: ALL_ABILITY_IDS,
+  guardian: ALL_ABILITY_IDS,
+  wolf: ALL_ABILITY_IDS,
+  lynx: ALL_ABILITY_IDS
 };
 export type SpiderType = keyof typeof SPIDER_STARTERS;
 export function isSpiderType(value: unknown): value is SpiderType {
@@ -329,7 +342,7 @@ export function validateSpiderProgress(value: unknown, legacySkills: unknown, le
     const exp = Number.isFinite(data?.exp) ? Math.max(0, data.exp) : 0;
     const skills: AbilityId[] = ['dash', SPIDER_STARTERS[species]];
     if (Array.isArray(data?.skills)) for (const id of data.skills) {
-      if (skills.length >= Math.min(5, levelFromSpiderExp(exp) + 1)) break;
+      if (skills.length >= Math.min(16, levelFromSpiderExp(exp) + 1)) break;
       if (isAbilityId(id) && SPIDER_POOLS[species].includes(id) && !skills.includes(id) && ABILITIES[id].unlock.level <= levelFromSpiderExp(exp) && isNodeAvailableToUnlock(id, skills)) skills.push(id);
     }
     result[species] = { exp, skills };
@@ -337,8 +350,8 @@ export function validateSpiderProgress(value: unknown, legacySkills: unknown, le
   return result;
 }
 
-function levelFromSpiderExp(exp: number): number {
-  const thresholds = [0, 100, 250, 450, 700];
+export function levelFromSpiderExp(exp: number): number {
+  const thresholds = [0, 100, 250, 450, 700, 1000, 1350, 1750, 2200, 2700, 3250, 3850, 4500, 5200, 5950];
   return thresholds.reduce((level, threshold) => exp >= threshold ? level + 1 : level, 0);
 }
 

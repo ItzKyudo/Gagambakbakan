@@ -1,5 +1,6 @@
 import { sound } from '../audio';
-import { ABILITIES, type AbilityId } from './abilities';
+import { ABILITIES, spiderSkillStrength, type AbilityId } from './abilities';
+import { spiderVariant } from './spiderVariants';
 import {
   STICK, POND_Y, BODY_Y, LBL_Y, MAXDROP, REACH, MINDIST, SPEED, PARRY,
   ATK, ATK_LIGHT, ATK_HEAVY, REEL_CD, TAP, FALL_DEPTH, FALL_SPEED, SURGE_LIFT, FATIGUE_MAX,
@@ -371,10 +372,36 @@ private doStrike(a: LocalPlayerState, b: LocalPlayerState) {
   }
 }
 
+private applySpiderVariant(s: LocalPlayerState, o: LocalPlayerState, id: AbilityId) {
+  const bonus = spiderVariant(s.species, id);
+  const near = !s.hang && !o.hang && !o.ko && o.inv <= 0 && Math.abs(o.x - s.x) < 135;
+  const exposed = near && !o.blocking && o.shield <= 0;
+  switch (bonus) {
+    case 'thread': if (exposed) o.snare = Math.max(o.snare, 0.32); break;
+    case 'silkguard': s.shield = Math.max(s.shield, 0.8); break;
+    case 'focus': s.power = Math.max(s.power, 1.8); break;
+    case 'evade': s.inv = Math.max(s.inv, 0.16); break;
+    case 'brace': s.guard = Math.min(100, s.guard + 10); break;
+    case 'clamp': if (exposed) o.snare = Math.max(o.snare, 0.4); break;
+    case 'chase': s.hasteT = Math.max(s.hasteT, 1); break;
+    case 'fang': if (exposed) o.venom = Math.max(o.venom, 1.2); break;
+    case 'draw': if (exposed) this.kb[o.id] = (s.x > o.x ? 1 : -1) * 170; break;
+    case 'shove': if (exposed) this.kb[o.id] = (o.x > s.x ? 1 : -1) * 180; break;
+    case 'reel': if (s.hang) s.drop = Math.max(0, s.drop - 15); break;
+    case 'recover': s.grip = Math.min(MAX_GRIP, s.grip + 7); break;
+    case 'counter': s.riposte = Math.max(s.riposte, 0.22); break;
+    case 'spring': if (!s.hang) { s.dashT = Math.max(s.dashT, 0.09); s.dashDir = s.face; } break;
+    case 'stun': if (exposed) o.stun = Math.max(o.stun, 0.2); break;
+    case 'guardbreak': if (near && o.shield <= 0) o.guard = Math.max(1, o.guard - 9); break;
+    case 'leech': if (near) s.grip = Math.min(MAX_GRIP, s.grip + 9); break;
+  }
+}
+
 private useSkill(s: LocalPlayerState, o: LocalPlayerState, slotIndex: number, inp: InputState): boolean {
   const id = slotIndex === 0 ? s.skill1 : s.skill2;
   const def = ABILITIES[id as AbilityId];
   if (!def) return false;
+  const strength = spiderSkillStrength(s.species, id as AbilityId);
 
   if (slotIndex === 0) {
     s.cd1 = def.cd;
@@ -384,33 +411,46 @@ private useSkill(s: LocalPlayerState, o: LocalPlayerState, slotIndex: number, in
     s.cd2max = def.cd;
   }
 
+
+  this.applySpiderVariant(s, o, id as AbilityId);
+  this.emitFx({ type: 'ability', x: s.x, y: BODY_Y + (s.hang ? s.drop : 0), species: s.species, id });
+
   switch (id) {
     case 'dash':
-      s.dashT = 0.16;
+      s.dashT = 0.16 * strength;
       s.dashDir = inp.right ? 1 : (inp.left ? -1 : -s.face);
       s.pounce = false;
-      s.inv = Math.max(s.inv, 0.2);
+      s.inv = Math.max(s.inv, 0.2 * strength);
       s.blocking = false;
       s.atkT = 0;
       this.sfx('dash');
       return true;
 
     case 'pounce':
-      s.dashT = 0.14;
+      s.dashT = 0.14 * strength;
       s.dashDir = s.face;
       s.pounce = true;
-      s.inv = Math.max(s.inv, 0.14);
+      s.inv = Math.max(s.inv, 0.14 * strength);
       s.blocking = false;
       s.atkT = 0;
       this.sfx('pounce');
       return true;
 
     case 'web':
+      if (s.species !== 'weaver') {
+        const d = (o.x - s.x) * s.face;
+        if (s.species === 'hunter') { s.power = Math.max(s.power, 3); if (d > 0 && d < 240 && o.blocking && o.inv <= 0 && o.shield <= 0) o.guard = Math.max(1, o.guard - 12); }
+        if (s.species === 'guardian') { s.guard = Math.min(100, s.guard + 14); if (d > 0 && d < 105 && o.inv <= 0 && !o.blocking && o.shield <= 0) o.snare = Math.max(o.snare, 0.85); }
+        if (s.species === 'wolf') { s.hasteT = Math.max(s.hasteT, 2); if (d > 0 && d < 175 && o.inv <= 0 && !o.blocking && o.shield <= 0) o.snare = Math.max(o.snare, 0.35); }
+        if (s.species === 'lynx' && d > 0 && d < 135 && o.inv <= 0 && !o.blocking && o.shield <= 0) o.snare = Math.max(o.snare, 1.1);
+        this.sfx('web');
+        return false;
+      }
       this.state.webs.push({
         id: `web_${Date.now()}_${Math.random()}`,
         x: s.x + s.face * 30,
         y: BODY_Y - 4,
-        vx: s.face * 560,
+        vx: s.face * 560 * strength,
         owner: s.id,
         life: 1.6,
         k: 'web'
@@ -419,11 +459,19 @@ private useSkill(s: LocalPlayerState, o: LocalPlayerState, slotIndex: number, in
       return false;
 
     case 'spit':
+      if (s.species !== 'weaver' && s.species !== 'lynx') {
+        const d = (o.x - s.x) * s.face;
+        if (s.species === 'hunter') { s.dashT = Math.max(s.dashT, 0.11); s.dashDir = s.face; if (d > 0 && d < 110 && o.inv <= 0 && !o.blocking && o.shield <= 0) o.venom = Math.max(o.venom, 1.5); }
+        if (s.species === 'guardian' && d > 0 && d < 135 && o.inv <= 0 && o.shield <= 0) o.guard = Math.max(1, o.guard - 22);
+        if (s.species === 'wolf') { s.dashT = Math.max(s.dashT, 0.13); s.dashDir = s.face; if (d > 0 && d < 115 && o.inv <= 0 && !o.blocking && o.shield <= 0) o.venom = Math.max(o.venom, 1.4); }
+        this.sfx('spit');
+        return false;
+      }
       this.state.webs.push({
         id: `spit_${Date.now()}_${Math.random()}`,
         x: s.x + s.face * 30,
         y: BODY_Y - 4,
-        vx: s.face * 780,
+        vx: s.face * 780 * strength,
         owner: s.id,
         life: 1.2,
         k: 'spit'
@@ -432,41 +480,41 @@ private useSkill(s: LocalPlayerState, o: LocalPlayerState, slotIndex: number, in
       return false;
 
     case 'power':
-      s.power = 5;
+      s.power = 5 * strength;
       this.emitFx({ type: 'txt', x: s.x, y: LBL_Y, text: 'POWER UP', col: '#ffb347' });
       this.emitFx({ type: 'spark', x: s.x, y: BODY_Y, col: '#ffb347', count: 10, sp: 180 });
       this.sfx('power_up');
       return false;
 
     case 'shield':
-      s.shield = 4;
+      s.shield = 4 * strength;
       this.emitFx({ type: 'txt', x: s.x, y: LBL_Y, text: 'IRON SILK', col: '#cfe9ff' });
       this.emitFx({ type: 'spark', x: s.x, y: BODY_Y, col: '#cfe9ff', count: 10, sp: 160 });
       this.sfx('shield');
       return false;
 
     case 'mend':
-      s.grip = Math.min(MAX_GRIP, s.grip + 35);
-      this.emitFx({ type: 'txt', x: s.x, y: LBL_Y, text: '+35 GRIP', col: '#9cf0a8' });
+      s.grip = Math.min(MAX_GRIP, s.grip + 35 * strength);
+      this.emitFx({ type: 'txt', x: s.x, y: LBL_Y, text: `+${Math.round(35 * strength)} GRIP`, col: '#9cf0a8' });
       this.emitFx({ type: 'spark', x: s.x, y: BODY_Y, col: '#9cf0a8', count: 12, sp: 150 });
       this.sfx('mend');
       return false;
 
     case 'riposte':
-      s.riposte = 1;
+      s.riposte = strength;
       s.blocking = false;
       this.emitFx({ type: 'txt', x: s.x, y: LBL_Y, text: 'RIPOSTE', col: '#ffffff' });
       this.sfx('riposte');
       return false;
 
     case 'leech':
-      s.leech = 5;
+      s.leech = 5 * strength;
       this.emitFx({ type: 'txt', x: s.x, y: LBL_Y, text: 'LEECH FANG', col: '#d24a5a' });
       this.sfx('leech');
       return false;
 
     case 'carapace':
-      s.guard = 100;
+      s.guard = Math.min(100, s.guard + 100 * strength);
       s.gLock = false;
       this.emitFx({ type: 'txt', x: s.x, y: LBL_Y, text: 'CARAPACE', col: '#8fb7d6' });
       this.emitFx({ type: 'spark', x: s.x, y: BODY_Y, col: '#8fb7d6', count: 12, sp: 170 });
@@ -474,11 +522,22 @@ private useSkill(s: LocalPlayerState, o: LocalPlayerState, slotIndex: number, in
       return false;
 
     case 'hook':
+      if (s.species !== 'weaver') {
+        const d = (o.x - s.x) * s.face;
+        if (s.species === 'hunter') { s.dashT = Math.max(s.dashT, 0.18); s.dashDir = s.face; s.pounce = true; }
+        if (d > 0 && d < 170 && o.inv <= 0 && !o.blocking && o.shield <= 0) {
+          if (s.species === 'guardian') { this.kb[o.id] = -s.face * 360; o.stun = Math.max(o.stun, 0.3); }
+          if (s.species === 'wolf') { this.kb[o.id] = -s.face * 420; o.venom = Math.max(o.venom, 0.8); }
+          if (s.species === 'lynx') { this.kb[o.id] = -s.face * 280; o.snare = Math.max(o.snare, 0.55); }
+        }
+        this.sfx('hook');
+        return s.species === 'hunter';
+      }
       this.state.webs.push({
         id: `hook_${Date.now()}_${Math.random()}`,
         x: s.x + s.face * 30,
         y: BODY_Y - 4,
-        vx: s.face * 700,
+        vx: s.face * 700 * strength,
         owner: s.id,
         life: 1.0,
         k: 'hook'
@@ -498,13 +557,13 @@ private useSkill(s: LocalPlayerState, o: LocalPlayerState, slotIndex: number, in
         } else if (o.shield > 0) {
           this.absorb(o);
         } else if (o.blocking) {
-          o.guard -= 15;
-          this.kb[o.id] = s.face * 300;
+          o.guard -= 15 * strength;
+          this.kb[o.id] = s.face * 300 * strength;
           this.emitFx({ type: 'txt', x: o.x, y: LBL_Y, text: 'BLOCK', col: o.colorLight });
           if (o.guard <= 0) this.guardBreak(o);
         } else {
-          o.grip -= 10;
-          this.kb[o.id] = s.face * 650;
+          o.grip -= 10 * strength;
+          this.kb[o.id] = s.face * 650 * strength;
           o.stun = 0.3;
           o.atkT = 0;
           o.hitFlash = 0.2;
@@ -518,7 +577,7 @@ private useSkill(s: LocalPlayerState, o: LocalPlayerState, slotIndex: number, in
     }
 
     case 'haste':
-      s.hasteT = 3.5;
+      s.hasteT = 3.5 * strength;
       this.emitFx({ type: 'txt', x: s.x, y: LBL_Y, text: 'HASTE', col: s.colorLight });
       this.sfx('haste');
       return false;
@@ -527,13 +586,13 @@ private useSkill(s: LocalPlayerState, o: LocalPlayerState, slotIndex: number, in
       s.quake = 0.5;
       this.emitShake(9);
       this.sfx('tremor');
-      if (!o.hang && !o.ko && Math.abs(o.x - s.x) < 260 && o.inv <= 0) {
+      if (!o.hang && !o.ko && Math.abs(o.x - s.x) < 260 * strength && o.inv <= 0) {
         if (o.shield > 0) {
           this.absorb(o);
         } else if (o.blocking) {
           this.emitFx({ type: 'txt', x: o.x, y: LBL_Y, text: 'HELD', col: o.colorLight });
         } else {
-          o.stun = Math.max(o.stun, 0.9);
+          o.stun = Math.max(o.stun, 0.9 * strength);
           o.atkT = 0;
           o.hitFlash = 0.15;
           this.emitFx({ type: 'txt', x: o.x, y: LBL_Y, text: 'SHAKEN!', col: s.colorLight });
@@ -542,14 +601,14 @@ private useSkill(s: LocalPlayerState, o: LocalPlayerState, slotIndex: number, in
       return false;
 
     case 'surge':
-      s.drop = Math.max(0, s.drop - SURGE_LIFT);
+      s.drop = Math.max(0, s.drop - SURGE_LIFT * strength);
       this.emitFx({ type: 'txt', x: s.x, y: BODY_Y + s.drop + 20, text: 'SURGE!', col: s.colorLight });
       this.emitFx({ type: 'spark', x: s.x, y: BODY_Y + s.drop + 20, col: s.colorLight, count: 8, sp: 180 });
       this.sfx('surge');
       return false;
 
     case 'anchor':
-      s.anchorT = 2.5;
+      s.anchorT = 2.5 * strength;
       this.emitFx({ type: 'txt', x: s.x, y: BODY_Y + s.drop + 20, text: 'ANCHORED', col: s.colorLight });
       this.emitFx({ type: 'spark', x: s.x, y: BODY_Y + s.drop + 14, col: s.colorLight, count: 8, sp: 140 });
       this.sfx('anchor');

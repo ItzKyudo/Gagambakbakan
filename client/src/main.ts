@@ -342,7 +342,7 @@ async function startOnlineGame(opts: MenuStartOptions) {
           gamePage.showDraftModal(myChoices, network.room.state.round || 1, myName || 'Player', (skills) => {
             onlineDraftSubmitted = true;
             network.sendSelectSkills(skills);
-          });
+          }, myId === 0 ? network.room.state.p1.species : network.room.state.p2.species);
         }
       } else if (network.room.state.status === 'ready' || network.room.state.status === 'fight') {
         sound.music.play('duel');
@@ -519,7 +519,7 @@ function getNetworkCallbacks(isRanked: boolean) {
             gamePage.showDraftModal(myChoices, state.round || 1, myName || 'Player', (skills) => {
               onlineDraftSubmitted = true;
               network.sendSelectSkills(skills);
-            });
+            }, myId === 0 ? state.p1.species : state.p2.species);
           }
         } else if (state.status === 'ready' || state.status === 'fight') {
           gamePage.hideSpiderSelect();
@@ -862,7 +862,8 @@ function startLocalGame(opts: MenuStartOptions) {
               if (opts.mode === 'cpu') {
                 sound.music.play('duel');
               }
-            }
+            },
+            localEngine.state.p1.species
           );
         } else if (opts.mode === '2p' && localEngine.state.p1Drafted && !localEngine.state.p2Drafted && !gp.isDraftOpen) {
           gp.showDraftModal(
@@ -872,7 +873,8 @@ function startLocalGame(opts: MenuStartOptions) {
             (skills) => {
               localEngine?.confirmDraft(1, skills);
               sound.music.play('duel');
-            }
+            },
+            localEngine.state.p2.species
           );
         }
       } else if (localEngine.state.status === 'ready' || localEngine.state.status === 'fight') {

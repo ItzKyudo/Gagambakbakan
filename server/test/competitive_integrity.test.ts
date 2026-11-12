@@ -143,6 +143,7 @@ test('spider picks stay hidden until both players lock in, then draft uses each 
   const p2 = { sessionId: 'p2', auth: guest, send() {} };
   room.onJoin(p1, { species: 'weaver' });
   room.onJoin(p2, { species: 'hunter' });
+  room.spiderProgress = [{ wolf: { exp: 5950, skills: ['dash', 'surge'] } }, { lynx: { exp: 0, skills: ['dash', 'hook'] } }];
   assert.equal(room.battleState.status, 'select');
   assert.equal(room.battleState.p1.species, '');
   handlers.selectSpider(p1, { species: 'wolf' });
@@ -152,8 +153,27 @@ test('spider picks stay hidden until both players lock in, then draft uses each 
   assert.equal(room.battleState.status, 'draft');
   assert.equal(room.battleState.p1.species, 'wolf');
   assert.equal(room.battleState.p2.species, 'lynx');
+  assert.equal(room.battleState.p1.spiderLevel, 15);
+  assert.equal(room.battleState.p2.spiderLevel, 1);
   assert.deepEqual(room.battleState.draftChoicesP1, ['dash', 'surge']);
   assert.deepEqual(room.battleState.draftChoicesP2, ['dash', 'hook']);
+});
+
+test('a full 16-skill draft gets 30 seconds before server auto-picks', () => {
+  const room = Object.create(BattleRoom.prototype) as any;
+  room.battleState = {
+    status: 'draft', stateT: 0, p1Drafted: true, p2Drafted: true,
+    draftChoicesP1: Array(16).fill('dash'), draftChoicesP2: ['dash', 'web'],
+    p1: { sessionId: 'p1' }, p2: { sessionId: 'p2' }
+  };
+  room.playerInputs = new Map();
+  room.combat = { update() {} };
+  let started = false;
+  room.startFightReady = () => { started = true; };
+  room.update(30);
+  assert.equal(started, false);
+  room.update(2);
+  assert.equal(started, true);
 });
 
 test('leaving before combat gives no spider XP or rating', async () => {

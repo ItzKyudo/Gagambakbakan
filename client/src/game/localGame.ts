@@ -3,7 +3,7 @@ import { sound } from '../audio';
 import { LocalCombat } from './localCombat';
 import type { InputState, LocalBattleState, LocalPlayerState } from './localGameTypes';
 import { ABILITIES, drawSkills, type AbilityId } from './abilities';
-import { getUnlockedIds, recordMatch, getColor } from '../gb';
+import { getUnlockedIds, recordMatch, getColor, getLevel, getProgress } from '../gb';
 
 export type { InputState, LocalBattleState, LocalPlayerState, LocalWebState } from './localGameTypes';
 
@@ -107,6 +107,7 @@ export class LocalGameEngine {
       id,
       name,
       species,
+      spiderLevel: getLevel(getProgress().spiderProgress?.[species]?.exp || 0),
       color: main,
       colorDark: dark,
       colorLight: light,
@@ -187,6 +188,9 @@ export class LocalGameEngine {
     }
 
     // Offer all unlocked skills for drafting
+    const progress = getProgress();
+    this.state.p1.spiderLevel = getLevel(progress.spiderProgress?.[this.state.p1.species]?.exp || 0);
+    this.state.p2.spiderLevel = getLevel(progress.spiderProgress?.[this.state.p2.species]?.exp || 0);
     this.state.draftChoicesP1 = getUnlockedIds(undefined, this.state.p1.species);
     this.state.draftChoicesP2 = getUnlockedIds(undefined, this.state.p2.species);
     this.state.p1Drafted = false;

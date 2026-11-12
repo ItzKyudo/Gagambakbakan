@@ -71,6 +71,7 @@ test('profile shows separate spider ability progress; Player 2 has no account ra
     getExpProgress: () => ({ expIntoLevel: 0, expForLevel: 150 }),
     getRankProgress: () => ({ progressPct: 50, ratingInTier: 100, ratingForTier: 500, nextRank: null }),
     spiderSVG: () => '<svg></svg>',
+    spiderAbilityIcon: () => 'data:image/svg+xml,icon',
     SPIDERS: [{ id: 'weaver', name: 'Orb Weaver', skill: 'web' }, { id: 'wolf', name: 'Wolf Spider', skill: 'surge' }],
     getRankFromRating: () => ({ id: 'huntsman-spider', species: 'Huntsman Spider', title: 'Nightmare Prowler' }),
     renderRankBadgeSVG: () => '<img class="rank-badge-svg">',

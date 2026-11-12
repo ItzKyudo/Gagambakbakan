@@ -1,5 +1,6 @@
 import { getAuthUser, supabase } from '../../auth';
 import { getColor, getExpProgress, getLevel, getLooks, getProgress, SPIDERS, spiderSVG } from '../../gb';
+import { spiderAbilityIcon } from '../../game/spiderIcons';
 import { fetchMatchHistory, MATCH_MODES, summarizeMatches, type MatchMode, type MatchRecord } from '../../matchHistory';
 import { getRankFromRating, getRankProgress, renderRankBadgeSVG, RANK_RATING_LABEL, SPIDER_RANKS } from './rankTitle';
 import { renderLeaderboardBadge } from './leaderboardBadge';
@@ -10,7 +11,7 @@ export function renderProfileView(slot: 'p1' | 'p2'): string {
   const currentRankIndex = SPIDER_RANKS.findIndex(tier => tier.id === rank.id);
   const looks = getLooks();
   const lk = looks[slot] || looks.p1;
-  const spiderHtml = spiderSVG(lk, '-profile');
+  const spiderHtml = spiderSVG(lk, '-profile', getLevel(progress.spiderProgress?.[lk.species]?.exp || 0));
   const spiderColor = typeof getColor === 'function' ? getColor(lk.color) : { main: '#f2a33a', light: '#ffd694', label: 'Amber' };
   const rankProgress = typeof getRankProgress === 'function'
     ? getRankProgress(progress.rating)
@@ -128,8 +129,8 @@ export function renderProfileView(slot: 'p1' | 'p2'): string {
         <p class="note">Each spider gains experience and unlocks skills only when used online. Manage unlocks in Abilities.</p>
       </div>
       <ul class="profile-abilities">${SPIDERS.map(spider => `
-        <li><img class="ability-icon" src="/abilities/${spider.skill}.png" alt="">
-          <div><h3>${spider.name}</h3><p>Level ${getLevel(progress.spiderProgress?.[spider.id]?.exp || 0)}</p><small>${progress.spiderProgress?.[spider.id]?.skills.length || 2} / 5 skills unlocked</small></div></li>`).join('')}</ul>
+        <li><img class="ability-icon" src="${spiderAbilityIcon(spider.id, spider.skill)}" alt="">
+          <div><h3>${spider.name}</h3><p>Level ${getLevel(progress.spiderProgress?.[spider.id]?.exp || 0)}</p><small>${progress.spiderProgress?.[spider.id]?.skills.length || 2} / 16 skills unlocked</small></div></li>`).join('')}</ul>
     </section>
   </section>`;
 }

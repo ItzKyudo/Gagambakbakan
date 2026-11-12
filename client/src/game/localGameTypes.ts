@@ -4,6 +4,7 @@ export interface LocalPlayerState {
   id: number;
   name: string;
   species: string;
+  spiderLevel?: number;
   color: string;
   colorDark: string;
   colorLight: string;

@@ -1,5 +1,5 @@
 import { createElement, BookOpen, GraduationCap, Settings, LogIn, type IconNode } from 'lucide';
-import { getColor, getExpProgress, getLooks, getProgress, getBattlefieldsData, SPIDERS, spiderSVG } from '../../gb';
+import { getColor, getExpProgress, getLevel, getLooks, getProgress, getBattlefieldsData, SPIDERS, spiderSVG } from '../../gb';
 import { getRankFromRating, getRankProgress, renderRankBadgeSVG, RANK_RATING_LABEL } from './rankTitle';
 import { getAuthUser } from '../../auth';
 
@@ -152,7 +152,7 @@ export function renderMainMenuView(activePanel: 'main' | 'play' = 'main'): strin
             <div class="showcase-podium">
               <div class="showcase-glow" style="--spider-glow:${getColor(looks.p1.color).main};"></div>
               <div class="stage" id="showcaseStage" role="button" tabindex="0" title="Click to customize your spider">
-                ${spiderSVG(looks.p1, '-showcase')}
+                ${spiderSVG(looks.p1, '-showcase', getLevel(getProgress().spiderProgress?.[looks.p1.species]?.exp || 0))}
               </div>
               <div class="showcase-reflection"></div>
               <button type="button" class="showcase-customize-hint" id="btnQuickCustomize" title="Customize Spider">

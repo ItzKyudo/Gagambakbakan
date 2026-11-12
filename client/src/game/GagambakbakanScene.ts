@@ -6,6 +6,8 @@ import {
 import { keyLabel, getKeys } from '../gb';
 import { decodePatternArt } from '../patternArt';
 import { attackPose, gaitMotion, skillBurst, smoothMotion, type SkillBurst } from './spiderMotion';
+import { ALL_ABILITY_IDS, getSpiderAbility, type AbilityId } from './abilities';
+import { spiderAbilityIcon } from './spiderIcons';
 
 interface Particle {
   x: number;
@@ -55,6 +57,8 @@ export class GagambakbakanScene extends Phaser.Scene {
   private particles: Particle[] = [];
   private impactRings: ImpactRing[] = [];
   private floatingTexts: FloatingText[] = [];
+  private abilityCasts: Array<{ x: number; y: number; species: string; id: AbilityId; life: number; image: HTMLImageElement }> = [];
+  private abilityImages = new Map<string, HTMLImageElement>();
   private powerTrailUntil: [number, number] = [0, 0];
   private leechTrailUntil: [number, number] = [0, 0];
 
@@ -294,6 +298,16 @@ export class GagambakbakanScene extends Phaser.Scene {
           g: 900
         });
       }
+    } else if (fx.type === 'ability' && ALL_ABILITY_IDS.includes(fx.id)) {
+      const key = `${fx.species}:${fx.id}`;
+      let icon = this.abilityImages.get(key);
+      if (!icon) {
+        icon = new Image();
+        icon.src = spiderAbilityIcon(fx.species, fx.id);
+        this.abilityImages.set(key, icon);
+      }
+      this.abilityCasts.push({ x: fx.x, y: fx.y, species: fx.species, id: fx.id, life: 0.65, image: icon });
+      this.floatingTexts.push({ x: fx.x, y: fx.y - 65, text: getSpiderAbility(fx.species, fx.id).name.toUpperCase(), col: '#f5f4dc', life: 0.85 });
     } else if (fx.type === 'txt') {
       this.floatingTexts.push({
         x: fx.x,
@@ -335,6 +349,8 @@ export class GagambakbakanScene extends Phaser.Scene {
         this.impactRings.pop();
       }
     }
+
+    this.abilityCasts = this.abilityCasts.filter(cast => (cast.life -= dt) > 0);
 
     // Update floating texts (O(1) swap-and-pop)
     for (let j = this.floatingTexts.length - 1; j >= 0; j--) {
@@ -411,6 +427,7 @@ export class GagambakbakanScene extends Phaser.Scene {
           ? [p1, p2]
           : (p1.atkT > 0 && p2.atkT <= 0 ? [p2, p1] : [p1, p2]));
       order.forEach((s) => this.drawSpider(ctx, s, t));
+      this.drawAbilityCasts(ctx);
       order.forEach((s) => this.drawSpiderName(ctx, s));
 
       // Draw Webs & Projectiles
@@ -652,6 +669,38 @@ export class GagambakbakanScene extends Phaser.Scene {
     }
 
     ctx.restore();
+  }
+
+  private drawAbilityCasts(ctx: CanvasRenderingContext2D) {
+    for (const cast of this.abilityCasts) {
+      const p = 1 - cast.life / 0.65;
+      const index = ALL_ABILITY_IDS.indexOf(cast.id);
+      const radius = 16 + 25 * p + index % 4 * 2;
+      const colors: Record<string, string> = { weaver: '#66d7ca', hunter: '#89c8ff', guardian: '#d8c794', wolf: '#f3a76d', lynx: '#b3dd72' };
+      ctx.save();
+      ctx.translate(cast.x, cast.y - 37 - p * 16);
+      ctx.globalAlpha = Math.min(1, cast.life * 3);
+      ctx.strokeStyle = colors[cast.species] || colors.weaver;
+      ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      if (cast.species === 'weaver') {
+        ctx.arc(0, 0, radius, 0, Math.PI * 2);
+        for (let i = 0; i < 6 + index % 4; i++) { const a = i * Math.PI * 2 / (6 + index % 4); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a) * radius, Math.sin(a) * radius); }
+      } else if (cast.species === 'hunter') {
+        ctx.ellipse(0, 0, radius, radius * 0.48, 0, 0, Math.PI * 2);
+        ctx.moveTo(-radius - 6, 0); ctx.lineTo(-radius + 3, 0);
+        ctx.moveTo(radius - 3, 0); ctx.lineTo(radius + 6, 0);
+      } else if (cast.species === 'guardian') {
+        for (let i = 0; i <= 6; i++) { const a = i * Math.PI / 3 - Math.PI / 2; if (i === 0) ctx.moveTo(Math.cos(a) * radius, Math.sin(a) * radius); else ctx.lineTo(Math.cos(a) * radius, Math.sin(a) * radius); }
+      } else if (cast.species === 'wolf') {
+        for (let i = -1; i <= 1; i++) { ctx.moveTo(-radius + i * 9 + p * 18, -radius); ctx.lineTo(radius + i * 9, radius); }
+      } else {
+        for (let i = 0; i < 7 + index % 3; i++) { const a = i * Math.PI * 2 / (7 + index % 3) + p; ctx.moveTo(Math.cos(a) * (radius - 10), Math.sin(a) * (radius - 10)); ctx.lineTo(Math.cos(a) * (radius + 5), Math.sin(a) * (radius + 5)); }
+      }
+      ctx.stroke();
+      if (cast.image.complete && cast.image.naturalWidth) ctx.drawImage(cast.image, -17, -17, 34, 34);
+      ctx.restore();
+    }
   }
 
   private drawStick(ctx: CanvasRenderingContext2D) {
@@ -1308,9 +1357,9 @@ export class GagambakbakanScene extends Phaser.Scene {
       }
 
       const isArmBlocking = s.blocking && i === 0;
-      const legWidth = far
+      const legWidth = (far
         ? (isArmBlocking ? 3.8 : 3.2)
-        : (i < 2 && (s.atkT > 0 || sweepArc > 0 || isArmBlocking) ? 4.8 : 4);
+        : (i < 2 && (s.atkT > 0 || sweepArc > 0 || isArmBlocking) ? 4.8 : 4));
       const showClawTip = (!far || isArmBlocking) ? clawCol : undefined;
 
       this.legStroke(
@@ -1351,6 +1400,7 @@ export class GagambakbakanScene extends Phaser.Scene {
     const colDark = s.colorDark || (isAmber ? COLORS.amberDark : COLORS.jadeDark);
     const colLight = s.colorLight || (isAmber ? COLORS.amberLight : COLORS.jadeLight);
     const pattern = s.pattern || 'stripes';
+    const species = s.species || 'weaver';
     const acc = s.acc || 'none';
 
     // Track recent power/leech buffs so active strikes keep their empowered visual trail even after hit consumption
@@ -1883,6 +1933,50 @@ export class GagambakbakanScene extends Phaser.Scene {
         ctx.stroke();
       });
     }
+    ctx.save();
+    ctx.globalAlpha *= 0.62;
+    ctx.strokeStyle = colDark;
+    ctx.fillStyle = colDark;
+    ctx.lineWidth = 2.5;
+    if (species === 'weaver') {
+      ctx.beginPath(); ctx.ellipse(cx, cy, 11, 9, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(cx, cy, 5, 4, 0, 0, Math.PI * 2); ctx.stroke();
+    } else if (species === 'guardian') {
+      ctx.beginPath(); ctx.moveTo(cx - 17, cy - 3); ctx.lineTo(cx, cy - 10); ctx.lineTo(cx + 17, cy - 3); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx - 17, cy + 3); ctx.lineTo(cx, cy + 10); ctx.lineTo(cx + 17, cy + 3); ctx.stroke();
+    } else if (species === 'wolf') {
+      ctx.beginPath(); ctx.moveTo(cx - 16, cy - 5); ctx.lineTo(cx - 6, cy + 2); ctx.lineTo(cx + 4, cy - 5); ctx.lineTo(cx + 14, cy + 2); ctx.stroke();
+    } else if (species === 'lynx') {
+      for (const [dx, dy] of [[-12,-6],[0,-9],[12,-4],[-8,6],[9,7]]) { ctx.beginPath(); ctx.arc(cx + dx, cy + dy, 2, 0, Math.PI * 2); ctx.fill(); }
+    } else {
+      ctx.beginPath(); ctx.arc(cx, cy - 4, 6, Math.PI, 0); ctx.stroke();
+    }
+    ctx.restore();
+    const upgradeTier = s.spiderLevel >= 15 ? 3 : s.spiderLevel >= 10 ? 2 : s.spiderLevel >= 5 ? 1 : 0;
+    if (upgradeTier) {
+      ctx.save();
+      ctx.strokeStyle = colLight;
+      ctx.lineWidth = upgradeTier > 1 ? 2.6 : 1.8;
+      ctx.beginPath();
+      if (species === 'weaver') {
+        ctx.arc(cx, cy, 13, Math.PI * 0.2, Math.PI * 1.8);
+        ctx.moveTo(cx - 13, cy); ctx.lineTo(cx + 13, cy);
+      } else if (species === 'hunter') {
+        ctx.moveTo(cx - 14, cy - 10); ctx.lineTo(cx + 13, cy - 10);
+        ctx.moveTo(cx - 10, cy + 10); ctx.lineTo(cx + 10, cy + 10);
+      } else if (species === 'guardian') {
+        ctx.moveTo(cx - 18, cy - 7); ctx.lineTo(cx, cy - 13); ctx.lineTo(cx + 18, cy - 7);
+        ctx.moveTo(cx - 17, cy + 8); ctx.lineTo(cx, cy + 14); ctx.lineTo(cx + 17, cy + 8);
+      } else if (species === 'wolf') {
+        ctx.moveTo(cx - 17, cy - 10); ctx.lineTo(cx - 8, cy - 2); ctx.lineTo(cx, cy - 10); ctx.lineTo(cx + 8, cy - 2); ctx.lineTo(cx + 17, cy - 10);
+      } else {
+        for (let i = -1; i <= 1; i++) { ctx.moveTo(cx + i * 11, cy - 12); ctx.lineTo(cx + i * 11 + 4, cy - 18); }
+      }
+      if (upgradeTier > 1) { ctx.moveTo(cx - 16, cy + 5); ctx.lineTo(cx + 16, cy + 5); }
+      if (upgradeTier > 2) { ctx.moveTo(cx - 9, cy - 14); ctx.lineTo(cx + 9, cy - 14); }
+      ctx.stroke();
+      ctx.restore();
+    }
     ctx.restore();
 
     ctx.beginPath();
@@ -1910,6 +2004,8 @@ export class GagambakbakanScene extends Phaser.Scene {
     // Cephalothorax (head/chest) with attack lunge & pitch
     const hx2 = bx + f * 11 + headOffsetX;
     const hy2 = by + headOffsetY;
+    const headRx = 15;
+    const headRy = 14;
     const g2 = ctx.createRadialGradient(hx2 - f * 4, hy2 - 6, 1, hx2, hy2, 17);
     g2.addColorStop(0, colMain);
     g2.addColorStop(1, colDark);
@@ -1917,14 +2013,29 @@ export class GagambakbakanScene extends Phaser.Scene {
     ctx.strokeStyle = COLORS.outline;
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.ellipse(hx2, hy2, 15 + pose.strike * 1.2, 14 - pose.strike * 0.6, 0, 0, Math.PI * 2);
+    ctx.ellipse(hx2, hy2, headRx + pose.strike * 1.2, headRy - pose.strike * 0.6, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
+    if (upgradeTier > 1) {
+      ctx.save();
+      ctx.fillStyle = '#4b5664';
+      ctx.strokeStyle = '#dbe7ea';
+      ctx.lineWidth = 1.3;
+      ctx.beginPath();
+      ctx.moveTo(hx2 - 12, hy2 - 5);
+      ctx.quadraticCurveTo(hx2, hy2 - 17, hx2 + 12, hy2 - 5);
+      ctx.lineTo(hx2 + 9, hy2 - 2);
+      ctx.quadraticCurveTo(hx2, hy2 - 10, hx2 - 9, hy2 - 2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
 
     if (s.hitFlash > 0) {
       ctx.fillStyle = `rgba(255,255,255,${(s.hitFlash / 0.2 * 0.7).toFixed(2)})`;
       ctx.beginPath();
-      ctx.ellipse(hx2, hy2, 15, 14, 0, 0, Math.PI * 2);
+      ctx.ellipse(hx2, hy2, headRx, headRy, 0, 0, Math.PI * 2);
       ctx.fill();
     }
 

@@ -1,7 +1,7 @@
 import { Room, Client, ServerError, type AuthContext } from 'colyseus';
 import { BattleStateData, PlayerStateData, WebStateData } from './schema/BattleState';
 import { BattleCombat, type PlayerInput } from './BattleCombat';
-import { ABILITIES, isAbilityId, isSpiderType, SPIDER_STARTERS, SPIDER_POOLS, selectSpiderAbilities, type SpiderType, AbilityId } from '../abilities';
+import { ABILITIES, isAbilityId, isSpiderType, levelFromSpiderExp, SPIDER_STARTERS, SPIDER_POOLS, selectSpiderAbilities, type SpiderType, AbilityId } from '../abilities';
 import { getRankFromRating, normalizeRankId, calculateRatingChange } from '../ranks';
 import { validateUsername } from '../auth';
 import { checkMatchmakingRateLimit } from '../matchmakingRateLimit';
@@ -380,6 +380,7 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
   private startDraft() {
     for (const player of [this.battleState.p1, this.battleState.p2]) {
       player.species = this.selectedSpecies[player.id] || this.preferredSpecies[player.id];
+      player.spiderLevel = levelFromSpiderExp(this.spiderProgress[player.id]?.[player.species as SpiderType]?.exp || 0);
     }
     const choices = (player: PlayerStateData) => {
       const species = player.species as SpiderType;
@@ -503,8 +504,8 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
       return;
     }
 
-    // 17s server timeout provides 2s grace over 15s client countdown to absorb network latency
-    if (this.battleState.status === 'draft' && this.battleState.stateT >= 17) {
+    // Two seconds of grace after the client draft timer absorbs network latency.
+    if (this.battleState.status === 'draft' && this.battleState.stateT >= (Math.max(this.battleState.draftChoicesP1.length, this.battleState.draftChoicesP2.length) > 9 ? 32 : 17)) {
       if (!this.battleState.p1Drafted) this.autoDraft(this.battleState.p1, this.battleState.draftChoicesP1);
       if (!this.battleState.p2Drafted) this.autoDraft(this.battleState.p2, this.battleState.draftChoicesP2);
       this.startFightReady();

@@ -42,7 +42,7 @@ body:has(#spiderPick:not([hidden])) .rail { display: none !important; }
 .spider-select-grid[hidden] { display: none; }
 .spider-select-card { min-height: 230px; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 22px 12px; color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 14px; font: inherit; cursor: pointer; transition: transform .18s ease-out, border-color .18s ease-out, box-shadow .18s ease-out; }
 .spider-select-card:hover, .spider-select-card:focus-visible { transform: translateY(-6px); border-color: var(--amber); box-shadow: 0 12px 28px #0008; outline: none; }
-.spider-select-card img { width: 72px; height: 72px; object-fit: contain; }
+.spider-select-card .spider-art { width: 100%; max-width: 170px; height: auto; overflow: visible; }
 .spider-select-card strong { font-family: var(--label); font-size: 19px; text-transform: uppercase; line-height: 1.1; }
 .spider-select-card span { font-size: 14px; line-height: 1.4; }
 .spider-select-card .spider-select-kit { color: var(--muted); font-size: 12px; }

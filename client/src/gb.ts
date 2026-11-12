@@ -1,5 +1,6 @@
 import {
   ABILITIES,
+  ALL_ABILITY_IDS,
   isNodeAvailableToUnlock,
   type AbilityId,
   shuffle
@@ -294,11 +295,11 @@ export const DEF_LOOK: { p1: SpiderLook; p2: SpiderLook } = {
 };
 
 export const SPIDERS = [
-  { id: 'weaver', name: 'Orb Weaver', skill: 'web', description: 'Controls space with sticky silk.', pool: ['dash', 'web', 'spit', 'tremor', 'hook'] },
-  { id: 'hunter', name: 'Jumping Spider', skill: 'pounce', description: 'Strikes from a sudden leap.', pool: ['dash', 'power', 'pounce', 'sweep', 'riposte'] },
-  { id: 'guardian', name: 'Huntsman', skill: 'shield', description: 'Defends and counters at close range.', pool: ['dash', 'shield', 'mend', 'carapace', 'leech'] },
-  { id: 'wolf', name: 'Wolf Spider', skill: 'surge', description: 'Runs down its rival.', pool: ['dash', 'surge', 'anchor', 'haste', 'sweep'] },
-  { id: 'lynx', name: 'Lynx Spider', skill: 'hook', description: 'Climbs and catches its rival.', pool: ['dash', 'web', 'spit', 'hook', 'anchor'] }
+  { id: 'weaver', name: 'Orb Weaver', skill: 'web', description: 'Controls space with sticky silk.', pool: ALL_ABILITY_IDS },
+  { id: 'hunter', name: 'Jumping Spider', skill: 'pounce', description: 'Strikes from a sudden leap.', pool: ALL_ABILITY_IDS },
+  { id: 'guardian', name: 'Huntsman', skill: 'shield', description: 'Defends and counters at close range.', pool: ALL_ABILITY_IDS },
+  { id: 'wolf', name: 'Wolf Spider', skill: 'surge', description: 'Runs down its rival.', pool: ALL_ABILITY_IDS },
+  { id: 'lynx', name: 'Lynx Spider', skill: 'hook', description: 'Climbs and catches its rival.', pool: ALL_ABILITY_IDS }
 ] as const;
 
 export function spiderStarter(species: string): AbilityId {
@@ -380,14 +381,29 @@ export function customPatternSVG(value: string): string {
   }).join('');
 }
 
-export function spiderSVGraw(look: SpiderLook): string {
+export function spiderSVGraw(look: SpiderLook, level = 1): string {
   const c = getColor(look.color);
   const OUT = 'rgba(8,16,15,.78)';
+  const species = look.species;
   const body = 'M41 94 C40 70 59 55 87 54 C116 53 136 69 136 92 C136 115 115 129 87 129 C59 129 42 116 41 94 Z';
   const head = 'M121 91 C121 73 135 62 153 63 C171 64 181 77 180 95 C179 112 165 121 147 118 C131 116 121 107 121 91 Z';
   const far = '<path d="M65 97 L44 88 Q37 86 32 94 L15 134"/><path d="M76 108 L57 109 Q49 111 45 121 L36 144"/><path d="M112 109 L132 115 Q140 119 143 130 L146 145"/><path d="M131 98 L154 96 Q165 97 174 107 L204 136"/>';
   const legs = '<path d="M62 102 L38 101 Q29 104 25 116 L14 143"/><path d="M75 114 L56 120 Q49 125 49 135 L47 146"/><path d="M114 113 L129 123 Q135 130 131 145"/>';
   const foreleg = '<path d="M132 102 L158 105 Q169 108 177 119 L198 142"/>';
+  const speciesMark = species === 'hunter' ? `<path d="M65 83 Q84 70 106 83" fill="none" stroke="${c.light}" stroke-width="5" opacity=".65"/>`
+    : species === 'guardian' ? `<path d="M49 87 Q92 68 135 87 L126 104 Q90 114 53 102 Z" fill="${c.dark}" stroke="${c.light}" stroke-width="2" opacity=".62"/>`
+    : species === 'wolf' ? `<path d="M49 91 L67 78 L85 91 L103 78 L121 91 L137 78" fill="none" stroke="${c.dark}" stroke-width="6" stroke-linejoin="round"/>`
+    : species === 'lynx' ? `<g fill="${c.dark}"><circle cx="63" cy="78" r="4"/><circle cx="92" cy="70" r="4"/><circle cx="115" cy="84" r="4"/><circle cx="75" cy="109" r="4"/><circle cx="109" cy="111" r="4"/></g>`
+    : `<circle cx="88" cy="92" r="23" fill="none" stroke="${c.dark}" stroke-width="4" opacity=".75"/><circle cx="88" cy="92" r="10" fill="none" stroke="${c.light}" stroke-width="3" opacity=".65"/>`;
+  const tier = level >= 15 ? 3 : level >= 10 ? 2 : level >= 5 ? 1 : 0;
+  const kit = tier ? {
+    weaver: `<path d="M51 96 Q86 49 126 96 M60 72 Q88 96 60 116 M111 68 Q88 96 112 119"/>`,
+    hunter: `<path d="M128 78 Q153 58 178 77 M133 81 L144 77 M161 76 L174 80"/>`,
+    guardian: `<path d="M48 82 L91 67 L129 82 L125 105 L90 117 L49 104 Z"/>`,
+    wolf: `<path d="M51 92 L67 70 L85 92 L104 70 L125 92 M54 107 L88 120 L123 107"/>`,
+    lynx: `<path d="M55 76 L62 59 L70 77 M83 66 L90 49 L97 66 M108 76 L117 58 L124 79"/>`
+  }[species] || '' : '';
+  const upgrades = tier ? `<g class="spider-upgrade" fill="none" stroke="${c.light}" stroke-width="${tier > 1 ? 3 : 2.5}" stroke-linecap="round" stroke-linejoin="round">${kit}${tier > 1 ? `<path d="M126 75 Q151 60 177 76 L174 82 Q151 71 128 83 Z" fill="#4b5664" stroke="#dbe7ea" stroke-width="1.5"/><path d="M26 113 l-8 -4 M174 113 l9 -7 M191 130 l9 -5"/>` : ''}${tier > 2 ? `<path d="M50 92 Q87 49 128 92 M51 102 Q88 138 127 101" stroke="#dbe7ea"/><circle cx="64" cy="74" r="2" fill="#f5f4dc"/><circle cx="107" cy="74" r="2" fill="#f5f4dc"/>` : ''}</g>` : '';
 
   let pat = '';
   if (look.pattern === 'custom') {
@@ -486,7 +502,7 @@ export function spiderSVGraw(look: SpiderLook): string {
     `<path d="M26 156 Q62 153 98 156 M136 156 Q176 158 212 155 M76 161 Q116 163 156 161" stroke="#4a331e" stroke-width="1.4" fill="none" stroke-linecap="round"/>` +
     `<path d="M216 144 C220 137 228 139 227 146 C223 147 218 145 216 144 Z" fill="#2ed573" stroke="${OUT}" stroke-width="1.2"/></g>` +
     `<g class="spider-rig"><g class="spider-legs spider-legs-far" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity=".72"><g stroke="${OUT}" stroke-width="6.4">${far}</g><g stroke="${c.dark}" stroke-width="3.5">${far}</g></g>` +
-    `<g class="spider-abdomen"><path d="${body}" fill="url(#pb)"/><g class="custom-pattern" clip-path="url(#pc)" opacity="${look.pattern === 'custom' ? 1 : .68}">${pat}</g><path d="${body}" fill="none" stroke="${OUT}" stroke-width="2.3"/>` +
+    `<g class="spider-abdomen"><path d="${body}" fill="url(#pb)"/><g clip-path="url(#pc)">${speciesMark}</g><g class="custom-pattern" clip-path="url(#pc)" opacity="${look.pattern === 'custom' ? 1 : .68}">${pat}</g><path d="${body}" fill="none" stroke="${OUT}" stroke-width="2.3"/>` +
     `<path d="M54 77 C68 59 96 57 117 68" fill="none" stroke="${c.light}" stroke-width="2.6" stroke-linecap="round" opacity=".26"/>` +
     `<g fill="none" stroke="${c.dark}" stroke-width="1.1" stroke-linecap="round" opacity=".7"><path d="M50 70 l-5 -5 M60 62 l-3 -6 M73 57 l-1 -7 M101 57 l2 -7 M115 63 l4 -6 M128 74 l6 -4 M45 105 l-6 3 M56 120 l-4 6 M72 127 l-1 7 M105 126 l3 7 M122 117 l6 5"/></g></g>` +
     `<g class="spider-legs spider-legs-near" fill="none" stroke-linecap="round" stroke-linejoin="round"><g stroke="${OUT}" stroke-width="6.6">${legs}</g><g stroke="${c.main}" stroke-width="3.7">${legs}</g></g>` +
@@ -496,11 +512,11 @@ export function spiderSVGraw(look: SpiderLook): string {
     `<g fill="none" stroke="${c.dark}" stroke-width="1" stroke-linecap="round" opacity=".75"><path d="M128 75 l-4 -5 M139 67 l-2 -6 M153 64 l0 -6 M167 69 l4 -5 M177 82 l6 -2 M176 104 l6 3 M164 115 l3 6 M138 114 l-2 6"/></g>` +
     `<g class="spider-eyes" fill="#07100f" stroke="${c.light}" stroke-width="1.2"><circle cx="151" cy="88" r="5.1"/><circle cx="164" cy="89" r="4.7"/><circle cx="142" cy="89" r="2.8"/><circle cx="173" cy="93" r="2.7"/><circle cx="143" cy="78" r="2.2"/><circle cx="151" cy="75" r="2.3"/><circle cx="161" cy="76" r="2.2"/><circle cx="170" cy="81" r="2"/></g>` +
     `<g class="spider-eye-glints" fill="#f4f7ee"><circle cx="149.3" cy="86.3" r="1.35"/><circle cx="162.5" cy="87.4" r="1.2"/><circle cx="141.2" cy="88" r=".7"/><circle cx="172.2" cy="92.2" r=".65"/><circle cx="150.3" cy="74.3" r=".55"/><circle cx="160.4" cy="75.4" r=".5"/></g>` +
-    `<g class="spider-palps" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M166 103 Q180 103 182 112 Q182 119 176 119 M163 106 Q175 109 175 117" stroke="${OUT}" stroke-width="5.4"/><path d="M166 103 Q180 103 182 112 Q182 119 176 119 M163 106 Q175 109 175 117" stroke="${c.dark}" stroke-width="2.8"/><path d="M173 105 L181 109 L176 113" stroke="#d9d2bd" stroke-width="1.8"/></g>${acc}</g></g></g></svg>`;
+    `<g class="spider-palps" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M166 103 Q180 103 182 112 Q182 119 176 119 M163 106 Q175 109 175 117" stroke="${OUT}" stroke-width="5.4"/><path d="M166 103 Q180 103 182 112 Q182 119 176 119 M163 106 Q175 109 175 117" stroke="${c.dark}" stroke-width="2.8"/><path d="M173 105 L181 109 L176 113" stroke="#d9d2bd" stroke-width="1.8"/></g>${acc}</g></g>${upgrades}</g></svg>`;
 }
 
-export function spiderSVG(look: SpiderLook, u: string = ''): string {
-  return spiderSVGraw(look)
+export function spiderSVG(look: SpiderLook, u: string = '', level = 1): string {
+  return spiderSVGraw(look, level)
     .replace(/id="(pb|ph|pc)"/g, `id="$1${u}"`)
     .replace(/url\(#(pb|ph|pc)\)/g, `url(#$1${u})`);
 }
@@ -749,7 +765,7 @@ export const LEVEL_EXP_TABLE = [
   2200, // Level 9: 2200 EXP (+450)
   2700, // Level 10: 2700 EXP (+500)
   3250, // Level 11: 3250 EXP (+550)
-  3850  // Level 12: 3850 EXP (+600, all 16 skills unlocked)
+  3850  // Level 12: 3850 EXP (+600)
 ];
 
 export function getExpRequiredForLevel(level: number): number {
@@ -853,7 +869,7 @@ export function getAbilityPoints(p?: ProgressData, species = getLooks().p1.speci
   p = p || getProgress();
   const spider = SPIDERS.find(s => s.id === species) || SPIDERS[0];
   const progress = p.spiderProgress?.[spider.id];
-  const total = Math.min(3, getLevel(progress?.exp || 0) - 1);
+  const total = Math.min(14, getLevel(progress?.exp || 0) - 1);
   const spent = (progress?.skills || []).filter(id => id !== 'dash' && id !== spider.skill).length;
   const available = Math.max(0, total - spent);
   return { total, spent, available };
@@ -1003,7 +1019,7 @@ export function recordOnlineMatch(won: boolean, myRoundsWon: number, isRanked: b
 
   const newLevel = getLevel(spider.exp);
   const leveledUp = newLevel > oldLevel;
-  const pointsGained = Math.min(3, newLevel - 1) - Math.min(3, oldLevel - 1);
+  const pointsGained = Math.min(14, newLevel - 1) - Math.min(14, oldLevel - 1);
 
   return {
     expGained,

@@ -12,6 +12,7 @@ export interface PlayerStateData {
   customPattern: string;
   acc: string;          // 'none' | 'band' | 'horns' | 'apex_crown' | 'mythic_laurel'
   level: number;        // Player online level
+  spiderLevel?: number; // Cosmetic level for the selected species
   rank?: string;        // Competitive rank tier
   rating?: number;      // Competitive rating/MMR
   isRanked?: boolean;

@@ -36,7 +36,7 @@ test('account identity and progression come from verified profile, never join op
     assert.equal(options.rank, 'philippine-tarantula');
     assert.equal(options.rating, 810);
     assert.equal(options.level, 2);
-    assert.deepEqual(options.unlockedSkills, ['dash', 'surge', 'anchor']);
+    assert.deepEqual(options.unlockedSkills, ['dash', 'web', 'surge', 'power']);
     assert.equal(calls.length, 2);
   } finally {
     globalThis.fetch = originalFetch;
@@ -49,7 +49,7 @@ test('ranked requires a token; guests get level-one casual skills', async () => 
   assert.equal(guest.rating, 0);
   assert.equal(guest.level, 1);
   assert.equal(guest.isRanked, false);
-  assert.deepEqual(guest.unlockedSkills, ['dash', 'web', 'surge']);
+  assert.deepEqual(guest.unlockedSkills, ['dash', 'web', 'surge', 'power']);
   const options = { rank: 'brown-widow', rating: 9000, isRanked: false };
   await BattleRoom.onAuth('', options, { ip: 'test-guest-pool' } as any);
   assert.equal(options.rank, 'guest');
@@ -116,7 +116,7 @@ test('join ignores forged level, rating, skills, and exclusive accessory', async
   assert.equal(room.battleState.p1.isRanked, false);
   assert.equal(room.battleState.p1.species, '');
   assert.equal(room.preferredSpecies[0], 'hunter');
-  assert.deepEqual(room.battleState.p1.unlockedSkills, ['dash', 'web', 'surge']);
+  assert.deepEqual(room.battleState.p1.unlockedSkills, ['dash', 'web', 'surge', 'power']);
   room.battleState.p1.connected = false;
   room.battleState.p1.acc = 'apex_crown';
   room.onJoin(client, { name: 'Guest', acc: 'invalid', species: 'invalid' });

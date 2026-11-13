@@ -1,4 +1,4 @@
-import { spiderMove } from './spiderMoves';
+import { SKILL_CATALOG, abilityForNode, nodeForAbility, type SkillSpecies } from '../../../server/src/skillCatalog';
 
 export type AbilityId =
   | 'dash'
@@ -61,7 +61,7 @@ export const ABILITIES: Record<AbilityId, AbilityDef> = {
     id: 'surge',
     name: 'Surge',
     cd: 5,
-    use: 'hang',
+    use: 'stand',
     icon: 'ic-surge',
     unlock: { level: 1 },
     desc: 'Only while dangling: one big pull worth about six taps.',
@@ -76,9 +76,9 @@ export const ABILITIES: Record<AbilityId, AbilityDef> = {
     id: 'anchor',
     name: 'Anchor Line',
     cd: 11,
-    use: 'hang',
+    use: 'stand',
     icon: 'ic-anchor',
-    unlock: { level: 2 },
+    unlock: { level: 1 },
     desc: 'Only while dangling: your thread stops sinking for 2.5 seconds, so you can climb in peace.',
     sector: 'aerial',
     sectorName: 'AERIAL SILK',
@@ -93,7 +93,7 @@ export const ABILITIES: Record<AbilityId, AbilityDef> = {
     cd: 10,
     use: 'stand',
     icon: 'ic-haste',
-    unlock: { level: 3 },
+    unlock: { level: 1 },
     desc: 'Move 50% faster for 3.5 seconds.',
     sector: 'aerial',
     sectorName: 'AERIAL SILK',
@@ -123,7 +123,7 @@ export const ABILITIES: Record<AbilityId, AbilityDef> = {
     cd: 7,
     use: 'stand',
     icon: 'ic-spit',
-    unlock: { level: 2 },
+    unlock: { level: 1 },
     desc: 'A fast shot that poisons your rival, draining their grip over 3 seconds.',
     sector: 'control',
     sectorName: 'VENOM CONTROL',
@@ -138,7 +138,7 @@ export const ABILITIES: Record<AbilityId, AbilityDef> = {
     cd: 9,
     use: 'stand',
     icon: 'ic-tremor',
-    unlock: { level: 3 },
+    unlock: { level: 1 },
     desc: 'Shake the twig. A nearby rival who is not blocking is stunned.',
     sector: 'control',
     sectorName: 'VENOM CONTROL',
@@ -153,7 +153,7 @@ export const ABILITIES: Record<AbilityId, AbilityDef> = {
     cd: 7,
     use: 'stand',
     icon: 'ic-hook',
-    unlock: { level: 4 },
+    unlock: { level: 1 },
     desc: 'Fire a hook that yanks your rival right up to you and stuns them briefly.',
     sector: 'control',
     sectorName: 'VENOM CONTROL',
@@ -183,7 +183,7 @@ export const ABILITIES: Record<AbilityId, AbilityDef> = {
     cd: 6,
     use: 'stand',
     icon: 'ic-pounce',
-    unlock: { level: 2 },
+    unlock: { level: 1 },
     desc: 'Lunge across the twig and strike in one move.',
     sector: 'assault',
     sectorName: 'MANDIBLE ASSAULT',
@@ -198,7 +198,7 @@ export const ABILITIES: Record<AbilityId, AbilityDef> = {
     cd: 8,
     use: 'stand',
     icon: 'ic-sweep',
-    unlock: { level: 3 },
+    unlock: { level: 1 },
     desc: 'A low leg sweep: 10 grip and a big shove. Can knock a rival off the end. You are open if it whiffs.',
     sector: 'assault',
     sectorName: 'MANDIBLE ASSAULT',
@@ -213,7 +213,7 @@ export const ABILITIES: Record<AbilityId, AbilityDef> = {
     cd: 11,
     use: 'stand',
     icon: 'ic-riposte',
-    unlock: { level: 4 },
+    unlock: { level: 1 },
     desc: 'For 1 second, the next hit on you is cancelled and your attacker is stunned.',
     sector: 'assault',
     sectorName: 'MANDIBLE ASSAULT',
@@ -243,7 +243,7 @@ export const ABILITIES: Record<AbilityId, AbilityDef> = {
     cd: 12,
     use: 'stand',
     icon: 'ic-mend',
-    unlock: { level: 2 },
+    unlock: { level: 1 },
     desc: 'Patch yourself up and restore 35 grip.',
     sector: 'vitality',
     sectorName: 'CARAPACE BULWARK',
@@ -258,7 +258,7 @@ export const ABILITIES: Record<AbilityId, AbilityDef> = {
     cd: 12,
     use: 'stand',
     icon: 'ic-carapace',
-    unlock: { level: 3 },
+    unlock: { level: 1 },
     desc: 'Harden your shell: your guard bar refills instantly and a guard break is cleared.',
     sector: 'vitality',
     sectorName: 'CARAPACE BULWARK',
@@ -273,7 +273,7 @@ export const ABILITIES: Record<AbilityId, AbilityDef> = {
     cd: 7,
     use: 'stand',
     icon: 'ic-leech',
-    unlock: { level: 4 },
+    unlock: { level: 1 },
     desc: 'Your next hit within 5 seconds also heals you for 20 grip.',
     sector: 'vitality',
     sectorName: 'CARAPACE BULWARK',
@@ -305,6 +305,23 @@ export const SKILLS_LIST: AbilityDef[] = [
 
 export const ALL_ABILITY_IDS: AbilityId[] = SKILLS_LIST.map(s => s.id);
 
+const tierNodes = new Map<number, string[]>();
+for (const [nodeId, node] of Object.entries(SKILL_CATALOG.weaver.nodes)) {
+  const group = tierNodes.get(node.tier) || [];
+  group.push(nodeId);
+  tierNodes.set(node.tier, group);
+}
+for (const skill of SKILLS_LIST) {
+  const nodeId = nodeForAbility(skill.id)!;
+  if (nodeId === 'S1') { skill.x = 500; skill.y = 380; continue; }
+  const tier = SKILL_CATALOG.weaver.nodes[nodeId].tier;
+  const ring = tierNodes.get(tier)!.filter(id => id !== 'S1');
+  const angle = -Math.PI / 2 + ring.indexOf(nodeId) * Math.PI * 2 / ring.length + (tier % 2) * Math.PI / ring.length;
+  const radius = [0, 135, 245, 285, 365][tier];
+  skill.x = Math.round(500 + Math.cos(angle) * radius);
+  skill.y = Math.round(380 + Math.sin(angle) * radius);
+}
+
 const spiderAbilityCache = new Map<string, AbilityDef>();
 
 export function getSpiderAbility(species: string, id: AbilityId): AbilityDef {
@@ -312,66 +329,23 @@ export function getSpiderAbility(species: string, id: AbilityId): AbilityDef {
   const key = `${species}:${base.id}`;
   const cached = spiderAbilityCache.get(key);
   if (cached) return cached;
-  const move = spiderMove(species, base.id);
-  const ability = { ...base, name: move.name, desc: move.desc, tip: move.desc };
+  const node = SKILL_CATALOG[species as SkillSpecies]?.nodes[nodeForAbility(base.id)!] || SKILL_CATALOG.weaver.nodes.S1;
+  const tierNames = ['STARTER CORE', 'INNER HEX', 'OUTER HEX', 'APEX'];
+  const tierColors = ['#ffd694', '#4cc7b2', '#b8a5ff', '#ffae79'];
+  const ability = { ...base, name: node.name, cd: node.cooldown, desc: node.description.replaceAll('**', ''),
+    tip: node.animation, sectorName: tierNames[node.tier - 1], sectorColor: tierColors[node.tier - 1] };
   spiderAbilityCache.set(key, ability);
   return ability;
 }
 
-export const WEB_EDGES: [AbilityId, AbilityId][] = [
-  // Radial Spoke 1: North (Aerial Silk)
-  ['dash', 'surge'],
-  ['surge', 'anchor'],
-  ['anchor', 'haste'],
-
-  // Radial Spoke 2: West (Venom Control)
-  ['dash', 'web'],
-  ['web', 'spit'],
-  ['spit', 'tremor'],
-  ['spit', 'hook'],
-
-  // Radial Spoke 3: East (Mandible Assault)
-  ['dash', 'power'],
-  ['power', 'pounce'],
-  ['pounce', 'sweep'],
-  ['pounce', 'riposte'],
-
-  // Radial Spoke 4: South (Carapace Bulwark)
-  ['dash', 'shield'],
-  ['shield', 'mend'],
-  ['mend', 'carapace'],
-  ['mend', 'leech'],
-
-  // Concentric Spiral Web Strands (The connecting rings of the spider web!)
-  // Inner Ring 1 Spiral
-  ['surge', 'web'],
-  ['surge', 'power'],
-  ['web', 'shield'],
-  ['power', 'shield'],
-
-  // Mid Ring 2 Spiral
-  ['anchor', 'spit'],
-  ['anchor', 'pounce'],
-  ['spit', 'mend'],
-  ['pounce', 'mend'],
-
-  // Outer Perimeter Ring Spiral
-  ['haste', 'tremor'],
-  ['haste', 'sweep'],
-  ['tremor', 'hook'],
-  ['sweep', 'riposte'],
-  ['hook', 'carapace'],
-  ['riposte', 'leech'],
-  ['carapace', 'leech']
-];
+export const WEB_EDGES: [AbilityId, AbilityId][] = Object.entries(SKILL_CATALOG.weaver.nodes).flatMap(([id, node]) =>
+  node.requires.map(required => [abilityForNode(required)!, abilityForNode(id)!]));
 
 export function isNodeAvailableToUnlock(id: AbilityId, unlocked: AbilityId[]): boolean {
   if (unlocked.includes(id)) return false;
-  return WEB_EDGES.some(([a, b]) => {
-    if (a === id) return unlocked.includes(b);
-    if (b === id) return unlocked.includes(a);
-    return false;
-  });
+  const nodeId = nodeForAbility(id);
+  return !!nodeId && SKILL_CATALOG.weaver.nodes[nodeId].requires.length > 0 &&
+    SKILL_CATALOG.weaver.nodes[nodeId].requires.every(required => unlocked.includes(abilityForNode(required)!));
 }
 
 export function getAbility(id: string): AbilityDef {

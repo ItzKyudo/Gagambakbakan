@@ -4,7 +4,7 @@ import { spiderMove, type SpiderPulse } from './spiderMoves';
 import {
   STICK, POND_Y, BODY_Y, LBL_Y, MAXDROP, REACH, MINDIST, SPEED, PARRY,
   ATK, ATK_LIGHT, ATK_HEAVY, REEL_CD, TAP, FALL_DEPTH, FALL_SPEED, FATIGUE_MAX,
-  DIFF_SETTINGS, MAX_GRIP, RECOVER_GRIP, VENOM_DUR, VENOM_DPS, WEB_SNARE, clamp, rand
+  DIFF_SETTINGS, MAX_GRIP, RECOVER_GRIP, VENOM_DPS, WEB_SNARE, clamp, rand
 } from './constants';
 import type { InputState, LocalBattleState, LocalPlayerState } from './localGameTypes';
 
@@ -111,10 +111,53 @@ private fall(s: LocalPlayerState) {
   this.reelCd[s.id] = 0;
   this.tapBuf[s.id] = false;
   s.dashT = 0;
+  s.airT = 0;
+  s.dashBounceBack = undefined;
+  s.dashPulse = undefined;
+  s.dashStunOnWall = undefined;
+  s.dashHitWall = false;
+  s.tetherT = 0;
+  s.tetherAnchorX = undefined;
+  s.tetherMaxDistance = undefined;
+  s.tetherStun = undefined;
+  s.projectileInvT = 0;
+  s.evasionT = 0;
   s.snare = 0;
   s.venom = 0;
   s.soak = 0;
   s.burn = 0;
+  s.igniteStacks = 0;
+  s.shredStacks = 0;
+  s.shredT = 0;
+  s.tailwindStacks = 0;
+  s.tailwindT = 0;
+  s.tremorT = 0;
+  s.bleedT = 0;
+  s.silenceT = 0;
+  s.speedT = 0;
+  s.reductionT = 0;
+  s.regenT = 0;
+  s.reflectT = 0;
+  s.reflectFraction = undefined;
+  s.reflectRequiresBarrier = false;
+  s.meleeDamageT = 0;
+  s.barrierT = 0;
+  s.barrierHp = 0;
+  s.stealthT = 0;
+  s.cooldownT = 0;
+  s.rootImmuneT = 0;
+  s.critT = 0;
+  s.revealT = 0;
+  s.attackSpeedT = 0;
+  s.reflectShotsT = 0;
+  s.knockbackImmuneT = 0;
+  s.nextAttackBonus = 0;
+  s.refreshToxinOnHit = false;
+  s.aftershockT = 0;
+  s.bloomT = 0;
+  s.hallucinationT = 0;
+  s.comboHits = 0;
+  s.toxin = 0;
   s.pounce = false;
   s.power = 0;
   s.shield = 0;
@@ -273,7 +316,8 @@ private doStrike(a: LocalPlayerState, b: LocalPlayerState) {
   const bodyRadius = 28;
   const maxHitDistance = armReach + bodyRadius; // 124px for light, 136px for heavy
 
-  if (d < -15 || d > maxHitDistance || b.inv > 0) return;
+  if (d < -15 || d > maxHitDistance || b.inv > 0 || (b.meleeInvT || 0) > 0 || (b.airT || 0) > 0) return;
+  if (this.evades(b)) return;
 
   const pw = a.power > 0;
 
@@ -322,9 +366,9 @@ private doStrike(a: LocalPlayerState, b: LocalPlayerState) {
       const guardDmg = isHeavy ? (pw ? 48 : 36) : (pw ? 28 : 15);
       const gripDmg = isHeavy ? (pw ? 8 : 4) : (pw ? 4 : 2);
       const kbForce = isHeavy ? (pw ? 360 : 250) : (pw ? 200 : 120);
-      b.guard -= guardDmg;
+      b.guard -= guardDmg * (1 + .1 * (b.shredStacks || 0));
       b.grip = Math.max(1, b.grip - gripDmg);
-      this.kb[b.id] = a.face * kbForce;
+      if (!(b.knockbackImmuneT && b.knockbackImmuneT > 0)) this.kb[b.id] = a.face * kbForce;
       a.stun = isHeavy ? 0.24 : 0.16;
 
       this.emitFx({ type: 'txt', x: b.x, y: LBL_Y, text: isHeavy ? 'CRUSH BLOCK' : 'BLOCK', col: b.colorLight });
@@ -340,12 +384,20 @@ private doStrike(a: LocalPlayerState, b: LocalPlayerState) {
     a.isHeavy = false;
   } else {
     // Direct hit
-    const gripDmg = isHeavy ? (pw ? 48 : 32) : (pw ? 26 : 14);
+    const baseGripDmg = isHeavy ? (pw ? 48 : 32) : (pw ? 26 : 14);
+    const meleeBoost = (a.meleeDamageT || 0) > 0 && (!a.meleeDamageRequiresBarrier || (a.barrierHp || 0) > 0) ? a.meleeDamageFraction || 0 : 0;
+    const gripDmg = baseGripDmg * (1 + meleeBoost);
     const kbForce = isHeavy ? (pw ? 760 : 580) : (pw ? 480 : 300);
     const stunDur = isHeavy ? (pw ? 0.55 : 0.42) : (pw ? 0.32 : 0.20);
     const flash = isHeavy ? 0.24 : 0.16;
-    b.grip -= gripDmg;
-    this.kb[b.id] = a.face * kbForce;
+    const received = this.hurt(b, (gripDmg + ((a.stealthT || 0) > 0 ? a.nextAttackBonus || 0 : 0)) * ((a.critT || 0) > 0 && Math.random() < (a.critChance || 0) ? 1.5 : 1));
+    if ((a.aftershockT || 0) > 0) this.applySpiderPulse(a, b, { range: 140, damage: 20, tremor: .5 });
+    if ((a.stealthT || 0) > 0 && a.refreshToxinOnHit) { b.toxin = Math.max(b.toxin || 0, 4); b.venom = Math.max(b.venom, 4); }
+    a.nextAttackBonus = 0;
+    a.refreshToxinOnHit = false;
+    a.stealthT = 0;
+    this.reflectHit(b, a, received);
+    if (!(b.knockbackImmuneT && b.knockbackImmuneT > 0)) this.kb[b.id] = a.face * kbForce;
     b.stun = stunDur;
     b.atkT = 0;
     b.isHeavy = false;
@@ -371,12 +423,53 @@ private doStrike(a: LocalPlayerState, b: LocalPlayerState) {
     }
 
     if (b.grip <= 0) this.fall(b);
+    if (a.grip <= 0) this.fall(a);
   }
 }
 
-private applySpiderPulse(s: LocalPlayerState, o: LocalPlayerState, pulse: SpiderPulse) {
-  const distance = (o.x - s.x) * s.face;
-  if (s.hang || o.hang || o.ko || o.inv > 0 || Math.abs(o.x - s.x) > pulse.range || (pulse.front && distance < 0)) return;
+private hurt(s: LocalPlayerState, damage: number) {
+  let remaining = damage * (1 + .1 * (s.shredStacks || 0)) * (1 - ((s.reductionT || 0) > 0 ? s.reductionFraction || 0 : 0));
+  const received = remaining;
+  if ((s.barrierHp || 0) > 0) {
+    const absorbed = Math.min(s.barrierHp || 0, remaining);
+    s.barrierHp = (s.barrierHp || 0) - absorbed;
+    remaining -= absorbed;
+  }
+  s.grip -= remaining;
+  return received;
+}
+
+private reflectHit(s: LocalPlayerState, o: LocalPlayerState, received: number) {
+  if (!((s.reflectT || 0) > 0) || (s.reflectRequiresBarrier && !((s.barrierHp || 0) > 0))) return;
+  this.hurt(o, s.reflectFraction ? received * s.reflectFraction : s.reflectDamage || 0);
+  if (s.reflectSoak) { o.soak = Math.max(o.soak, s.reflectSoak); o.burn = 0; o.igniteStacks = 0; }
+  if (s.reflectIgnite && o.soak <= 0) { o.igniteStacks = Math.min(5, (o.igniteStacks || 0) + s.reflectIgnite); o.burn = Math.max(o.burn, 4); }
+  if (s.reflectToxin) { o.toxin = Math.max(o.toxin || 0, s.reflectToxin); o.venom = Math.max(o.venom, s.reflectToxin); }
+}
+
+private evades(s: LocalPlayerState) {
+  return Math.random() < Math.min(.95, (s.tailwindStacks || 0) * .05 + ((s.evasionT || 0) > 0 ? s.evasionChance || 0 : 0));
+}
+
+private rootImmune(s: LocalPlayerState) {
+  return (s.rootImmuneT || 0) > 0 || this.state.webs.some(w => w.owner === s.id && w.rootImmune && w.zoneRadius && Math.abs(s.x - w.x) <= w.zoneRadius);
+}
+
+private wallX(s: LocalPlayerState, nextX: number, dashing = false) {
+  for (const w of this.state.webs) {
+    if (w.owner === s.id || !w.zoneRadius) continue;
+    const left = w.x - w.zoneRadius, right = w.x + w.zoneRadius;
+    if (w.cage && !dashing && s.x >= left && s.x <= right) nextX = clamp(nextX, left, right);
+    if (!w.blocksMovement) continue;
+    if (s.x < left && nextX > left) nextX = left;
+    if (s.x > right && nextX < right) nextX = right;
+  }
+  return nextX;
+}
+
+private applySpiderPulse(s: LocalPlayerState, o: LocalPlayerState, pulse: SpiderPulse, originX = s.x) {
+  const distance = (o.x - originX) * s.face;
+  if (s.hang || o.hang || o.ko || o.inv > 0 || ((o.airT || 0) > 0 && !pulse.tremor) || Math.abs(o.x - originX) > pulse.range || (pulse.front && distance < 0) || (pulse.requiresToxin && !(o.toxin && o.toxin > 0)) || this.evades(o)) return;
   if (o.blocking && o.blockT <= PARRY) {
     s.stun = Math.max(s.stun, .45);
     this.emitFx({ type: 'txt', x: o.x, y: LBL_Y, text: 'PARRY!', col: '#ffffff' });
@@ -385,20 +478,43 @@ private applySpiderPulse(s: LocalPlayerState, o: LocalPlayerState, pulse: Spider
   if (o.shield > 0) { this.absorb(o); return; }
   if (o.riposte > 0) { this.counter(o, s); return; }
   if (o.blocking) {
-    o.guard -= pulse.guard || (pulse.damage ? 12 : 0);
+    o.guard -= ((pulse.guard || (pulse.damage ? 12 : 0)) + (pulse.faultline ? s.guard * .35 : 0)) * (1 + .1 * (o.shredStacks || 0));
     if (o.guard <= 0) this.guardBreak(o);
     else this.emitFx({ type: 'txt', x: o.x, y: LBL_Y, text: 'BLOCK', col: o.colorLight });
     return;
   }
-  if (pulse.damage) o.grip -= pulse.damage;
-  if (pulse.guard) { o.guard -= pulse.guard; if (o.guard <= 0) this.guardBreak(o); }
+  if (pulse.damage) this.hurt(o, pulse.damage + (o.soak > 0 ? pulse.soakedBonus || 0 : 0) + ((o.shredStacks || 0) > 0 ? pulse.shredBonus || 0 : 0));
+  if (pulse.executeBelow && o.grip <= MAX_GRIP * pulse.executeBelow) o.grip = 0;
+  if (pulse.detonateIgnite && (o.igniteStacks || 0) > 0) { this.hurt(o, (o.igniteStacks || 0) * pulse.detonateIgnite); o.igniteStacks = 0; o.burn = 0; }
+  if (pulse.ignite && o.soak <= 0) { o.igniteStacks = Math.min(5, (o.igniteStacks || 0) + pulse.ignite); o.burn = Math.max(o.burn, 4); }
+  if (pulse.shred) { o.shredStacks = Math.min(3, (o.shredStacks || 0) + pulse.shred); o.shredT = 4; }
+  if (pulse.tailwind) { s.tailwindStacks = Math.min(4, (s.tailwindStacks || 0) + pulse.tailwind); s.tailwindT = 4; }
+  if (pulse.tremor) { o.airT = 0; o.tremorT = Math.max(o.tremorT || 0, pulse.tremor); o.dashT = 0; }
+  if (pulse.disorient) o.disorientT = Math.max(o.disorientT || 0, pulse.disorient);
+  if (pulse.toxin) { o.toxin = Math.max(o.toxin || 0, pulse.toxin); o.venom = Math.max(o.venom, pulse.toxin); }
+  if (pulse.bleed) o.bleedT = Math.max(o.bleedT || 0, pulse.bleed);
+  if (pulse.silence) o.silenceT = Math.max(o.silenceT || 0, pulse.silence);
+  if (pulse.knockup && (!pulse.knockupIfSoaked || o.soak > 0)) { o.stun = Math.max(o.stun, pulse.knockup); o.dashT = 0; }
+  if (pulse.stunIfIgniteStacks && (o.igniteStacks || 0) >= pulse.stunIfIgniteStacks) o.stun = Math.max(o.stun, pulse.conditionalStunDuration || 0);
+  if (pulse.cooldownRefundOnIgnite && o.igniteStacks) {
+    if (s.skill1 === 'web') s.cd1 = Math.max(0, s.cd1 - pulse.cooldownRefundOnIgnite);
+    if (s.skill2 === 'web') s.cd2 = Math.max(0, s.cd2 - pulse.cooldownRefundOnIgnite);
+  }
+  if (pulse.healSelf) s.grip = Math.min(MAX_GRIP, s.grip + pulse.healSelf * (s.toxin ? .7 : 1));
+  if (pulse.guard || pulse.faultline) { o.guard -= (pulse.guard || 0) + (pulse.faultline ? s.guard * .35 : 0); if (o.guard <= 0) this.guardBreak(o); }
   if (pulse.snare) { o.snare = Math.max(o.snare, pulse.snare); o.atkT = 0; }
-  if (pulse.venom) o.venom = Math.max(o.venom, pulse.venom);
-  if (pulse.soak) { o.soak = Math.max(o.soak, pulse.soak); o.burn = 0; }
-  if (pulse.burn && o.soak <= 0) o.burn = Math.max(o.burn, pulse.burn);
+  if (pulse.harvest && o.venom > 0) { o.venom = 0; s.grip = Math.min(MAX_GRIP, s.grip + 20); }
+  else if (pulse.venom) o.venom = Math.max(o.venom, pulse.venom);
+  if (pulse.push && !(o.knockbackImmuneT && o.knockbackImmuneT > 0)) this.kb[o.id] = (o.x >= s.x ? 1 : -1) * pulse.push;
+  if (pulse.undertow) {
+    if (o.soak > 0) { o.soak = 0; o.snare = Math.max(o.snare, .7); o.atkT = 0; this.kb[o.id] = (s.x >= o.x ? 1 : -1) * 600; }
+    else { o.soak = 1.5; o.burn = 0; }
+  }
+  if (pulse.soak) { o.soak = Math.max(o.soak, pulse.soak); o.burn = 0; o.igniteStacks = 0; }
+  if (pulse.detonate && o.burn > 0 && o.soak <= 0) { o.burn = 0; o.grip -= 12; o.stun = Math.max(o.stun, .35); }
+  else if (pulse.burn && o.soak <= 0) o.burn = Math.max(o.burn, pulse.burn);
   if (pulse.stun) { o.stun = Math.max(o.stun, pulse.stun); o.atkT = 0; }
-  if (pulse.push) this.kb[o.id] = (o.x >= s.x ? 1 : -1) * pulse.push;
-  if (pulse.pull) this.kb[o.id] = (s.x >= o.x ? 1 : -1) * pulse.pull;
+  if (pulse.pull && !(o.knockbackImmuneT && o.knockbackImmuneT > 0)) this.kb[o.id] = (originX >= o.x ? 1 : -1) * pulse.pull;
   o.hitFlash = Math.max(o.hitFlash, .14);
   this.emitFx({ type: 'spark', x: o.x, y: BODY_Y, col: s.colorLight, count: 12, sp: 190 });
   if (o.grip <= 0) this.fall(o);
@@ -409,12 +525,45 @@ private useSkill(s: LocalPlayerState, o: LocalPlayerState, slotIndex: number, in
   if (!ABILITIES[id as AbilityId]) return false;
   const move = spiderMove(s.species, id as AbilityId);
   const effect = move.effect;
-  const cd = ABILITIES[id as AbilityId].cd;
+  if (effect.requiresAirborne && !(s.airT && s.airT > 0)) return false;
+  if (((s.snare > 0 && !this.rootImmune(s)) || (s.tremorT || 0) > 0) && (effect.dash || effect.vault)) return false;
+  if ((effect.dash || effect.vault) && this.state.webs.some(w => w.owner !== s.id && w.progressiveSlow && w.zoneRadius && w.life > 0 && Math.abs(s.x - w.x) <= w.zoneRadius)) return false;
+  if (effect.expandZone && !this.state.webs.some(w => w.owner === s.id && w.zoneRadius && w.life > 0)) return false;
+  const cd = move.cooldown ?? ABILITIES[id as AbilityId].cd;
   if (slotIndex === 0) { s.cd1 = cd; s.cd1max = cd; }
   else { s.cd2 = cd; s.cd2max = cd; }
   this.emitFx({ type: 'ability', x: s.x, y: BODY_Y + (s.hang ? s.drop : 0), species: s.species, id });
 
-  if (effect.heal) s.grip = Math.min(MAX_GRIP, s.grip + effect.heal);
+  if (effect.heal) s.grip = Math.min(MAX_GRIP, s.grip + (effect.heal + (Math.abs(o.x - s.x) <= 360 ? (o.igniteStacks || 0) * (effect.healPerIgnite || 0) : 0)) * (s.toxin ? .7 : 1));
+  if (effect.airborne) s.airT = effect.airborne;
+  if (effect.combo) { s.comboT = 0; s.comboNext = effect.combo.duration / effect.combo.hits; s.comboHits = effect.combo.hits; s.comboDamage = effect.combo.damage / effect.combo.hits; s.comboRange = effect.combo.range; s.comboRefund = effect.combo.cooldownRefundOnIgnite || 0; }
+  if (effect.cleanseBurn) { s.burn = 0; s.igniteStacks = 0; }
+  if (effect.cleanseSlow) { s.snare = 0; s.soak = 0; s.tremorT = 0; }
+  if (effect.speed) { s.speedMultiplier = effect.speed.multiplier; s.speedT = effect.speed.duration; }
+  if (effect.reduction) { s.reductionFraction = effect.reduction.fraction; s.reductionT = effect.reduction.duration; }
+  if (effect.regen) {
+    const sources = (Math.abs(o.x - s.x) <= 360 && o.soak > 0 ? 1 : 0) + this.state.webs.filter(w => w.owner === s.id && w.zoneRadius && Math.abs(w.x - s.x) <= 360).length;
+    const inZone = this.state.webs.some(w => w.owner === s.id && w.zoneRadius && Math.abs(w.x - s.x) <= w.zoneRadius);
+    s.regenPerSecond = effect.regen.perSecond * (effect.regen.perSource ? sources : 1) * (effect.regen.bonusInZone && (inZone || (s.stealthT || 0) > 0) ? 1 + effect.regen.bonusInZone : 1);
+    s.regenT = effect.regen.duration;
+  }
+  if (effect.reflect) { s.reflectDamage = effect.reflect.damage; s.reflectFraction = effect.reflect.fraction; s.reflectRequiresBarrier = effect.reflect.requiresBarrier; s.reflectT = effect.reflect.duration; s.reflectSoak = effect.reflect.soak; s.reflectIgnite = effect.reflect.ignite; s.reflectToxin = effect.reflect.toxin; }
+  if (effect.meleeDamage) { s.meleeDamageFraction = effect.meleeDamage.fraction; s.meleeDamageT = effect.meleeDamage.duration; s.meleeDamageRequiresBarrier = effect.meleeDamage.requiresBarrier; }
+  if (effect.barrier) { s.barrierHp = Math.max(s.barrierHp || 0, effect.barrier.hp); s.barrierT = effect.barrier.duration; }
+  if (effect.tailwindBarrier) { s.barrierHp = Math.max(s.barrierHp || 0, 40 * (s.tailwindStacks || 0)); s.barrierT = 4; s.tailwindStacks = 0; s.tailwindT = 0; }
+  if (effect.stealth) s.stealthT = Math.max(s.stealthT || 0, effect.stealth);
+  if (effect.cooldownRate) { s.cooldownFraction = effect.cooldownRate.fraction; s.cooldownT = effect.cooldownRate.duration; }
+  if (effect.rootImmune) s.rootImmuneT = Math.max(s.rootImmuneT || 0, effect.rootImmune);
+  if (effect.crit) { s.critChance = effect.crit.chance; s.critT = effect.crit.duration; }
+  if (effect.reveal) { s.revealT = effect.reveal.duration; s.revealRange = effect.reveal.range; }
+  if (effect.attackSpeed) { s.attackSpeedMultiplier = effect.attackSpeed.multiplier; s.attackSpeedT = effect.attackSpeed.duration; }
+  if (effect.grantTailwind) { s.tailwindStacks = Math.min(4, (s.tailwindStacks || 0) + effect.grantTailwind); s.tailwindT = 4; }
+  if (effect.reflectShots) s.reflectShotsT = Math.max(s.reflectShotsT || 0, effect.reflectShots);
+  if (effect.knockbackImmune) s.knockbackImmuneT = Math.max(s.knockbackImmuneT || 0, effect.knockbackImmune);
+  if (effect.nextAttackBonus) s.nextAttackBonus = effect.nextAttackBonus;
+  if (effect.refreshToxinOnHit) s.refreshToxinOnHit = true;
+  if (effect.aftershock) s.aftershockT = Math.max(s.aftershockT || 0, effect.aftershock);
+  if (effect.resetSkill) { if (s.skill1 === effect.resetSkill) s.cd1 = 0; if (s.skill2 === effect.resetSkill) s.cd2 = 0; }
   if (effect.cleanse) { s.burn = 0; s.venom = 0; }
   if (effect.guard) { s.guard = Math.min(100, s.guard + effect.guard); if (s.guard >= 100) s.gLock = false; }
   if (effect.shield) s.shield = Math.max(s.shield, effect.shield);
@@ -423,27 +572,69 @@ private useSkill(s: LocalPlayerState, o: LocalPlayerState, slotIndex: number, in
   if (effect.counter) { s.riposte = Math.max(s.riposte, effect.counter); s.blocking = false; }
   if (effect.leech) s.leech = Math.max(s.leech, effect.leech);
   if (effect.inv) s.inv = Math.max(s.inv, effect.inv);
+  if (effect.evasion) { s.evasionChance = effect.evasion.chance; s.evasionT = effect.evasion.duration; }
+  if (effect.projectileInv) s.projectileInvT = Math.max(s.projectileInvT || 0, effect.projectileInv);
+  if (effect.tether && !o.hang && !o.ko && Math.abs(o.x - s.x) <= effect.tether.range) {
+    o.tetherT = effect.tether.duration;
+    o.tetherAnchorX = o.x;
+    o.tetherStun = effect.tether.stun;
+    o.tetherMaxDistance = effect.tether.maxDistance;
+  }
+  if (effect.meleeInv) s.meleeInvT = Math.max(s.meleeInvT || 0, effect.meleeInv);
   if (effect.lift) s.drop = Math.max(0, s.drop - effect.lift);
   if (effect.anchor) s.anchorT = Math.max(s.anchorT, effect.anchor);
-  if (id === 'tremor') s.quake = .5;
-  if (effect.pulse) this.applySpiderPulse(s, o, effect.pulse);
+  const leapRange = (effect.vault || 0) * (s.species === 'hunter' ? 1 + .05 * Math.min(4, s.tailwindStacks || 0) : 1);
+  if (effect.vault && !o.hang && !o.ko && Math.abs(o.x - s.x) <= leapRange) {
+    s.x = clamp(o.x + (s.x < o.x ? 1 : -1) * 60, STICK.l, STICK.r);
+    s.face = o.x > s.x ? 1 : -1;
+  }
+  if (s.species === 'wolf' && effect.pulse?.tremor) s.quake = .5;
+  s.dashPulse = effect.pulseOnDashEnd ? effect.pulse : undefined;
+  s.dashStunOnWall = effect.dashStunOnWall;
+  s.dashHitWall = false;
+  if (effect.pulse && !effect.pulseOnDashEnd) this.applySpiderPulse(s, o, effect.dash === 'forward' ? { ...effect.pulse, range: effect.pulse.range + (effect.dashTime || .12) * 900 } : effect.pulse);
+  if (effect.expandZone) for (const w of this.state.webs) if (w.owner === s.id && w.zoneRadius) { w.zoneRadius = effect.expandZone.radius; w.life = Math.max(w.life, effect.expandZone.life); w.oneShot = false; w.interval = .25; w.tickT = 0; if (w.zonePulse) { w.zonePulse.range = w.zoneRadius; w.zonePulse.pull = effect.expandZone.pull; } }
+  if (effect.zone && (!effect.zone.onTarget || Math.abs(o.x - s.x) <= (effect.pulse?.range || 240))) this.state.webs.push({
+    id: `zone_${Date.now()}_${Math.random()}`, x: clamp(effect.zone.onTarget ? o.x : s.x + s.face * (effect.zone.offset || 0), STICK.l, STICK.r), y: BODY_Y,
+    vx: 0, owner: s.id, life: effect.zone.life, k: 'web', species: s.species,
+    zoneRadius: effect.zone.radius, zonePulse: { ...effect.zone.pulse }, oneShot: effect.zone.oneShot,
+    interval: effect.zone.interval, tickT: effect.zone.oneShot ? effect.zone.interval || 0 : 0, followsOwner: effect.zone.followsOwner,
+    blocksShots: effect.zone.blocksShots, blocksMovement: effect.zone.blocksMovement, slowMultiplier: effect.zone.slowMultiplier,
+    damagePerMeter: effect.zone.damagePerMeter, healOwnerPerSecond: effect.zone.healOwnerPerSecond, healRequiresEnemy: effect.zone.healRequiresEnemy,
+    progressiveSlow: effect.zone.progressiveSlow, cage: effect.zone.cage, outerOnly: effect.zone.outerOnly, grantStealthInterval: effect.zone.grantStealthInterval, mist: effect.zone.mist,
+    cooldownRateFraction: effect.zone.cooldownRateFraction, rootImmune: effect.zone.rootImmune, dustCloud: effect.zone.dustCloud
+  });
+  if (effect.igniteZones) for (let i = this.state.webs.length - 1; i >= 0; i--) {
+    const w = this.state.webs[i];
+    if (!w.zoneRadius) continue;
+    if (w.owner !== s.id && w.oneShot) { this.state.webs.splice(i, 1); continue; }
+    w.owner = s.id; w.species = 'guardian'; w.oneShot = false; w.zonePulse = { range: w.zoneRadius, damage: 50, ignite: 1 }; w.interval = 1; w.tickT = 0; w.life = Math.max(w.life, 3);
+  }
   if (effect.shot) {
-    this.state.webs.push({
-      id: `${effect.shot}_${Date.now()}_${Math.random()}`,
-      x: s.x + s.face * 30, y: BODY_Y - 4,
+    const volleyId = `${effect.shot}_${Date.now()}_${Math.random()}`;
+    const count = effect.shotCount || 1;
+    for (let i = 0; i < count; i++) this.state.webs.push({
+      id: `${volleyId}_${i}`, volleyId,
+      x: s.x + s.face * (30 + i * 9), y: BODY_Y - 4 + (i - (count - 1) / 2) * 7,
       vx: s.face * (effect.shotSpeed || 650), owner: s.id,
-      life: effect.shotLife || 1.2, k: effect.shot, species: s.species
+      life: effect.shotLife || 1.2, k: effect.shot, species: s.species,
+      damage: effect.shotDamage, toxin: effect.shotToxin, pushOnSoaked: effect.shotPushOnSoaked,
+      cutsTraps: effect.shotCutsTraps,
+      attackSlowMultiplier: effect.shotAttackSlow?.multiplier, attackSlowDuration: effect.shotAttackSlow?.duration,
+      attackSlowHits: effect.shotAttackSlow?.hits, bloomDamage: effect.shotBloomDamage, hallucination: effect.shotHallucination
     });
   }
   if (effect.dash) {
-    s.dashT = effect.dashTime || .12;
     s.dashDir = effect.dash === 'back' ? -s.face : effect.dash === 'forward' ? s.face : inp.right ? 1 : inp.left ? -1 : -s.face;
+    const extendsLeap = effect.dash === 'forward' || (effect.dash === 'input' && s.dashDir === s.face);
+    s.dashT = (effect.dashTime || .12) * (s.species === 'hunter' && extendsLeap ? 1 + .05 * Math.min(4, s.tailwindStacks || 0) : 1);
+    s.dashBounceBack = effect.bounceBack;
     s.pounce = !!effect.pounce;
     s.blocking = false;
     s.atkT = 0;
   }
   this.sfx(effect.shot || (effect.dash ? 'dash' : effect.pulse ? 'sweep' : effect.shield ? 'shield' : effect.heal ? 'mend' : 'power_up'));
-  return !!effect.dash;
+  return true;
 }
 
 private stepWebs(dt: number) {
@@ -452,13 +643,49 @@ private stepWebs(dt: number) {
     const w = webs[i];
     const me = w.owner === 0 ? this.state.p1 : this.state.p2;
     const t = w.owner === 0 ? this.state.p2 : this.state.p1;
+    const previousX = w.x;
     w.x += w.vx * dt;
     w.life -= dt;
 
+    if (w.zoneRadius && w.zonePulse) {
+      if (w.followsOwner) w.x = me.x;
+      if (w.life <= 0) { webs.splice(i, 1); continue; }
+      const enemyInside = !t.hang && !t.ko && Math.abs(t.x - w.x) <= w.zoneRadius;
+      if (w.healOwnerPerSecond && Math.abs(me.x - w.x) <= w.zoneRadius && (!w.healRequiresEnemy || enemyInside)) me.grip = Math.min(MAX_GRIP, me.grip + w.healOwnerPerSecond * dt * (me.toxin ? .7 : 1));
+      if (w.grantStealthInterval && Math.abs(me.x - w.x) <= w.zoneRadius && me.atkT <= 0) {
+        w.stealthTick = (w.stealthTick || 0) + dt;
+        if (w.stealthTick >= w.grantStealthInterval) { me.stealthT = Math.max(me.stealthT || 0, w.grantStealthInterval); w.stealthTick = 0; }
+      }
+      if (enemyInside && (!w.outerOnly || Math.abs(t.x - w.x) >= w.zoneRadius * .7)) {
+        if (w.damagePerMeter) { if (w.targetX !== undefined) this.hurt(t, Math.abs(t.x - w.targetX) / 60 * w.damagePerMeter); w.targetX = t.x; }
+        w.tickT = (w.tickT || 0) + dt;
+        if (w.tickT >= (w.interval || 0)) {
+          this.applySpiderPulse(me, t, w.zonePulse, w.x);
+          w.tickT = 0;
+          if (w.oneShot) { webs.splice(i, 1); continue; }
+        }
+        if (t.grip <= 0 && !t.hang) this.fall(t);
+      } else w.targetX = undefined;
+      continue;
+    }
+    if (webs.some(z => z !== w && z.owner !== w.owner && z.blocksShots && z.zoneRadius && Math.min(previousX, w.x) <= z.x + z.zoneRadius && Math.max(previousX, w.x) >= z.x - z.zoneRadius)) {
+      webs.splice(i, 1);
+      continue;
+    }
+    if (w.cutsTraps) for (let j = webs.length - 1; j >= 0; j--) {
+      const trap = webs[j];
+      if (trap === w || trap.owner === w.owner || !trap.oneShot || trap.blocksShots || !trap.zoneRadius || Math.min(previousX, w.x) > trap.x + trap.zoneRadius || Math.max(previousX, w.x) < trap.x - trap.zoneRadius) continue;
+      webs.splice(j, 1);
+      if (j < i) i--;
+    }
+
     let gone = w.life <= 0 || w.x < STICK.l - 20 || w.x > STICK.r + 20;
-    if (!gone && !t.hang && !t.ko && t.inv <= 0 && Math.abs(w.x - t.x) < 24) {
+    if (!gone && !t.hang && !t.ko && t.inv <= 0 && (t.projectileInvT || 0) <= 0 && Math.abs(w.x - t.x) < 24 && !this.evades(t)) {
       gone = true;
-      if (t.blocking && t.blockT <= PARRY) {
+      if ((t.reflectShotsT || 0) > 0) {
+        webs.push({ ...w, id: `refl_${Date.now()}_${Math.random()}`, x: t.x, vx: -w.vx, owner: t.id, life: 1.2 });
+        this.emitFx({ type: 'txt', x: t.x, y: LBL_Y, text: 'REFLECT!', col: t.colorLight });
+      } else if (t.blocking && t.blockT <= PARRY) {
         // Parry reflect projectile!
         webs.push({
           id: `refl_${Date.now()}`,
@@ -491,19 +718,18 @@ private stepWebs(dt: number) {
         this.emitFx({ type: 'spark', x: t.x, y: BODY_Y, col: '#f3f7ee', count: 8, sp: 180 });
         this.sfx('hook');
       } else if (w.k === 'spit') {
-        if (w.species === 'weaver') {
-          t.soak = Math.max(t.soak, 1.5);
-          t.burn = 0;
-          t.hitFlash = 0.15;
-          this.emitFx({ type: 'txt', x: t.x, y: LBL_Y, text: 'SOAKED!', col: '#7bdcff' });
-          this.emitFx({ type: 'spark', x: t.x, y: BODY_Y, col: '#7bdcff', count: 10, sp: 180 });
-        } else {
-        // Venom: no stun, poisons grip over time instead
-        t.venom = VENOM_DUR;
-        t.hitFlash = 0.15;
-        this.emitFx({ type: 'txt', x: t.x, y: LBL_Y, text: 'VENOM!', col: '#9cf06a' });
-        this.emitFx({ type: 'spark', x: t.x, y: BODY_Y, col: '#9cf06a', count: 10, sp: 180 });
+        if (w.damage) this.hurt(t, w.damage);
+        if (w.pushOnSoaked && t.soak > 0 && !(t.knockbackImmuneT && t.knockbackImmuneT > 0)) this.kb[t.id] = (t.x >= me.x ? 1 : -1) * w.pushOnSoaked;
+        if (w.toxin) { t.toxin = Math.max(t.toxin || 0, w.toxin); t.venom = Math.max(t.venom, w.toxin); }
+        if (w.attackSlowHits) {
+          t.volleyHits = t.lastVolleyId === w.volleyId ? (t.volleyHits || 0) + 1 : 1;
+          t.lastVolleyId = w.volleyId;
+          if (t.volleyHits >= w.attackSlowHits) { t.attackSpeedMultiplier = w.attackSlowMultiplier; t.attackSpeedT = w.attackSlowDuration; }
         }
+        if (w.bloomDamage) { t.bloomT = 2; t.bloomDamage = w.bloomDamage; }
+        if (w.hallucination) t.hallucinationT = Math.max(t.hallucinationT || 0, w.hallucination);
+        t.hitFlash = 0.15;
+        this.emitFx({ type: 'spark', x: t.x, y: BODY_Y, col: w.species === 'weaver' ? '#7bdcff' : w.species === 'hunter' ? '#b7e8ff' : '#9cf06a', count: 10, sp: 180 });
         this.sfx('spit');
       } else {
         // Tangled: slowed and cannot attack (blocking still allowed)
@@ -519,6 +745,7 @@ private stepWebs(dt: number) {
       }
     }
 
+    if (t.grip <= 0 && !t.hang) this.fall(t);
     if (gone) webs.splice(i, 1);
   }
 }
@@ -532,11 +759,6 @@ private getAiInput(
   const D = DIFF_SETTINGS[this.diff];
   const inp: InputState = { left: false, right: false, strike: false, heavy: false, block: false, reel: 0, ab1: 0, ab2: 0 };
 
-  const slot = (id: string) => {
-    if (me.skill1 === id && me.cd1 <= 0) return 0;
-    if (me.skill2 === id && me.cd2 <= 0) return 1;
-    return -1;
-  };
   const press = (j: number) => {
     if (j === 0) inp.ab1 = 1;
     if (j === 1) inp.ab2 = 1;
@@ -553,10 +775,6 @@ private getAiInput(
       a.reelT += (1 / aiTargetRate) * rand(0.75, 1.25);
       n++;
     }
-    const sg = slot('surge');
-    const an = slot('anchor');
-    if (!me.falling && an >= 0 && me.drop > 50 && Math.random() < dt * 1.5) press(an);
-    else if (!me.falling && sg >= 0 && me.drop > 60 && Math.random() < dt * 2) press(sg);
     return inp;
   }
 
@@ -571,21 +789,15 @@ private getAiInput(
 
   if (!o.hang && o.atkT > 0 && o.atkId !== a.seen && dist < REACH + 24) {
     a.seen = o.atkId;
-    const dsh = slot('dash');
-    if (free && dsh >= 0 && me.snare <= 0 && dist < REACH + 10 && Math.random() < D.dash) {
-      press(dsh);
-      if (dir > 0) inp.left = true; else inp.right = true;
-      return inp;
-    }
-    const sh = slot('shield');
-    if (free && sh >= 0 && me.shield <= 0 && Math.random() < 0.5) {
-      press(sh);
-      return inp;
-    }
-    const rp = slot('riposte');
-    if (free && rp >= 0 && me.riposte <= 0 && Math.random() < 0.3) {
-      press(rp);
-      return inp;
+    if (free && Math.random() < D.dash) {
+      for (const [j, id, cd] of [[0, me.skill1, me.cd1], [1, me.skill2, me.cd2]] as const) {
+        if (!id || cd > 0) continue;
+        const e = spiderMove(me.species, id as AbilityId).effect;
+        if (e.barrier || e.reduction || e.reflect || e.reflectShots || e.inv || e.dash === 'back') {
+          press(j);
+          return inp;
+        }
+      }
     }
     if (Math.random() < D.rc) {
       a.blockAt = a.clock + rand(D.react[0], D.react[1]);
@@ -602,20 +814,19 @@ private getAiInput(
 
   a.nextAtk -= dt;
   if (free) {
-    const r = dt * D.web;
-    let j = -1;
-    if ((j = slot('web')) >= 0 && o.snare <= 0 && dist > 170 && dist < 520 && Math.random() < r) press(j);
-    else if ((j = slot('spit')) >= 0 && !o.blocking && dist > 120 && dist < 600 && Math.random() < r * 1.2) press(j);
-    else if ((j = slot('pounce')) >= 0 && me.snare <= 0 && dist > 110 && dist < 230 && Math.random() < r * 1.5) press(j);
-    else if ((j = slot('power')) >= 0 && dist < REACH + 50 && Math.random() < dt * 2) press(j);
-    else if ((j = slot('shield')) >= 0 && me.shield <= 0 && dist < 220 && Math.random() < dt * 0.8) press(j);
-    else if ((j = slot('mend')) >= 0 && me.grip < 55 && Math.random() < dt * 3) press(j);
-    else if ((j = slot('tremor')) >= 0 && dist < 240 && !o.blocking && Math.random() < dt * 0.9) press(j);
-    else if ((j = slot('haste')) >= 0 && me.hasteT <= 0 && dist > 200 && Math.random() < dt * 0.6) press(j);
-    else if ((j = slot('hook')) >= 0 && !o.blocking && dist > 200 && dist < 560 && Math.random() < r) press(j);
-    else if ((j = slot('sweep')) >= 0 && !o.blocking && dist < REACH + 8 && Math.random() < dt * 1.5) press(j);
-    else if ((j = slot('leech')) >= 0 && me.leech <= 0 && dist < REACH + 60 && Math.random() < dt * 1.5) press(j);
-    else if ((j = slot('carapace')) >= 0 && me.guard < 45 && Math.random() < dt * 3) press(j);
+    for (const [j, id, cd] of [[0, me.skill1, me.cd1], [1, me.skill2, me.cd2]] as const) {
+      if (!id || cd > 0 || Math.random() >= dt * D.web) continue;
+      const e = spiderMove(me.species, id as AbilityId).effect;
+      if (e.expandZone && !this.state.webs.some(w => w.owner === me.id && w.zoneRadius)) continue;
+      if ((e.heal || e.regen) && me.grip > 80) continue;
+      if (e.tailwindBarrier && !(me.tailwindStacks && me.tailwindStacks > 0)) continue;
+      if (e.shot && (dist < 90 || dist > 700 || o.blocking)) continue;
+      if (e.pulse && dist > e.pulse.range + (e.dash === 'forward' ? (e.dashTime || .12) * 900 : 0)) continue;
+      if (e.zone && dist > e.zone.radius + Math.abs(e.zone.offset || 0) + 120) continue;
+      if (e.dash && me.snare > 0) continue;
+      press(j);
+      break;
+    }
   }
 
   const want = 82;
@@ -646,11 +857,16 @@ private stepSpider(s: LocalPlayerState, o: LocalPlayerState, inp: InputState, dt
   const id = s.id;
   s.hitFlash = Math.max(0, s.hitFlash - dt);
   s.inv = Math.max(0, s.inv - dt);
+  s.airT = Math.max(0, (s.airT || 0) - dt);
+  s.disorientT = Math.max(0, (s.disorientT || 0) - dt);
+  s.meleeInvT = Math.max(0, (s.meleeInvT || 0) - dt);
   s.stun = Math.max(0, s.stun - dt);
   this.cool[id] = Math.max(0, this.cool[id] - dt);
   s.parryT = Math.max(0, s.parryT - dt);
-  s.cd1 = Math.max(0, s.cd1 - dt);
-  s.cd2 = Math.max(0, s.cd2 - dt);
+  const zoneCooldownRate = Math.max(0, ...this.state.webs.filter(w => w.owner === s.id && w.zoneRadius && w.cooldownRateFraction && Math.abs(s.x - w.x) <= w.zoneRadius).map(w => w.cooldownRateFraction || 0));
+  const cooldownRate = Math.max(zoneCooldownRate, (s.cooldownT || 0) > 0 ? s.cooldownFraction || 0 : 0);
+  s.cd1 = Math.max(0, s.cd1 - dt / (1 - cooldownRate));
+  s.cd2 = Math.max(0, s.cd2 - dt / (1 - cooldownRate));
   s.power = Math.max(0, s.power - dt);
   s.shield = Math.max(0, s.shield - dt);
   s.hasteT = Math.max(0, s.hasteT - dt);
@@ -661,17 +877,73 @@ private stepSpider(s: LocalPlayerState, o: LocalPlayerState, inp: InputState, dt
   this.reelCd[id] = Math.max(0, this.reelCd[id] - dt);
   s.snare = Math.max(0, s.snare - dt);
   s.soak = Math.max(0, s.soak - dt);
+  s.toxin = Math.max(0, (s.toxin || 0) - dt);
+  s.shredT = Math.max(0, (s.shredT || 0) - dt);
+  if (s.shredT === 0) s.shredStacks = 0;
+  s.tailwindT = Math.max(0, (s.tailwindT || 0) - dt);
+  if (s.tailwindT === 0) s.tailwindStacks = 0;
+  s.tremorT = Math.max(0, (s.tremorT || 0) - dt);
+  if ((s.bleedT || 0) > 0 && !s.hang) this.hurt(s, 15 * Math.min(dt, s.bleedT || 0));
+  s.bleedT = Math.max(0, (s.bleedT || 0) - dt);
+  s.silenceT = Math.max(0, (s.silenceT || 0) - dt);
+  s.speedT = Math.max(0, (s.speedT || 0) - dt);
+  s.reductionT = Math.max(0, (s.reductionT || 0) - dt);
+  s.reflectT = Math.max(0, (s.reflectT || 0) - dt);
+  s.meleeDamageT = Math.max(0, (s.meleeDamageT || 0) - dt);
+  s.barrierT = Math.max(0, (s.barrierT || 0) - dt);
+  if (s.barrierT === 0) s.barrierHp = 0;
+  s.stealthT = Math.max(0, (s.stealthT || 0) - dt);
+  s.cooldownT = Math.max(0, (s.cooldownT || 0) - dt);
+  s.rootImmuneT = Math.max(0, (s.rootImmuneT || 0) - dt);
+  s.critT = Math.max(0, (s.critT || 0) - dt);
+  s.revealT = Math.max(0, (s.revealT || 0) - dt);
+  s.attackSpeedT = Math.max(0, (s.attackSpeedT || 0) - dt);
+  s.aftershockT = Math.max(0, (s.aftershockT || 0) - dt);
+  const bloomBefore = s.bloomT || 0;
+  s.bloomT = Math.max(0, bloomBefore - dt);
+  if (bloomBefore > 0 && s.bloomT === 0 && !s.hang) this.hurt(s, s.bloomDamage || 0);
+  s.hallucinationT = Math.max(0, (s.hallucinationT || 0) - dt);
+  if ((s.comboHits || 0) > 0) {
+    s.comboT = (s.comboT || 0) + dt;
+    while ((s.comboHits || 0) > 0 && (s.comboT || 0) >= (s.comboNext || Infinity)) {
+      this.applySpiderPulse(s, o, { range: s.comboRange || 140, front: true, damage: s.comboDamage || 0 });
+      if ((o.igniteStacks || 0) > 0 && s.comboRefund) {
+        if (s.skill1 === 'web') s.cd1 = Math.max(0, s.cd1 - s.comboRefund);
+        if (s.skill2 === 'web') s.cd2 = Math.max(0, s.cd2 - s.comboRefund);
+      }
+      s.comboNext = (s.comboNext || 0) + .3;
+      s.comboHits!--;
+    }
+  }
+  s.reflectShotsT = Math.max(0, (s.reflectShotsT || 0) - dt);
+  s.knockbackImmuneT = Math.max(0, (s.knockbackImmuneT || 0) - dt);
+  s.projectileInvT = Math.max(0, (s.projectileInvT || 0) - dt);
+  s.evasionT = Math.max(0, (s.evasionT || 0) - dt);
+  if ((s.tetherT || 0) > 0) {
+    s.tetherT = Math.max(0, (s.tetherT || 0) - dt);
+    if (s.tetherT > 0 && !s.hang && !s.ko && Math.abs(s.x - (s.tetherAnchorX || 0)) > (s.tetherMaxDistance || 0)) {
+      s.x = s.tetherAnchorX || 0;
+      s.dashT = 0;
+      s.pounce = false;
+      s.stun = Math.max(s.stun, s.tetherStun || 1);
+      s.atkT = 0;
+      s.tetherT = 0;
+    }
+  }
+  if ((s.regenT || 0) > 0) { s.grip = Math.min(MAX_GRIP, s.grip + (s.regenPerSecond || 0) * dt * (s.toxin ? .7 : 1)); s.regenT = Math.max(0, (s.regenT || 0) - dt); }
   if (s.burn > 0 && !s.hang && !s.ko) {
     s.burn = Math.max(0, s.burn - dt);
-    s.grip = Math.max(1, s.grip - 4 * dt);
-  } else if (s.hang) s.burn = 0;
+    this.hurt(s, (s.igniteStacks ? 6 * s.igniteStacks : 4) * dt);
+    if (s.burn === 0) s.igniteStacks = 0;
+  } else if (s.hang) { s.burn = 0; s.igniteStacks = 0; }
   s.pump = Math.max(0, (s.pump || 0) - dt * 6);
   if (s.venom > 0 && !s.hang && !s.ko) {
     s.venom = Math.max(0, s.venom - dt);
-    s.grip = Math.max(1, s.grip - VENOM_DPS * dt);
+    this.hurt(s, VENOM_DPS * dt);
   } else if (s.hang) {
     s.venom = 0;
   }
+  if (s.grip <= 0 && !s.hang) this.fall(s);
 
   s.hb += ((s.hang ? 1 : 0) - s.hb) * Math.min(1, dt * 9);
   if (s.ko) return;
@@ -752,7 +1024,10 @@ private stepSpider(s: LocalPlayerState, o: LocalPlayerState, inp: InputState, dt
   // Dash / Pounce movement
   if (s.dashT > 0) {
     s.dashT -= dt;
-    let dxn = clamp(s.x + s.dashDir * 900 * dt, STICK.l + 6, STICK.r - 6);
+    const desiredX = s.x + s.dashDir * 900 * dt;
+    const boundedX = clamp(desiredX, STICK.l + 6, STICK.r - 6);
+    let dxn = this.wallX(s, boundedX, true);
+    if (dxn !== boundedX || boundedX !== desiredX) s.dashHitWall = true;
     // Dash phases through the opponent; only pounce is body-blocked
     if (s.pounce && !o.hang && !o.ko && Math.abs(dxn - o.x) < MINDIST && Math.abs(dxn - o.x) < Math.abs(s.x - o.x)) {
       dxn = s.x;
@@ -760,6 +1035,20 @@ private stepSpider(s: LocalPlayerState, o: LocalPlayerState, inp: InputState, dt
     s.x = dxn;
     s.move = 1;
     s.walkPhase += dt * 6;
+
+    if (s.dashT <= 0 && s.dashPulse) {
+      this.applySpiderPulse(s, o, s.dashHitWall && s.dashStunOnWall ? { ...s.dashPulse, stun: s.dashStunOnWall } : s.dashPulse);
+      s.dashPulse = undefined;
+      s.dashStunOnWall = undefined;
+      s.dashHitWall = false;
+    }
+
+    if (s.dashT <= 0 && s.dashBounceBack) {
+      s.dashDir = -s.dashDir;
+      s.dashT = s.dashBounceBack / 900;
+      s.dashBounceBack = undefined;
+      return;
+    }
 
     if (s.dashT <= 0 && s.pounce) {
       s.pounce = false;
@@ -788,16 +1077,12 @@ private stepSpider(s: LocalPlayerState, o: LocalPlayerState, inp: InputState, dt
   const free = s.stun <= 0 && s.atkT <= 0;
 
   // Stand abilities
-  if (free) {
+  if (free && !(s.silenceT && s.silenceT > 0)) {
     if (inp.ab1 > 0 && s.cd1 <= 0 && ABILITIES[s.skill1 as AbilityId]?.use === 'stand') {
-      if (!(s.snare > 0 && spiderMove(s.species, s.skill1 as AbilityId).effect.dash)) {
-        if (this.useSkill(s, o, 0, inp)) return;
-      }
+      if (this.useSkill(s, o, 0, inp)) return;
     }
     if (inp.ab2 > 0 && s.cd2 <= 0 && ABILITIES[s.skill2 as AbilityId]?.use === 'stand') {
-      if (!(s.snare > 0 && spiderMove(s.species, s.skill2 as AbilityId).effect.dash)) {
-        if (this.useSkill(s, o, 1, inp)) return;
-      }
+      if (this.useSkill(s, o, 1, inp)) return;
     }
   }
 
@@ -819,7 +1104,11 @@ private stepSpider(s: LocalPlayerState, o: LocalPlayerState, inp: InputState, dt
   // Movement
   let v = 0;
   if (free && s.stun <= 0) {
-    v = ((inp.right ? 1 : 0) - (inp.left ? 1 : 0)) * SPEED * (s.blocking ? 0.35 : 1) * (s.snare > 0 ? 0.4 : 1) * (s.soak > 0 ? 0.75 : 1) * (s.hasteT > 0 ? 1.5 : 1);
+    v = ((inp.right ? 1 : 0) - (inp.left ? 1 : 0)) * (s.disorientT > 0 ? -1 : 1) * SPEED * (s.blocking ? 0.35 : 1) * (s.snare > 0 && !this.rootImmune(s) ? 0.4 : 1) * (s.soak > 0 ? 0.85 : 1) * (s.hasteT > 0 ? 1.5 : 1) * (1 + .05 * (s.tailwindStacks || 0)) * (s.speedT ? s.speedMultiplier || 1 : 1);
+    for (const w of this.state.webs) if (w.owner !== s.id && w.zoneRadius && Math.abs(s.x - w.x) <= w.zoneRadius) {
+      if (w.slowMultiplier) v *= w.slowMultiplier;
+      if (w.progressiveSlow) v *= .3 + .4 * (w.life / 4);
+    }
   }
   if (wait && free && s.stun <= 0) {
     let wtx = s.id === 0 ? 440 : 760;
@@ -829,7 +1118,7 @@ private stepSpider(s: LocalPlayerState, o: LocalPlayerState, inp: InputState, dt
   }
 
   if (v) {
-    let nx = clamp(s.x + v * dt, STICK.l + 6, STICK.r - 6);
+    let nx = this.wallX(s, clamp(s.x + v * dt, STICK.l + 6, STICK.r - 6));
     if (!o.hang && !o.ko && Math.abs(nx - o.x) < MINDIST && Math.abs(nx - o.x) < Math.abs(s.x - o.x)) {
       nx = s.x;
     }
@@ -842,7 +1131,7 @@ private stepSpider(s: LocalPlayerState, o: LocalPlayerState, inp: InputState, dt
   if (s.atkT > 0) {
     const atkConfig = s.isHeavy ? ATK_HEAVY : ATK_LIGHT;
     const prevAtk = s.atkT;
-    s.atkT += dt;
+    s.atkT += dt * (s.attackSpeedT ? s.attackSpeedMultiplier || 1 : 1);
     if (prevAtk < atkConfig.wind && s.atkT >= atkConfig.wind) {
       this.doStrike(s, o);
     }

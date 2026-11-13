@@ -17,15 +17,13 @@ import {
   Anchor,
   Shield,
   Lightbulb,
-  Info,
-  Wind,
-  Flame,
-  Sparkles,
-  ShieldCheck
+  Info
 } from 'lucide';
+import { SKILL_CATALOG, nodeForAbility, type SkillSpecies } from '../../../../server/src/skillCatalog';
 import { getAbilityPoints, getExpProgress, getProgress, getUnlockedIds, getLooks, SPIDERS } from '../../gb';
 import { ABILITIES, SKILLS_LIST, WEB_EDGES, getSpiderAbility, isNodeAvailableToUnlock, type AbilityId } from '../../game/abilities';
 import { spiderAbilityIcon, spiderIconHue } from '../../game/spiderIcons';
+import { spiderMove } from '../../game/spiderMoves';
 import { getPlayerRankTitle } from './rankTitle';
 
 function icon(node: IconNode, attrs: Record<string, string | number> = {}): string {
@@ -41,8 +39,19 @@ export function renderDetailCardHtml(nodeId: AbilityId, species = getLooks().p1.
   const pts = getAbilityPoints(prog, species);
   const unlockedIds = getUnlockedIds(prog, species);
   const sel = getSpiderAbility(species, ABILITIES[nodeId] ? nodeId : 'dash');
+  const node = SKILL_CATALOG[species as SkillSpecies].nodes[nodeForAbility(sel.id)!];
+  const effect = spiderMove(species, sel.id).effect;
+  const tactic = effect.zone
+    ? 'Hold a lane and make opponents cross the threat area before they can reach you.'
+    : effect.dash || effect.vault
+      ? 'Change distance to break their timing, then use the opening to re-enter with a strike.'
+      : effect.shot
+        ? 'Punish an approach from range; fire as your opponent commits to a lane.'
+        : effect.barrier || effect.reduction || effect.reflect || effect.shield || effect.heal
+          ? 'Activate before a trade so the opponent spends their attack into your defense.'
+          : 'Wait for your opponent to enter range, then punish their recovery or dropped guard.';
   const selUnlocked = unlockedIds.includes(sel.id);
-  const selAvailable = (spider.pool as readonly string[]).includes(sel.id) && sel.unlock.level <= getExpProgress(prog.spiderProgress?.[species]?.exp || 0).level && isNodeAvailableToUnlock(sel.id, unlockedIds);
+  const selAvailable = (spider.pool as readonly string[]).includes(sel.id) && isNodeAvailableToUnlock(sel.id, unlockedIds);
 
   let actionHtml = '';
   if (selUnlocked) {
@@ -53,18 +62,18 @@ export function renderDetailCardHtml(nodeId: AbilityId, species = getLooks().p1.
       </div>
     `;
   } else if (selAvailable) {
-    if (pts.available > 0) {
+    if (pts.available >= node.cost) {
       actionHtml = `
         <button type="button" class="btn-acquire-action" id="btnAcquireSkill" data-id="${sel.id}">
           ${icon(Zap, { class: 'ico', width: 16, height: 16, fill: 'currentColor' })}
-          <span>ACQUIRE FOR 1 POINT</span>
+          <span>ACQUIRE FOR ${node.cost} POINT${node.cost === 1 ? '' : 'S'}</span>
         </button>
       `;
     } else {
       actionHtml = `
         <div class="ac-locked-banner warning">
           <span>PATH REACHED &bull; 0 POINTS AVAILABLE</span>
-          <small>Play online matches with ${spider.name} to earn ability points.</small>
+          <small>Play online matches with ${spider.name} to earn ${node.cost - pts.available} more point${node.cost - pts.available === 1 ? '' : 's'}.</small>
         </div>
       `;
     }
@@ -73,7 +82,7 @@ export function renderDetailCardHtml(nodeId: AbilityId, species = getLooks().p1.
       <div class="ac-locked-banner">
         ${icon(Lock, { class: 'ico mini', width: 16, height: 16, 'stroke-width': 2 })}
         <span>LOCKED</span>
-        <small>${sel.unlock.level > getExpProgress(prog.spiderProgress?.[species]?.exp || 0).level ? `Reach ${spider.name} level ${sel.unlock.level}.` : 'Unlock adjacent connecting skills in the spider web first.'}</small>
+        <small>Requires ${node.requires.map(id => SKILL_CATALOG[species as SkillSpecies].nodes[id].name).join(', ')}.</small>
       </div>
     `;
   }
@@ -117,7 +126,7 @@ export function renderDetailCardHtml(nodeId: AbilityId, species = getLooks().p1.
         ${icon(Lightbulb, { class: 'ico tactic-ico', width: 14, height: 14, 'stroke-width': 2 })}
         <span>COMBAT TACTIC</span>
       </span>
-      ${sel.tip}
+      ${tactic}
     </div>
 
     <div class="ac-action-area">
@@ -155,8 +164,7 @@ export function renderAbilitiesView(
     if (aUnlocked && bUnlocked) {
       edgeClass = 'silk-edge edge-active';
     } else if (
-      (aUnlocked && b.unlock.level <= expInfo.level && isNodeAvailableToUnlock(bId, unlockedIds)) ||
-      (bUnlocked && a.unlock.level <= expInfo.level && isNodeAvailableToUnlock(aId, unlockedIds))
+      (aUnlocked && isNodeAvailableToUnlock(bId, unlockedIds))
     ) {
       edgeClass = 'silk-edge edge-available';
     }
@@ -167,7 +175,8 @@ export function renderAbilitiesView(
   // Nodes SVG
   const nodesSVG = SKILLS_LIST.filter(s => (spider.pool as readonly string[]).includes(s.id)).map(base => getSpiderAbility(species, base.id)).map(s => {
     const isUnlockedNode = unlockedIds.includes(s.id);
-    const isAvail = s.unlock.level <= expInfo.level && isNodeAvailableToUnlock(s.id, unlockedIds);
+    const isAvail = isNodeAvailableToUnlock(s.id, unlockedIds);
+    const node = SKILL_CATALOG[species as SkillSpecies].nodes[nodeForAbility(s.id)!];
     const isSelected = selectedNodeId === s.id;
     const isCenter = s.id === 'dash';
 
@@ -184,6 +193,7 @@ export function renderAbilitiesView(
 
     return `
       <g class="web-node ${isSelected ? 'selected' : ''}" data-id="${s.id}" transform="translate(${s.x}, ${s.y})" cursor="pointer" tabindex="0" role="button" aria-label="${s.name}">
+        <title>${s.name}</title>
         <!-- Completely stable, non-moving hit area -->
         <circle class="node-hit-area" cx="0" cy="0" r="34" fill="transparent" />
 
@@ -217,7 +227,7 @@ export function renderAbilitiesView(
           ${!isUnlockedNode && isAvail ? `
             <g transform="translate(11, -11)">
               <circle cx="0" cy="0" r="7.5" fill="#2a1e0b" stroke="#f2a33a" stroke-width="1.2" />
-              <text x="0" y="3.5" text-anchor="middle" font-size="9.5" font-weight="900" fill="#ffd694">1</text>
+              <text x="0" y="3.5" text-anchor="middle" font-size="9.5" font-weight="900" fill="#ffd694">${node.cost}</text>
             </g>
           ` : ''}
           ${isUnlockedNode && !isCenter ? `
@@ -229,7 +239,7 @@ export function renderAbilitiesView(
         </g>
 
         <!-- Name Tag -->
-        <text class="node-label ${isUnlockedNode ? 'unlocked' : (isAvail ? 'available' : 'locked')}" x="0" y="42" text-anchor="middle" dominant-baseline="central">${s.name.toUpperCase()}</text>
+        <text class="node-label ${isUnlockedNode ? 'unlocked' : (isAvail ? 'available' : 'locked')}" x="0" y="42" text-anchor="middle" dominant-baseline="central">${s.name.split(' ')[0].toUpperCase()}</text>
       </g>
     `;
   }).join('');
@@ -245,23 +255,11 @@ export function renderAbilitiesView(
 
         <div class="swv-title-block">
           <h1 class="swv-title"><span class="a">SPIDER WEB</span> <span class="j">OF ABILITIES</span></h1>
-          <div class="swv-sectors-pill">
-            <span class="sec-pill aerial">
-              ${icon(Wind, { class: 'ico sec-ico', width: 11, height: 11, 'stroke-width': 2.5 })}
-              <span>Aerial Silk</span>
-            </span>
-            <span class="sec-pill control">
-              ${icon(Sparkles, { class: 'ico sec-ico', width: 11, height: 11, 'stroke-width': 2.5 })}
-              <span>Venom Control</span>
-            </span>
-            <span class="sec-pill assault">
-              ${icon(Flame, { class: 'ico sec-ico', width: 11, height: 11, 'stroke-width': 2.5 })}
-              <span>Mandible Assault</span>
-            </span>
-            <span class="sec-pill vitality">
-              ${icon(ShieldCheck, { class: 'ico sec-ico', width: 11, height: 11, 'stroke-width': 2.5 })}
-              <span>Carapace Bulwark</span>
-            </span>
+          <div class="swv-sectors-pill" aria-label="Skill tiers">
+            <span class="sec-pill aerial">Starter Core · Free</span>
+            <span class="sec-pill control">Inner Hex · 1 point</span>
+            <span class="sec-pill assault">Outer Hex · 2 points</span>
+            <span class="sec-pill vitality">Apex · 3 points</span>
           </div>
         </div>
 
@@ -269,7 +267,7 @@ export function renderAbilitiesView(
           <div class="sbb-exp-group">
             <span class="sbb-lvl">LVL ${expInfo.level} &bull; ${rankTitle}</span>
             <div class="sbb-track" title="${expInfo.expIntoLevel} / ${expInfo.expForLevel} EXP towards Level ${expInfo.level + 1}">
-              <div class="sbb-fill" style="width:${expInfo.progressPct}%;"></div>
+              <div class="sbb-fill" style="transform:scaleX(${expInfo.progressPct / 100});"></div>
             </div>
             <span class="sbb-exp-val">${expInfo.expIntoLevel} / ${expInfo.expForLevel} EXP</span>
           </div>
@@ -392,7 +390,7 @@ export function renderAbilitiesView(
 
             <div class="swv-modal-body">
               <p class="swv-modal-desc">
-                Refund all spent ability points and reset your spider web back to starter <strong>Dash</strong>?
+                Refund all spent ability points and keep the four starter skills?
               </p>
 
               <div class="swv-modal-stats-box">
@@ -409,7 +407,7 @@ export function renderAbilitiesView(
 
               <div class="swv-modal-note">
                 ${icon(Info, { class: 'ico note-ico', width: 15, height: 15, 'stroke-width': 2 })}
-                <span>All unlocked ability branches will be cleared. You can immediately re-allocate all ${pts.total} points anywhere in the web.</span>
+                <span>Purchased skills will be cleared. Rebuild from the four starters and their prerequisites.</span>
               </div>
             </div>
 

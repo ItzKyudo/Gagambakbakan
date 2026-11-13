@@ -1,0 +1,97 @@
+import type { AbilityId } from './abilities';
+import type { SpiderMoveEffect } from './spiderMoves';
+import type { SkillSpecies } from './skillCatalog';
+
+// Shared by local and online combat so a node always has the same effect.
+export const SKILL_EFFECTS: Record<SkillSpecies, Partial<Record<AbilityId, SpiderMoveEffect>>> = {
+  weaver: {
+    dash: { pulse: { range: 170, front: true, damage: 40, soak: 3 } },
+    web: { speed: { multiplier: 1.4, duration: 2 } },
+    surge: { zone: { offset: 80, radius: 90, life: 8, oneShot: true, pulse: { range: 90, damage: 30, soak: 3, snare: 1.2 } } },
+    power: { reduction: { fraction: .25, duration: 3.5 }, cleanseBurn: true },
+    shield: { shot: 'spit', shotSpeed: 850, shotLife: 1, shotDamage: 65, shotPushOnSoaked: 360 },
+    mend: { dash: 'input', dashTime: .13, pulse: { range: 180, damage: 55, pull: 180 } },
+    carapace: { dash: 'back', dashTime: .12, evasion: { chance: .2, duration: 3 }, zone: { offset: -80, radius: 240, life: 3, interval: 3, mist: true, pulse: { range: 0 } } },
+    pounce: { expandZone: { radius: 210, life: 2.5, pull: 180 } },
+    sweep: { reflect: { damage: 35, duration: 4, soak: 3 } },
+    spit: { regen: { perSecond: 15, duration: 3, perSource: true } },
+    anchor: { dash: 'forward', dashTime: .1, pulse: { range: 130, front: true, damage: 80, knockup: .8, knockupIfSoaked: true } },
+    riposte: { dash: 'forward', dashTime: .13, pulseOnDashEnd: true, pulse: { range: 270, damage: 70 }, zone: { offset: 180, radius: 90, life: 8, oneShot: true, pulse: { range: 90, damage: 30, soak: 3, snare: 1.2 } } },
+    tremor: { tether: { range: 300, duration: 3, maxDistance: 300, stun: 1 } },
+    haste: { zone: { offset: 160, radius: 180, life: 4, interval: .5, blocksShots: true, slowMultiplier: .5, pulse: { range: 180, snare: .5 } } },
+    hook: { zone: { radius: 300, life: 5, interval: 1, pulse: { range: 300, damage: 35, soak: 3, pull: 150 } } },
+    leech: { zone: { radius: 240, life: 6, interval: 1, pulse: { range: 240 }, healOwnerPerSecond: 25, cooldownRateFraction: .35, rootImmune: true } }
+  },
+  hunter: {
+    dash: { dash: 'forward', dashTime: .267, pulse: { range: 120, front: true, damage: 45, tailwind: 1 } },
+    web: { airborne: 1.5 },
+    surge: { vault: 420, inv: .15 },
+    power: { crit: { chance: .25, duration: 4 }, reveal: { range: 480, duration: 4 } },
+    shield: { shot: 'spit', shotSpeed: 850, shotLife: .56, shotDamage: 60, shotCutsTraps: true },
+    mend: { dash: 'forward', dashTime: .14, pulse: { range: 160, front: true, damage: 70 }, inv: .15, requiresAirborne: true, bounceBack: 300 },
+    carapace: { dash: 'back', dashTime: .1, zone: { radius: 100, life: 1.5, oneShot: true, pulse: { range: 100, push: 350 } } },
+    pounce: { zone: { offset: 100, radius: 110, life: 3, interval: .5, pulse: { range: 110, knockup: 1 } } },
+    sweep: { reflectShots: 1.5, grantTailwind: 1 },
+    spit: { tailwindBarrier: true, cleanseSlow: true },
+    anchor: { vault: 600, pulse: { range: 120, damage: 95, silence: 1 } },
+    riposte: { meleeInv: 3.5 },
+    tremor: { pulse: { range: 300, damage: 75, pull: 240, knockup: .8 } },
+    haste: { speed: { multiplier: 1.5, duration: 4 }, zone: { radius: 240, life: 4, interval: .5, pulse: { range: 240, push: 120 } } },
+    hook: { pulse: { range: 400, damage: 160, knockup: 1 } },
+    leech: { zone: { radius: 420, life: 6, interval: 1, followsOwner: true, outerOnly: true, cooldownRateFraction: .6, pulse: { range: 420, damage: 40, push: 250 } } }
+  },
+  guardian: {
+    dash: { pulse: { range: 110, front: true, damage: 35, ignite: 1 } },
+    web: { dash: 'forward', dashTime: .4, zone: { offset: 180, radius: 180, life: 3, interval: 1, pulse: { range: 180, damage: 20, ignite: 1 } } },
+    surge: { zone: { offset: 85, radius: 85, life: 8, oneShot: true, pulse: { range: 85, damage: 50, ignite: 2 } } },
+    power: { cleanseSlow: true, attackSpeed: { multiplier: 1.3, duration: 4 } },
+    shield: { combo: { hits: 4, duration: 1.2, damage: 75, range: 140, cooldownRefundOnIgnite: .5 } },
+    mend: { dash: 'forward', dashTime: .2, pulse: { range: 180, front: true, damage: 60, stunIfIgniteStacks: 3, conditionalStunDuration: .6 } },
+    carapace: { zone: { radius: 300, life: 2, interval: .5, followsOwner: true, mist: true, pulse: { range: 300, snare: .5 } }, speed: { multiplier: 1.35, duration: 2 } },
+    pounce: { zone: { radius: 150, life: 3, oneShot: true, pulse: { range: 150, damage: 65, ignite: 2 } } },
+    sweep: { reflect: { damage: 40, duration: 3, ignite: 1 } },
+    spit: { heal: 80, healPerIgnite: 15, consumeFire: true },
+    anchor: { pulse: { range: 130, front: true, damage: 55, detonateIgnite: 25 } },
+    riposte: { speed: { multiplier: 1.4, duration: 5 }, attackSpeed: { multiplier: 1.25, duration: 5 }, zone: { radius: 100, life: 5, interval: .5, followsOwner: true, pulse: { range: 100, damage: 10, ignite: 1 } } },
+    tremor: { pulse: { range: 240, front: true, snare: 1.8 }, zone: { onTarget: true, radius: 50, life: 1.8, interval: .6, pulse: { range: 50, ignite: 1 } } },
+    haste: { igniteZones: true },
+    hook: { dash: 'forward', dashTime: .3, pulse: { range: 300, front: true, damage: 150, knockup: .8, executeBelow: .15 } },
+    leech: { zone: { radius: 270, life: 6, interval: 1, cage: true, pulse: { range: 270, damage: 20, ignite: 5 } } }
+  },
+  wolf: {
+    dash: { pulse: { range: 115, front: true, damage: 50, shred: 1 } },
+    web: { dash: 'input', dashTime: .5, projectileInv: 2.5, pulseOnDashEnd: true, speed: { multiplier: 1.2, duration: 2.5 }, pulse: { range: 120, damage: 40 } },
+    surge: { pulse: { range: 240, front: true, damage: 45, tremor: 2 } },
+    power: { barrier: { hp: 90, duration: 4 }, knockbackImmune: 4 },
+    shield: { pulse: { range: 135, front: true, damage: 75, shredBonus: 25, knockup: .3 } },
+    mend: { pulse: { range: 300, pull: 240, damage: 60 } },
+    carapace: { zone: { radius: 300, life: 3.5, interval: .5, followsOwner: true, slowMultiplier: .75, dustCloud: true, pulse: { range: 300 } } },
+    pounce: { pulse: { range: 420, front: true, damage: 65, tremor: 2, stun: 1 } },
+    sweep: { reflect: { damage: 0, duration: 4, fraction: .3, requiresBarrier: true }, meleeDamage: { fraction: .2, duration: 4, requiresBarrier: true } },
+    spit: { reduction: { fraction: .45, duration: 4 }, regen: { perSecond: 30, duration: 4 }, speed: { multiplier: .7, duration: 4 } },
+    anchor: { pulse: { range: 300, damage: 90, bleed: 3 } },
+    riposte: { dash: 'forward', dashTime: .5, pulseOnDashEnd: true, dashStunOnWall: 1.2, pulse: { range: 120, damage: 70 } },
+    tremor: { zone: { radius: 180, life: 4, interval: .5, progressiveSlow: true, pulse: { range: 180, tremor: .5 } } },
+    haste: { zone: { offset: 150, radius: 90, life: 5, interval: .5, blocksShots: true, blocksMovement: true, pulse: { range: 90, tremor: 2 } } },
+    hook: { pulse: { range: 360, damage: 155, stun: 1.8 } },
+    leech: { barrier: { hp: 200, duration: 5.5 }, zone: { radius: 300, life: 5.5, interval: 1, cage: true, pulse: { range: 300 } }, aftershock: 5.5 }
+  },
+  lynx: {
+    dash: { shot: 'spit', shotSpeed: 720, shotLife: .75, shotDamage: 40, shotToxin: 4 },
+    web: { dash: 'input', dashTime: .4, speedOnHazard: { multiplier: 1.25, duration: 2, range: 60 } },
+    surge: { zone: { offset: 90, radius: 105, life: 5, interval: 1, damagePerMeter: 15, healOwnerPerSecond: 10, healRequiresEnemy: true, pulse: { range: 105 } } },
+    power: { stealth: 3, nextAttackBonus: 35, refreshToxinOnHit: true },
+    shield: { shot: 'spit', shotSpeed: 800, shotLife: .6, shotCount: 3, shotDamage: 30, shotAttackSlow: { multiplier: .75, duration: 2, hits: 2 } },
+    mend: { dash: 'forward', dashTime: .3, bounceBack: 240, pulse: { range: 300, front: true, damage: 60 } },
+    carapace: { dash: 'back', dashTime: .2, zone: { radius: 120, life: 2, interval: .5, pulse: { range: 120, toxin: 4, snare: 1 } } },
+    pounce: { pulse: { range: 240, snare: 1.6, damage: 40, healSelf: 40, requiresToxin: true } },
+    sweep: { reduction: { fraction: .25, duration: 4 }, reflect: { damage: 0, duration: 4, toxin: 4 } },
+    spit: { regen: { perSecond: 25, duration: 3, bonusInZone: .5 } },
+    anchor: { shot: 'spit', shotSpeed: 720, shotLife: .5, shotDamage: 65, shotBloomDamage: 55 },
+    riposte: { vault: 480, pulse: { range: 220, damage: 75 }, stealth: 1, resetSkill: 'dash' },
+    tremor: { shot: 'spit', shotSpeed: 740, shotLife: 1, shotDamage: 50, shotHallucination: 2.5 },
+    haste: { zone: { offset: 180, radius: 140, life: 4.5, interval: 1, blocksMovement: true, pulse: { range: 140, damage: 25, snare: .5 } } },
+    hook: { pulse: { range: 600, front: true, damage: 145, pull: 300, healSelf: 75 } },
+    leech: { zone: { radius: 270, life: 6, interval: 1, grantStealthInterval: 1.5, shotSpeedMultiplier: 1.3, pulse: { range: 270, toxin: 4 } }, stealth: 1.5 }
+  }
+};

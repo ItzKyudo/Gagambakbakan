@@ -25,6 +25,7 @@ function loadGbSource() {
     ALL_ABILITY_IDS: ['dash', 'web', 'surge'],
     ABILITIES: {},
     isNodeAvailableToUnlock: () => true,
+    validateSkillTree: () => ['S1', 'S2', 'S3', 'S4'],
     getRankFromRating: () => ({ id: 'wolf-spider' }),
     lsGet: () => null,
     lsSet: () => {},

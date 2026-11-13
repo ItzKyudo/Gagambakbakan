@@ -465,6 +465,19 @@ body.abilities-active .menu-view-container {
 }
 
 @media (max-width: 900px) {
+  .swv-stage {
+    flex-direction: column;
+    align-items: stretch;
+    touch-action: auto;
+  }
+
+  .swv-svg-canvas {
+    flex: 0 0 43%;
+    height: 43%;
+    min-height: 0;
+    touch-action: none;
+  }
+
   .swv-detail-panel {
     position: relative;
     right: auto;
@@ -472,7 +485,32 @@ body.abilities-active .menu-view-container {
     bottom: auto;
     width: 100%;
     max-height: none;
+    min-height: 0;
+    flex: 1;
+    border-radius: 0;
+    padding: 16px;
+    touch-action: pan-y;
   }
+
+  .swv-detail-panel.collapsed { display: none; }
+  .swv-nav-hud { top: calc(43% - 43px); bottom: auto; left: 10px; }
+  .swv-top-hud { top: 10px; left: 10px; }
+  .swv-open-card-tab { top: calc(43% - 43px); }
+}
+
+@media (max-width: 600px) {
+  .swv-header {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 6px;
+  }
+  .swv-title-block { grid-column: 1 / -1; grid-row: 1; }
+  .swv-title { font-size: 22px; }
+  .swv-sectors-pill { flex-wrap: wrap; gap: 3px; font-size: 9px; letter-spacing: 0; }
+  .sec-pill { padding: 3px 5px; }
+  .swv-back-btn { grid-column: 1; grid-row: 2; font-size: 12px; padding: 6px 10px; }
+  .swv-right-hud { grid-column: 2; grid-row: 2; justify-content: flex-end; }
+  .sbb-track, .sbb-exp-val { display: none; }
 }
 
 /* Open Card Tab when detail panel is collapsed */
@@ -761,7 +799,7 @@ body.abilities-active .menu-view-container {
 .ac-tip-box {
   background: rgba(10, 20, 19, 0.7);
   border: 1px solid var(--line);
-  border-left: 3px solid var(--jade);
+  border-left-color: var(--jade);
   border-radius: 6px;
   padding: 10px 12px;
   font-size: 12px;
@@ -957,11 +995,13 @@ body.abilities-active .menu-view-container {
 }
 
 .sbb-fill {
+  width: 100%;
   height: 100%;
   border-radius: 7px;
   background: linear-gradient(90deg, #f2a33a 0%, #ffd694 45%, #4cc7b2 100%);
   box-shadow: 0 0 10px rgba(76, 199, 178, 0.45);
-  transition: width 0.4s ease;
+  transform-origin: left center;
+  transition: transform 0.4s ease;
 }
 
 .sbb-exp-val {
@@ -1027,7 +1067,7 @@ body.abilities-active .menu-view-container {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  animation: modalScaleUp 0.22s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+  animation: modalScaleUp 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes modalScaleUp {

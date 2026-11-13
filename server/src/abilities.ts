@@ -59,7 +59,7 @@ export const ABILITIES: Record<AbilityId, AbilityDef> = {
     id: 'surge',
     name: 'Surge',
     cd: 5,
-    use: 'hang',
+    use: 'stand',
     icon: 'ic-surge',
     unlock: { level: 1 },
     desc: 'Only while dangling: one big pull worth about six taps.',
@@ -74,9 +74,9 @@ export const ABILITIES: Record<AbilityId, AbilityDef> = {
     id: 'anchor',
     name: 'Anchor Line',
     cd: 11,
-    use: 'hang',
+    use: 'stand',
     icon: 'ic-anchor',
-    unlock: { level: 2 },
+    unlock: { level: 1 },
     desc: 'Only while dangling: your thread stops sinking for 2.5 seconds, so you can climb in peace.',
     sector: 'aerial',
     sectorName: 'AERIAL SILK',
@@ -91,7 +91,7 @@ export const ABILITIES: Record<AbilityId, AbilityDef> = {
     cd: 10,
     use: 'stand',
     icon: 'ic-haste',
-    unlock: { level: 3 },
+    unlock: { level: 1 },
     desc: 'Move 50% faster for 3.5 seconds.',
     sector: 'aerial',
     sectorName: 'AERIAL SILK',
@@ -121,7 +121,7 @@ export const ABILITIES: Record<AbilityId, AbilityDef> = {
     cd: 7,
     use: 'stand',
     icon: 'ic-spit',
-    unlock: { level: 2 },
+    unlock: { level: 1 },
     desc: 'A fast shot that poisons your rival, draining their grip over 3 seconds.',
     sector: 'control',
     sectorName: 'VENOM CONTROL',
@@ -136,7 +136,7 @@ export const ABILITIES: Record<AbilityId, AbilityDef> = {
     cd: 9,
     use: 'stand',
     icon: 'ic-tremor',
-    unlock: { level: 3 },
+    unlock: { level: 1 },
     desc: 'Shake the twig. A nearby rival who is not blocking is stunned.',
     sector: 'control',
     sectorName: 'VENOM CONTROL',
@@ -151,7 +151,7 @@ export const ABILITIES: Record<AbilityId, AbilityDef> = {
     cd: 7,
     use: 'stand',
     icon: 'ic-hook',
-    unlock: { level: 4 },
+    unlock: { level: 1 },
     desc: 'Fire a hook that yanks your rival right up to you and stuns them briefly.',
     sector: 'control',
     sectorName: 'VENOM CONTROL',
@@ -181,7 +181,7 @@ export const ABILITIES: Record<AbilityId, AbilityDef> = {
     cd: 6,
     use: 'stand',
     icon: 'ic-pounce',
-    unlock: { level: 2 },
+    unlock: { level: 1 },
     desc: 'Lunge across the twig and strike in one move.',
     sector: 'assault',
     sectorName: 'MANDIBLE ASSAULT',
@@ -196,7 +196,7 @@ export const ABILITIES: Record<AbilityId, AbilityDef> = {
     cd: 8,
     use: 'stand',
     icon: 'ic-sweep',
-    unlock: { level: 3 },
+    unlock: { level: 1 },
     desc: 'A low leg sweep: 10 grip and a big shove. Can knock a rival off the end. You are open if it whiffs.',
     sector: 'assault',
     sectorName: 'MANDIBLE ASSAULT',
@@ -211,7 +211,7 @@ export const ABILITIES: Record<AbilityId, AbilityDef> = {
     cd: 11,
     use: 'stand',
     icon: 'ic-riposte',
-    unlock: { level: 4 },
+    unlock: { level: 1 },
     desc: 'For 1 second, the next hit on you is cancelled and your attacker is stunned.',
     sector: 'assault',
     sectorName: 'MANDIBLE ASSAULT',
@@ -241,7 +241,7 @@ export const ABILITIES: Record<AbilityId, AbilityDef> = {
     cd: 12,
     use: 'stand',
     icon: 'ic-mend',
-    unlock: { level: 2 },
+    unlock: { level: 1 },
     desc: 'Patch yourself up and restore 35 grip.',
     sector: 'vitality',
     sectorName: 'CARAPACE BULWARK',
@@ -256,7 +256,7 @@ export const ABILITIES: Record<AbilityId, AbilityDef> = {
     cd: 12,
     use: 'stand',
     icon: 'ic-carapace',
-    unlock: { level: 3 },
+    unlock: { level: 1 },
     desc: 'Harden your shell: your guard bar refills instantly and a guard break is cleared.',
     sector: 'vitality',
     sectorName: 'CARAPACE BULWARK',
@@ -271,7 +271,7 @@ export const ABILITIES: Record<AbilityId, AbilityDef> = {
     cd: 7,
     use: 'stand',
     icon: 'ic-leech',
-    unlock: { level: 4 },
+    unlock: { level: 1 },
     desc: 'Your next hit within 5 seconds also heals you for 20 grip.',
     sector: 'vitality',
     sectorName: 'CARAPACE BULWARK',
@@ -307,7 +307,7 @@ export function isAbilityId(id: unknown): id is AbilityId {
   return typeof id === 'string' && id in ABILITIES;
 }
 
-export const SPIDER_STARTERS = { weaver: 'web', hunter: 'pounce', guardian: 'shield', wolf: 'surge', lynx: 'hook' } as const;
+export const SPIDER_STARTERS = { weaver: 'dash', hunter: 'dash', guardian: 'dash', wolf: 'dash', lynx: 'dash' } as const;
 export const SPIDER_POOLS: Record<keyof typeof SPIDER_STARTERS, AbilityId[]> = {
   weaver: ALL_ABILITY_IDS,
   hunter: ALL_ABILITY_IDS,
@@ -327,19 +327,22 @@ export function validateSpiderProgress(value: unknown, legacySkills: unknown, le
     const old = !saved && legacySpecies === species ? { exp: legacyExp, skills: legacySkills } : null;
     const data = saved?.[species] || old;
     const exp = Number.isFinite(data?.exp) ? Math.max(0, data.exp) : 0;
-    const skills: AbilityId[] = ['dash', SPIDER_STARTERS[species]];
-    if (Array.isArray(data?.skills)) for (const id of data.skills) {
-      if (skills.length >= Math.min(16, levelFromSpiderExp(exp) + 1)) break;
-      if (isAbilityId(id) && SPIDER_POOLS[species].includes(id) && !skills.includes(id) && ABILITIES[id].unlock.level <= levelFromSpiderExp(exp) && isNodeAvailableToUnlock(id, skills)) skills.push(id);
-    }
+    const skills = validateSkillTree(species, data?.skills, levelFromSpiderExp(exp)).map(abilityForNode).filter((id): id is AbilityId => !!id);
     result[species] = { exp, skills };
   }
   return result;
 }
 
 export function levelFromSpiderExp(exp: number): number {
+  if (!Number.isFinite(exp) || exp <= 0) return 1;
   const thresholds = [0, 100, 250, 450, 700, 1000, 1350, 1750, 2200, 2700, 3250, 3850, 4500, 5200, 5950];
-  return thresholds.reduce((level, threshold) => exp >= threshold ? level + 1 : level, 0);
+  let level = thresholds.reduce((result, threshold) => exp >= threshold ? result + 1 : result, 0);
+  let nextExp = thresholds[thresholds.length - 1];
+  while (level >= 15 && exp >= nextExp + 600 + (level - 11) * 50) {
+    nextExp += 600 + (level - 11) * 50;
+    level++;
+  }
+  return level;
 }
 
 export function selectSpiderAbilities(species: string, skills: unknown, choices: AbilityId[]): [AbilityId, AbilityId | ''] {
@@ -356,83 +359,19 @@ export function selectDraftAbilities(skills: unknown, choices: AbilityId[]): [Ab
   return [skill1, skill2];
 }
 
-export const WEB_EDGES: [AbilityId, AbilityId][] = [
-  // Radial Spoke 1: North (Aerial Silk)
-  ['dash', 'surge'],
-  ['surge', 'anchor'],
-  ['anchor', 'haste'],
-
-  // Radial Spoke 2: West (Venom Control)
-  ['dash', 'web'],
-  ['web', 'spit'],
-  ['spit', 'tremor'],
-  ['spit', 'hook'],
-
-  // Radial Spoke 3: East (Mandible Assault)
-  ['dash', 'power'],
-  ['power', 'pounce'],
-  ['pounce', 'sweep'],
-  ['pounce', 'riposte'],
-
-  // Radial Spoke 4: South (Carapace Bulwark)
-  ['dash', 'shield'],
-  ['shield', 'mend'],
-  ['mend', 'carapace'],
-  ['mend', 'leech'],
-
-  // Concentric Spiral Web Strands (The connecting rings of the spider web!)
-  // Inner Ring 1 Spiral
-  ['surge', 'web'],
-  ['surge', 'power'],
-  ['web', 'shield'],
-  ['power', 'shield'],
-
-  // Mid Ring 2 Spiral
-  ['anchor', 'spit'],
-  ['anchor', 'pounce'],
-  ['spit', 'mend'],
-  ['pounce', 'mend'],
-
-  // Outer Perimeter Ring Spiral
-  ['haste', 'tremor'],
-  ['haste', 'sweep'],
-  ['tremor', 'hook'],
-  ['sweep', 'riposte'],
-  ['hook', 'carapace'],
-  ['riposte', 'leech'],
-  ['carapace', 'leech']
-];
+export const WEB_EDGES: [AbilityId, AbilityId][] = Object.entries(SKILL_CATALOG.weaver.nodes).flatMap(([id, node]) =>
+  node.requires.map(required => [abilityForNode(required)!, abilityForNode(id)!]));
 
 export function isNodeAvailableToUnlock(id: AbilityId, unlocked: AbilityId[]): boolean {
   if (unlocked.includes(id)) return false;
-  return WEB_EDGES.some(([a, b]) => {
-    if (a === id) return unlocked.includes(b);
-    if (b === id) return unlocked.includes(a);
-    return false;
-  });
+  const nodeId = nodeForAbility(id);
+  return !!nodeId && SKILL_CATALOG.weaver.nodes[nodeId].requires.length > 0 &&
+    SKILL_CATALOG.weaver.nodes[nodeId].requires.every(required => unlocked.includes(abilityForNode(required)!));
 }
 
-export function validateUnlockedSkills(skills: unknown, level: number = 1): AbilityId[] {
-  const safeLvl = Math.max(1, Math.min(100, Math.floor(level) || 1));
-  const maxAllowed = safeLvl + 2;
-  const list = Array.isArray(skills) ? skills.filter(isAbilityId) : [];
-  const unlocked: AbilityId[] = ['dash'];
-
-  for (const id of list) {
-    if (unlocked.length >= maxAllowed) break;
-    if (id !== 'dash' && !unlocked.includes(id) && ABILITIES[id].unlock.level <= safeLvl && isNodeAvailableToUnlock(id, unlocked)) {
-      unlocked.push(id);
-    }
-  }
-
-  const defaults: AbilityId[] = ['web', 'surge'];
-  for (const d of defaults) {
-    if (unlocked.length >= 3 || unlocked.length >= maxAllowed) break;
-    if (!unlocked.includes(d) && isNodeAvailableToUnlock(d, unlocked)) {
-      unlocked.push(d);
-    }
-  }
-  return unlocked;
+export function validateUnlockedSkills(_skills: unknown, _level: number = 1): AbilityId[] {
+  // Species-specific purchases live in spider_skills; this legacy field grants only the four free starters.
+  return ['dash', 'web', 'surge', 'power'];
 }
 
 export function getAbility(id: string): AbilityDef {
@@ -462,3 +401,4 @@ export function getRandomAbilities(count: number = 3, exclude: AbilityId[] = [],
   const finalPool: AbilityId[] = pool.length > 0 ? pool : ['dash'];
   return shuffle(finalPool).slice(0, Math.min(count, finalPool.length));
 }
+import { SKILL_CATALOG, abilityForNode, nodeForAbility, validateSkillTree } from './skillCatalog';

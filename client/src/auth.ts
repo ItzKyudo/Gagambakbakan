@@ -79,7 +79,7 @@ export async function fetchProfile(userId: string): Promise<UserProfile | null> 
     const spiderProgress = data?.spider_exp && data?.spider_skills
       ? Object.fromEntries(SPIDERS.map(spider => [spider.id, {
           exp: data.spider_exp[spider.id] || 0,
-          skills: data.spider_skills[spider.id] || ['dash', spider.skill]
+          skills: data.spider_skills[spider.id] || ['S1', 'S2', 'S3', 'S4']
         }]))
       : undefined;
     const rank = getRankFromRating(rating).id as SpiderRankId;

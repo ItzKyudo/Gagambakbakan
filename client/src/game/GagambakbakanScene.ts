@@ -426,13 +426,52 @@ export class GagambakbakanScene extends Phaser.Scene {
         : (!p1.hang && p2.hang
           ? [p1, p2]
           : (p1.atkT > 0 && p2.atkT <= 0 ? [p2, p1] : [p1, p2]));
-      order.forEach((s) => this.drawSpider(ctx, s, t));
+      for (const [victim, lynx] of [[p1, p2], [p2, p1]] as const) if (victim.hallucinationT > 0 && lynx.species === 'lynx') {
+        for (const offset of [-72, 72]) {
+          ctx.save();
+          ctx.globalAlpha = .24;
+          this.drawSpider(ctx, { ...lynx, x: clamp(victim.x + offset, STICK.l, STICK.r), inv: 0, stealthT: 0, power: 0, leech: 0 }, t);
+          ctx.restore();
+        }
+      }
+      const revealOwner = [p1, p2].find((s) => s.species === 'hunter' && s.revealT > 0 && (!this.isOnline || s.id === this.myPlayerId));
+      order.forEach((s) => {
+        const obscured = this.isOnline && s.id !== this.myPlayerId && this.gameState.webs.some((w: any) => (w.mist || w.dustCloud) && w.owner === s.id && Math.abs(s.x - w.x) <= w.zoneRadius);
+        const revealed = !!revealOwner && s.id !== revealOwner.id && s.stealthT > 0 && Math.abs(s.x - revealOwner.x) <= (revealOwner.revealRange || 0);
+        const visible = revealed ? { ...s, stealthT: 0 } : s;
+        ctx.save();
+        if (obscured) ctx.globalAlpha = .25;
+        this.drawSpider(ctx, visible, t);
+        ctx.restore();
+      });
       this.drawAbilityCasts(ctx);
-      order.forEach((s) => this.drawSpiderName(ctx, s));
+      order.forEach((s) => this.drawSpiderName(ctx, revealOwner && s.id !== revealOwner.id && Math.abs(s.x - revealOwner.x) <= (revealOwner.revealRange || 0) ? { ...s, stealthT: 0 } : s));
 
       // Draw Webs & Projectiles
       const webs = this.gameState.webs || [];
       webs.forEach((w: any) => {
+        if (w.zoneRadius) {
+          const color = w.species === 'weaver' ? '#62d9f4' : w.species === 'guardian' ? '#ff784d' : w.species === 'wolf' ? '#c4a270' : w.species === 'lynx' ? '#91d864' : '#b7e8ff';
+          ctx.save();
+          ctx.fillStyle = color + '33';
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.ellipse(w.x, STICK.y + STICK.th - 2, w.zoneRadius, 11 + Math.sin(t * 5) * 2, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          if (w.mist || w.dustCloud) {
+            ctx.globalAlpha = .6;
+            ctx.fillStyle = w.dustCloud ? '#d4b27a88' : '#c8f4ff88';
+            for (let i = 0; i < 3; i++) {
+              ctx.beginPath();
+              ctx.ellipse(w.x + Math.sin(t * 1.7 + i * 2) * w.zoneRadius * .35, STICK.y + STICK.th - 14 - i * 5, w.zoneRadius * .55, 9, 0, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+          ctx.restore();
+          return;
+        }
         const sg = Math.sign(w.vx) || 1;
         if (w.k === 'spit') {
           if (w.species === 'weaver') {
@@ -452,6 +491,17 @@ export class GagambakbakanScene extends Phaser.Scene {
             ctx.quadraticCurveTo(0, -11, -sg * 8, 0);
             ctx.quadraticCurveTo(0, 11, sg * 12, 0);
             ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+            return;
+          }
+          if (w.species === 'hunter') {
+            ctx.save();
+            ctx.translate(w.x, w.y);
+            ctx.strokeStyle = '#d7f5ff';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(-sg * 3, 0, 15, -1.15, 1.15);
             ctx.stroke();
             ctx.restore();
             return;
@@ -697,7 +747,7 @@ export class GagambakbakanScene extends Phaser.Scene {
       const p = 1 - cast.life / 0.65;
       const index = ALL_ABILITY_IDS.indexOf(cast.id);
       const radius = 16 + 25 * p + index % 4 * 2;
-      const colors: Record<string, string> = { weaver: '#66d7ca', hunter: '#89c8ff', guardian: '#d8c794', wolf: '#f3a76d', lynx: '#b3dd72' };
+      const colors: Record<string, string> = { weaver: '#66d7ca', hunter: '#89c8ff', guardian: '#f3a76d', wolf: '#d8c794', lynx: '#b3dd72' };
       ctx.save();
       ctx.translate(cast.x, cast.y - 37 - p * 16);
       ctx.globalAlpha = Math.min(1, cast.life * 3);
@@ -821,7 +871,7 @@ export class GagambakbakanScene extends Phaser.Scene {
       if (s.quake && s.quake > 0) {
         const k = 1 - s.quake / 0.5;
         const colLight = s.colorLight || (s.id === 0 ? COLORS.amberLight : COLORS.jadeLight);
-        const elementColor: Record<string, string> = { weaver: '#7bdcff', hunter: '#d4f5ff', guardian: '#e8d9b0', wolf: '#ff9b43', lynx: '#b3dd72' };
+        const elementColor: Record<string, string> = { weaver: '#7bdcff', hunter: '#d4f5ff', guardian: '#ff9b43', wolf: '#e8d9b0', lynx: '#b3dd72' };
         const waveColor = elementColor[s.species] || colLight;
         const baseY = STICK.y + STICK.th + 4;
         ctx.save();
@@ -1545,6 +1595,7 @@ export class GagambakbakanScene extends Phaser.Scene {
     }
     const bx = s.x + f * atkXOffset - (s.blocking ? f * 5 : 0) - f * cast * 4;
     let by = STICK.y - BODY_H + (s.blocking ? 5 : 0) + atkYOffset;
+    by -= (s.airT || 0) > 0 ? Math.sin((1 - s.airT / 1.5) * Math.PI) * 48 : 0;
     by += Math.sin(t * 2.1 + s.id * 1.7) * .55 * (1 - moving) * (1 - hb);
     by -= gait.lift * 1.4 * moving;
     by -= cast * 2;
@@ -1556,7 +1607,8 @@ export class GagambakbakanScene extends Phaser.Scene {
     if (Math.abs(flip) < 0.06) flip = flip < 0 ? -0.06 : 0.06;
 
     ctx.save();
-    if (s.inv > 0 && Math.floor(t * 18) % 2) ctx.globalAlpha = 0.55;
+    if (s.stealthT > 0) ctx.globalAlpha = .12;
+    if (s.inv > 0 && !(s.stealthT > 0) && Math.floor(t * 18) % 2) ctx.globalAlpha = 0.55;
 
     // Silk thread & Hang Skill VFX (Surge & Anchor Line)
     if (hb > 0.04) {
@@ -3442,7 +3494,7 @@ export class GagambakbakanScene extends Phaser.Scene {
   }
 
   private drawSpiderName(ctx: CanvasRenderingContext2D, s: any) {
-    if (!s.name) return;
+    if (!s.name || s.stealthT > 0) return;
     const isAmber = s.id === 0;
     const colLight = s.colorLight || (isAmber ? COLORS.amberLight : COLORS.jadeLight);
 

@@ -1,10 +1,10 @@
 import {
   ABILITIES,
   ALL_ABILITY_IDS,
-  isNodeAvailableToUnlock,
   type AbilityId,
   shuffle
 } from './game/abilities';
+import { SKILL_CATALOG, STARTER_SKILLS, abilityForNode, nodeForAbility, skillPointsForLevel, validateSkillTree, type SkillSpecies } from '../../server/src/skillCatalog';
 import { calculateRatingDelta, getRankFromRating, type SpiderRankId } from './ui/menu/rankTitle';
 import { decodePatternArt } from './patternArt';
 import bgMusicMenuUrl from './assets/musics/bg-music-menu.mp3';
@@ -295,11 +295,11 @@ export const DEF_LOOK: { p1: SpiderLook; p2: SpiderLook } = {
 };
 
 export const SPIDERS = [
-  { id: 'weaver', name: 'Orb Weaver', skill: 'web', description: 'Controls space with sticky silk.', pool: ALL_ABILITY_IDS },
-  { id: 'hunter', name: 'Jumping Spider', skill: 'pounce', description: 'Strikes from a sudden leap.', pool: ALL_ABILITY_IDS },
-  { id: 'guardian', name: 'Huntsman', skill: 'shield', description: 'Defends and counters at close range.', pool: ALL_ABILITY_IDS },
-  { id: 'wolf', name: 'Wolf Spider', skill: 'surge', description: 'Runs down its rival.', pool: ALL_ABILITY_IDS },
-  { id: 'lynx', name: 'Lynx Spider', skill: 'hook', description: 'Climbs and catches its rival.', pool: ALL_ABILITY_IDS }
+  { id: 'weaver', name: 'Orb Weaver', skill: 'dash', description: 'Water trapper: soak and control space.', pool: ALL_ABILITY_IDS },
+  { id: 'hunter', name: 'Jumping Spider', skill: 'dash', description: 'Air skirmisher: leap, evade, and burst.', pool: ALL_ABILITY_IDS },
+  { id: 'guardian', name: 'Huntsman', skill: 'dash', description: 'Fire hunter: rush down and ignite rivals.', pool: ALL_ABILITY_IDS },
+  { id: 'wolf', name: 'Wolf Spider', skill: 'dash', description: 'Land bruiser: ground rivals and break armor.', pool: ALL_ABILITY_IDS },
+  { id: 'lynx', name: 'Lynx Spider', skill: 'dash', description: 'Nature stalker: toxin, briars, and leech.', pool: ALL_ABILITY_IDS }
 ] as const;
 
 export function spiderStarter(species: string): AbilityId {
@@ -829,11 +829,7 @@ export function getProgress(): ProgressData {
   for (const spider of SPIDERS) {
     const saved = p.spiderProgress?.[spider.id] || (p.spiderProgress ? null : spider.id === legacySpecies ? { exp: onlineExp, skills: p.unlockedSkills } : null);
     const exp = Number.isFinite(saved?.exp) ? Math.max(0, saved.exp) : 0;
-    const skills: string[] = ['dash', spider.skill];
-    if (Array.isArray(saved?.skills)) for (const id of saved.skills) {
-      if (skills.length >= getLevel(exp) + 1) break;
-      if ((spider.pool as readonly string[]).includes(id) && !skills.includes(id) && ABILITIES[id as AbilityId].unlock.level <= getLevel(exp) && isNodeAvailableToUnlock(id as AbilityId, skills as AbilityId[])) skills.push(id);
-    }
+    const skills = validateSkillTree(spider.id, saved?.skills, getLevel(exp));
     spiderProgress[spider.id] = { exp, skills };
   }
   const played = Math.max(0, (p.played ?? p.onlinePlayed) | 0);
@@ -869,8 +865,8 @@ export function getAbilityPoints(p?: ProgressData, species = getLooks().p1.speci
   p = p || getProgress();
   const spider = SPIDERS.find(s => s.id === species) || SPIDERS[0];
   const progress = p.spiderProgress?.[spider.id];
-  const total = Math.min(14, getLevel(progress?.exp || 0) - 1);
-  const spent = (progress?.skills || []).filter(id => id !== 'dash' && id !== spider.skill).length;
+  const total = skillPointsForLevel(getLevel(progress?.exp || 0));
+  const spent = (progress?.skills || []).reduce((sum, id) => sum + (SKILL_CATALOG[spider.id].nodes[id as keyof typeof SKILL_CATALOG.weaver.nodes]?.cost || 0), 0);
   const available = Math.max(0, total - spent);
   return { total, spent, available };
 }
@@ -878,8 +874,8 @@ export function getAbilityPoints(p?: ProgressData, species = getLooks().p1.speci
 export function isUnlocked(id: AbilityId, p?: ProgressData, species = getLooks().p1.species): boolean {
   p = p || getProgress();
   if (p.unlockAll) return !!(SPIDERS.find(s => s.id === species)?.pool as readonly string[] | undefined)?.includes(id);
-  const list = p.spiderProgress?.[species]?.skills || ['dash', spiderStarter(species)];
-  return list.includes(id);
+  const list = p.spiderProgress?.[species]?.skills || STARTER_SKILLS;
+  return list.includes(nodeForAbility(id) || '');
 }
 
 export function getUnlockNeed(id: AbilityId, species = getLooks().p1.species): { have: number; need: number; text: string } {
@@ -900,7 +896,7 @@ export function getUnlockNeed(id: AbilityId, species = getLooks().p1.species): {
 export function getUnlockedIds(p?: ProgressData, species: string = getLooks().p1.species): AbilityId[] {
   p = p || getProgress();
   if (p.unlockAll) return [...(SPIDERS.find(s => s.id === species) || SPIDERS[0]).pool] as AbilityId[];
-  return (p.spiderProgress?.[species]?.skills || ['dash', spiderStarter(species)]) as AbilityId[];
+  return (p.spiderProgress?.[species]?.skills || STARTER_SKILLS).map(abilityForNode).filter((id): id is AbilityId => !!id);
 }
 
 export function acquireSkill(id: AbilityId, species = getLooks().p1.species): { success: boolean; reason?: string } {
@@ -908,20 +904,15 @@ export function acquireSkill(id: AbilityId, species = getLooks().p1.species): { 
   const spider = SPIDERS.find(s => s.id === species);
   if (!spider || !(spider.pool as readonly string[]).includes(id)) return { success: false, reason: 'This skill belongs to another spider' };
   const unlocked = p.spiderProgress![species].skills;
-  if (unlocked.includes(id)) {
+  const nodeId = nodeForAbility(id)!;
+  if (unlocked.includes(nodeId)) {
     return { success: false, reason: 'Already unlocked' };
   }
-  if (!isNodeAvailableToUnlock(id, unlocked as AbilityId[])) {
-    return { success: false, reason: 'Path not connected' };
-  }
-  if (ABILITIES[id].unlock.level > getLevel(p.spiderProgress![species].exp)) {
-    return { success: false, reason: `Requires spider level ${ABILITIES[id].unlock.level}` };
-  }
+  const node = SKILL_CATALOG[species as SkillSpecies].nodes[nodeId];
+  if (!node.requires.every(required => unlocked.includes(required))) return { success: false, reason: 'Unlock prerequisite skills first' };
   const pts = getAbilityPoints(p, species);
-  if (pts.available <= 0) {
-    return { success: false, reason: 'No ability points available' };
-  }
-  unlocked.push(id);
+  if (pts.available < node.cost) return { success: false, reason: `Requires ${node.cost} ability points` };
+  unlocked.push(nodeId);
   p.spiderProgress![species].skills = unlocked;
   saveProgress(p);
   return { success: true };
@@ -929,7 +920,7 @@ export function acquireSkill(id: AbilityId, species = getLooks().p1.species): { 
 
 export function respecWeb(species = getLooks().p1.species): void {
   const p = getProgress();
-  p.spiderProgress![species].skills = ['dash', spiderStarter(species)];
+  p.spiderProgress![species].skills = [...STARTER_SKILLS];
   p.unlockAll = false;
   saveProgress(p);
 }

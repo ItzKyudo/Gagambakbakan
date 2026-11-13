@@ -1,6 +1,7 @@
 import { Room, Client, ServerError, type AuthContext } from 'colyseus';
 import { BattleStateData, PlayerStateData, WebStateData } from './schema/BattleState';
 import { BattleCombat, type PlayerInput } from './BattleCombat';
+import { spiderMove } from '../spiderMoves';
 import { ABILITIES, isAbilityId, isSpiderType, levelFromSpiderExp, SPIDER_STARTERS, SPIDER_POOLS, selectSpiderAbilities, type SpiderType, AbilityId } from '../abilities';
 import { getRankFromRating, normalizeRankId, calculateRatingChange } from '../ranks';
 import { validateUsername } from '../auth';
@@ -121,8 +122,8 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
 
       target.skill1 = s1;
       target.skill2 = s2;
-      target.cd1max = ABILITIES[s1 as AbilityId]?.cd || 3;
-      target.cd2max = s2 ? (ABILITIES[s2 as AbilityId]?.cd || 5) : 0;
+      target.cd1max = spiderMove(target.species, s1).cooldown || 3;
+      target.cd2max = s2 ? spiderMove(target.species, s2).cooldown || 5 : 0;
 
       if (isP1) this.battleState.p1Drafted = true;
       if (isP2) this.battleState.p2Drafted = true;
@@ -384,7 +385,7 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
     }
     const choices = (player: PlayerStateData) => {
       const species = player.species as SpiderType;
-      const unlocked = player.isRanked ? SPIDER_POOLS[species] : this.spiderProgress[player.id]?.[species]?.skills || ['dash', SPIDER_STARTERS[species]];
+      const unlocked = player.isRanked ? SPIDER_POOLS[species] : this.spiderProgress[player.id]?.[species]?.skills || ['dash', 'web', 'surge', 'power'];
       return unlocked.filter(id => SPIDER_POOLS[species].includes(id as AbilityId));
     };
     this.battleState.draftChoicesP1 = choices(this.battleState.p1);
@@ -441,13 +442,19 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
     s.cheer = false;
     s.parryT = 0;
     s.cd1 = 0;
-    s.cd1max = ABILITIES[s.skill1 as AbilityId]?.cd || 3;
+    s.cd1max = spiderMove(s.species, s.skill1 as AbilityId).cooldown || 3;
     s.cd2 = 0;
-    s.cd2max = s.skill2 ? (ABILITIES[s.skill2 as AbilityId]?.cd || 5) : 0;
+    s.cd2max = s.skill2 ? spiderMove(s.species, s.skill2 as AbilityId).cooldown || 5 : 0;
     s.snare = 0;
     s.venom = 0;
     s.soak = 0;
     s.burn = 0;
+    Object.assign(s, { airT: 0, dashBounceBack: undefined, igniteStacks: 0, shredStacks: 0, shredT: 0, tailwindStacks: 0, tailwindT: 0, tremorT: 0,
+      toxin: 0, bleedT: 0, silenceT: 0, speedT: 0, reductionT: 0, regenT: 0, reflectT: 0, reflectFraction: undefined, reflectRequiresBarrier: false, meleeDamageFraction: 0, meleeDamageT: 0, meleeDamageRequiresBarrier: false,
+      barrierHp: 0, barrierT: 0, stealthT: 0, cooldownT: 0, rootImmuneT: 0, critT: 0, revealT: 0, revealRange: 0, attackSpeedT: 0,
+      reflectShotsT: 0, knockbackImmuneT: 0, nextAttackBonus: 0, refreshToxinOnHit: false, aftershockT: 0, projectileInvT: 0, dashPulse: undefined, dashStunOnWall: undefined, dashHitWall: false,
+      tetherT: 0, tetherAnchorX: undefined, tetherMaxDistance: undefined, tetherStun: undefined, evasionChance: 0, evasionT: 0,
+      lastVolleyId: '', volleyHits: 0, bloomT: 0, bloomDamage: 0, hallucinationT: 0 });
     s.dashT = 0;
     s.dashDir = 0;
     s.pounce = false;
@@ -474,8 +481,8 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
     const [s1, s2] = selectSpiderAbilities(target.species, [], validChoices);
     target.skill1 = s1;
     target.skill2 = s2;
-    target.cd1max = ABILITIES[s1 as AbilityId]?.cd || 3;
-    target.cd2max = s2 ? (ABILITIES[s2 as AbilityId]?.cd || 5) : 0;
+    target.cd1max = spiderMove(target.species, s1).cooldown || 3;
+    target.cd2max = s2 ? spiderMove(target.species, s2).cooldown || 5 : 0;
     if (target.id === 0) this.battleState.p1Drafted = true;
     if (target.id === 1) this.battleState.p2Drafted = true;
     this.broadcast('playerDrafted', { id: target.id, skill1: s1, skill2: s2 });

@@ -8,6 +8,7 @@ import { validateUsername } from '../auth';
 import { checkMatchmakingRateLimit } from '../matchmakingRateLimit';
 import { authenticateBattle, recordBattleResult, type BattleIdentity } from '../competitiveStore';
 import { randomUUID } from 'node:crypto';
+import { TERRAIN_IDS } from '../terrain';
 
 const TAP = 8, FALL_DEPTH = 100;
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
@@ -47,6 +48,7 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
   private combat!: BattleCombat;
   private rematchVotes: Set<string> = new Set();
   private matchId = randomUUID();
+  private terrainStart = Math.floor(Math.random() * TERRAIN_IDS.length);
   private resultPending = false;
   private combatStarted = false;
   private preferredSpecies: [SpiderType, SpiderType] = ['weaver', 'hunter'];
@@ -61,6 +63,14 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
     const isRanked = Boolean(options?.isRanked);
     this.setMetadata({ rank: roomRank, isRanked });
     this.battleState = {
+      terrain: TERRAIN_IDS[this.terrainStart],
+      terrainTime: 0,
+      terrainBroken: false,
+      terrainSink: 0,
+      terrainClearT: 0,
+      terrainBuds: 0,
+      terrainPuddleT: 0,
+      terrainFireT: 0,
       mode: 'pvp',
       status: 'waiting',
       stateT: 0,
@@ -356,6 +366,7 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
   private startMatch() {
     this.lock(); // Lock room so third players cannot disrupt a 2-player match
     this.matchId = randomUUID();
+    this.terrainStart = Math.floor(Math.random() * TERRAIN_IDS.length);
     this.rematchVotes.clear();
     this.battleState.isPaused = false;
     this.battleState.disconnectPause = null;
@@ -406,6 +417,15 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
   }
 
   private startRound() {
+    this.battleState.terrain = TERRAIN_IDS[(this.terrainStart + this.battleState.round - 1) % TERRAIN_IDS.length];
+    this.battleState.terrainTime = 0;
+    this.battleState.terrainBroken = false;
+    this.battleState.terrainStrike = undefined;
+    this.battleState.terrainSink = 0;
+    this.battleState.terrainClearT = 0;
+    this.battleState.terrainBuds = 0;
+    this.battleState.terrainPuddleT = 0;
+    this.battleState.terrainFireT = 0;
     this.battleState.p1.falls = 0;
     this.battleState.p2.falls = 0;
     this.resetSpiderRound(this.battleState.p1, 440, 1);
@@ -428,6 +448,7 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
     s.grip = 120;
     s.guard = 100;
     s.hang = false;
+    s.under = false;
     s.falling = false;
     s.drop = 0;
     s.dropV = 0;
@@ -449,7 +470,7 @@ export class BattleRoom extends Room<{ state: BattleStateData }> {
     s.venom = 0;
     s.soak = 0;
     s.burn = 0;
-    Object.assign(s, { airT: 0, dashBounceBack: undefined, igniteStacks: 0, shredStacks: 0, shredT: 0, tailwindStacks: 0, tailwindT: 0, tremorT: 0,
+    Object.assign(s, { airT: 0, terrainJumpT: 0, dashBounceBack: undefined, igniteStacks: 0, shredStacks: 0, shredT: 0, tailwindStacks: 0, tailwindT: 0, tremorT: 0,
       toxin: 0, bleedT: 0, silenceT: 0, speedT: 0, reductionT: 0, regenT: 0, reflectT: 0, reflectFraction: undefined, reflectRequiresBarrier: false, meleeDamageFraction: 0, meleeDamageT: 0, meleeDamageRequiresBarrier: false,
       barrierHp: 0, barrierT: 0, stealthT: 0, cooldownT: 0, rootImmuneT: 0, critT: 0, revealT: 0, revealRange: 0, attackSpeedT: 0,
       reflectShotsT: 0, knockbackImmuneT: 0, nextAttackBonus: 0, refreshToxinOnHit: false, aftershockT: 0, projectileInvT: 0, dashPulse: undefined, dashStunOnWall: undefined, dashHitWall: false,

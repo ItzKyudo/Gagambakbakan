@@ -15,6 +15,7 @@ export function getRoute(): AppRoute {
   if (raw === 'settings') return 'settings';
   if (raw === 'about') return 'about';
   if (raw === 'learn') return 'learn';
+  if (raw === 'guide') return 'guide';
   if (raw === 'account') return 'account';
   if (raw === 'leaderboard') return 'leaderboard';
   if (raw === 'profile') return 'profile';

@@ -14,6 +14,7 @@ import { renderSettingsView } from './menu/settingsView';
 import { bindSettingsEvents, type SettingsState } from './menu/settingsController';
 import { renderAboutView } from './menu/aboutView';
 import { bindLearnDemo, renderLearnView } from './menu/learnView';
+import { bindGuideView, renderGuideView } from './menu/guideView';
 import { renderAccountView } from './menu/accountView';
 import { bindAccountEvents, createAccountState } from './menu/accountController';
 import { getAuthUser, initAuth, subscribeAuth } from '../auth';
@@ -32,6 +33,7 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
   let spiderLookFrame = 0;
   let cleanupMainDemo: (() => void) | null = null;
   let cleanupLearnDemo: (() => void) | null = null;
+  let cleanupGuideView: (() => void) | null = null;
   let cleanupAccountDemo: (() => void) | null = null;
   const abilitiesState = createAbilitiesViewState();
   const accountState = createAccountState();
@@ -83,6 +85,8 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
     cleanupMainDemo = null;
     cleanupLearnDemo?.();
     cleanupLearnDemo = null;
+    cleanupGuideView?.();
+    cleanupGuideView = null;
     cleanupAccountDemo?.();
     cleanupAccountDemo = null;
     clearAbilitiesKeyHandler(abilitiesState);
@@ -115,6 +119,8 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
     cleanupMainDemo = null;
     cleanupLearnDemo?.();
     cleanupLearnDemo = null;
+    cleanupGuideView?.();
+    cleanupGuideView = null;
     cleanupAccountDemo?.();
     cleanupAccountDemo = null;
     container.innerHTML = `
@@ -283,6 +289,8 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
         return renderSettingsView(settingsState.listeningKey);
       case 'learn':
         return renderLearnView();
+      case 'guide':
+        return renderGuideView();
       case 'leaderboard':
         return renderLeaderboardView();
       case 'about':
@@ -408,6 +416,7 @@ export function renderMenuPage(container: HTMLElement, rawOnStart: (opts: MenuSt
     if (activeTab === 'abilities') bindAbilitiesEvents(container, abilitiesState, render);
 
     if (activeTab === 'learn') cleanupLearnDemo = bindLearnDemo(container);
+    if (activeTab === 'guide') cleanupGuideView = bindGuideView(container);
 
     if (activeTab === 'account') cleanupAccountDemo = bindAccountEvents(container, accountState, render);
   }

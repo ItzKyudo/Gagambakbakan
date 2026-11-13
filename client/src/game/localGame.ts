@@ -4,6 +4,7 @@ import { LocalCombat } from './localCombat';
 import type { InputState, LocalBattleState, LocalPlayerState } from './localGameTypes';
 import { drawSkills, getSpiderAbility, type AbilityId } from './abilities';
 import { getUnlockedIds, recordMatch, getColor, getLevel, getProgress } from '../gb';
+import { TERRAINS, terrainAt } from './terrain';
 
 export type { InputState, LocalBattleState, LocalPlayerState, LocalWebState } from './localGameTypes';
 
@@ -17,6 +18,7 @@ export class LocalGameEngine {
   public onMatchEnd?: (data: { winner: number; winnerName: string; p1Wins: number; p2Wins: number; unlocked?: AbilityId[]; isTimeOut?: boolean }) => void;
 
   private combat!: LocalCombat;
+  private terrainStart = Math.floor(Math.random() * TERRAINS.length);
 
   constructor(
     mode: 'cpu' | '2p' | 'demo' = 'cpu',
@@ -66,6 +68,14 @@ export class LocalGameEngine {
     );
 
     this.state = {
+      terrain: terrainAt(this.terrainStart).id,
+      terrainTime: 0,
+      terrainBroken: false,
+      terrainSink: 0,
+      terrainClearT: 0,
+      terrainBuds: 0,
+      terrainPuddleT: 0,
+      terrainFireT: 0,
       status: mode === 'demo' ? 'draft' : 'select',
       stateT: 0,
       round: 1,
@@ -169,6 +179,7 @@ export class LocalGameEngine {
   }
 
   public startMatch() {
+    this.terrainStart = Math.floor(Math.random() * TERRAINS.length);
     this.state.round = 1;
     this.state.winner = -1;
     this.state.p1.wins = 0;
@@ -229,6 +240,15 @@ export class LocalGameEngine {
   }
 
   public startRound() {
+    this.state.terrain = terrainAt(this.terrainStart + this.state.round - 1).id;
+    this.state.terrainTime = 0;
+    this.state.terrainBroken = false;
+    this.state.terrainStrike = undefined;
+    this.state.terrainSink = 0;
+    this.state.terrainClearT = 0;
+    this.state.terrainBuds = 0;
+    this.state.terrainPuddleT = 0;
+    this.state.terrainFireT = 0;
     this.state.p1.falls = 0;
     this.state.p2.falls = 0;
     this.resetSpiderRound(this.state.p1, 440, 1);
@@ -254,6 +274,7 @@ export class LocalGameEngine {
     s.grip = MAX_GRIP;
     s.guard = 100;
     s.hang = false;
+    s.under = false;
     s.falling = false;
     s.drop = 0;
     s.dropV = 0;
@@ -275,7 +296,7 @@ export class LocalGameEngine {
     s.venom = 0;
     s.soak = 0;
     s.burn = 0;
-    Object.assign(s, { airT: 0, dashBounceBack: undefined, igniteStacks: 0, shredStacks: 0, shredT: 0, tailwindStacks: 0, tailwindT: 0, tremorT: 0,
+    Object.assign(s, { airT: 0, terrainJumpT: 0, dashBounceBack: undefined, igniteStacks: 0, shredStacks: 0, shredT: 0, tailwindStacks: 0, tailwindT: 0, tremorT: 0,
       toxin: 0, bleedT: 0, silenceT: 0, speedT: 0, reductionT: 0, regenT: 0, reflectT: 0, reflectFraction: undefined, reflectRequiresBarrier: false, meleeDamageFraction: 0, meleeDamageT: 0, meleeDamageRequiresBarrier: false,
       barrierHp: 0, barrierT: 0, stealthT: 0, cooldownT: 0, rootImmuneT: 0, critT: 0, revealT: 0, revealRange: 0, attackSpeedT: 0,
       reflectShotsT: 0, knockbackImmuneT: 0, nextAttackBonus: 0, refreshToxinOnHit: false, aftershockT: 0, projectileInvT: 0, dashPulse: undefined, dashStunOnWall: undefined, dashHitWall: false,

@@ -1,3 +1,5 @@
+import type { TerrainId } from '../../terrain';
+
 export interface PlayerStateData {
   sessionId: string;
   userId?: string | null;
@@ -32,6 +34,7 @@ export interface PlayerStateData {
   
   // State flags
   hang: boolean;
+  under?: boolean;
   falling: boolean;
   drop: number;
   dropV: number;
@@ -105,6 +108,7 @@ export interface PlayerStateData {
   revealT?: number;
   revealRange?: number;
   airT?: number;
+  terrainJumpT?: number;
   dashBounceBack?: number;
   dashSpeedOnHazard?: { multiplier: number; duration: number; range: number };
   disorientT?: number;
@@ -204,6 +208,15 @@ export interface DisconnectPauseData {
 }
 
 export interface BattleStateData {
+  terrain: TerrainId;
+  terrainTime: number;
+  terrainBroken: boolean;
+  terrainStrike?: { x: number; warning: number };
+  terrainSink: number;
+  terrainClearT: number;
+  terrainBuds: number;
+  terrainPuddleT: number;
+  terrainFireT: number;
   mode: string;         // 'pvp'
   status: 'waiting' | 'select' | 'draft' | 'ready' | 'fight' | 'roundEnd' | 'matchEnd';
   stateT: number;

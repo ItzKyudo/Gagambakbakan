@@ -266,6 +266,12 @@ export function bindMainMenuEvents(container: HTMLElement, actions: MainMenuActi
     actions.navigate('learn');
   });
 
+  container.querySelector('#btnGoGuide')?.addEventListener('click', () => {
+    cancelQueue();
+    sound.playTone(520, 0.08, 'triangle', 0.05, 200);
+    actions.navigate('guide');
+  });
+
   container.querySelector('#btnGoAbout')?.addEventListener('click', () => {
     cancelQueue();
     sound.playTone(520, 0.08, 'triangle', 0.05, 200);

@@ -3,6 +3,7 @@ import { ABILITIES, getSpiderAbility, type AbilityId } from '../game/abilities';
 import { spiderAbilityIcon, spiderIconHue } from '../game/spiderIcons';
 import { SPIDER_ELEMENTS, type SpiderSpecies } from '../game/spiderMoves';
 import { MAX_GRIP } from '../game/constants';
+import { TERRAINS } from '../game/terrain';
 import { getKeys, keyLabel, getColor, getLooks, getSettings, getProgress, getLevel, SPIDERS, spiderSVG, saveSettings, applyQualityClass, type GraphicQuality } from '../gb';
 
 export interface GamePageCallbacks {
@@ -194,7 +195,7 @@ export class GamePage {
                   </svg>
                 </button>
                 <div class="hud-match-timer" id="hudTimer" aria-label="Round Timer">60</div>
-                <div id="roundLbl">Round 1</div>
+                <div id="roundLbl" role="status" aria-live="polite">Round 1</div>
                 <div class="best">First to 2</div>
               </div>
 
@@ -332,11 +333,11 @@ export class GamePage {
               <!-- QUICK CONTROLS GUIDE -->
               <div class="igm-controls-guide">
                 <div class="igm-ctrl-row"><span>Move</span><b>A / D &nbsp;or&nbsp; ← / →</b></div>
-                <div class="igm-ctrl-row"><span>Light Attack</span><b>J &nbsp;or&nbsp; Z</b></div>
-                <div class="igm-ctrl-row"><span>Heavy Attack</span><b>K &nbsp;or&nbsp; X</b></div>
-                <div class="igm-ctrl-row"><span>Guard / Block</span><b>L &nbsp;or&nbsp; C</b></div>
-                <div class="igm-ctrl-row"><span>Climb / Reel</span><b>W &nbsp;or&nbsp; Space</b></div>
-                <div class="igm-ctrl-row"><span>Skills</span><b>Q &nbsp;/&nbsp; E</b></div>
+                <div class="igm-ctrl-row"><span>Light Attack</span><b>F &nbsp;or&nbsp; K</b></div>
+                <div class="igm-ctrl-row"><span>Heavy Attack</span><b>R &nbsp;or&nbsp; I</b></div>
+                <div class="igm-ctrl-row"><span>Guard / Block</span><b>G &nbsp;or&nbsp; L</b></div>
+                <div class="igm-ctrl-row"><span>Jump / Climb</span><b>Space &nbsp;or&nbsp; Enter</b></div>
+                <div class="igm-ctrl-row"><span>Skills</span><b>Q / E &nbsp;or&nbsp; , / .</b></div>
               </div>
 
               <!-- ACTIONS -->
@@ -1256,6 +1257,8 @@ export class GamePage {
     if (this.roundLbl.textContent !== roundText) {
       this.roundLbl.textContent = roundText;
     }
+    const terrainName = TERRAINS.find(terrain => terrain.id === state.terrain)?.name;
+    if (terrainName) this.roundLbl.setAttribute('aria-label', `${roundText}, ${terrainName}`);
 
     // Round timer countdown (60s per round)
     const timerVal = typeof state.roundTimer === 'number' ? state.roundTimer : state.matchTimer;

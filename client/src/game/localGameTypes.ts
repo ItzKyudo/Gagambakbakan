@@ -1,5 +1,6 @@
 import type { AbilityId } from './abilities';
 import type { SpiderPulse } from './spiderMoves';
+import type { TerrainId } from './terrain';
 
 export interface LocalPlayerState {
   id: number;
@@ -19,6 +20,7 @@ export interface LocalPlayerState {
   grip: number;
   guard: number;
   hang: boolean;
+  under?: boolean;
   falling: boolean;
   drop: number;
   dropV: number;
@@ -88,6 +90,7 @@ export interface LocalPlayerState {
   revealT?: number;
   revealRange?: number;
   airT?: number;
+  terrainJumpT?: number;
   dashBounceBack?: number;
   dashSpeedOnHazard?: { multiplier: number; duration: number; range: number };
   disorientT?: number;
@@ -179,6 +182,15 @@ export interface LocalWebState {
 }
 
 export interface LocalBattleState {
+  terrain: TerrainId;
+  terrainTime: number;
+  terrainBroken: boolean;
+  terrainStrike?: { x: number; warning: number };
+  terrainSink: number;
+  terrainClearT: number;
+  terrainBuds: number;
+  terrainPuddleT: number;
+  terrainFireT: number;
   status: 'waiting' | 'select' | 'draft' | 'ready' | 'fight' | 'roundEnd' | 'matchEnd';
   stateT: number;
   round: number;

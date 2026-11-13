@@ -1,4 +1,4 @@
-import { createElement, BookOpen, GraduationCap, Settings, LogIn, type IconNode } from 'lucide';
+import { createElement, BookOpen, Compass, GraduationCap, Settings, LogIn, type IconNode } from 'lucide';
 import { getColor, getExpProgress, getLevel, getLooks, getProgress, getBattlefieldsData, SPIDERS, spiderSVG } from '../../gb';
 import { getRankFromRating, getRankProgress, renderRankBadgeSVG, RANK_RATING_LABEL } from './rankTitle';
 import { getAuthUser } from '../../auth';
@@ -75,6 +75,10 @@ export function renderMainMenuView(activePanel: 'main' | 'play' = 'main'): strin
           <button type="button" class="mb" id="btnGoLearn">
             <span class="mi">${icon(GraduationCap, { class: 'ico', width: 20, height: 20, 'stroke-width': 2.1 })}</span>
             <span class="ml">Learn</span>
+          </button>
+          <button type="button" class="mb" id="btnGoGuide">
+            <span class="mi">${icon(Compass, { class: 'ico', width: 20, height: 20, 'stroke-width': 2.1 })}</span>
+            <span class="ml">Field Guide</span>
           </button>
           <button type="button" class="mb" id="btnGoSettings">
             <span class="mi">${icon(Settings, { class: 'ico', width: 20, height: 20, 'stroke-width': 2.1 })}</span>

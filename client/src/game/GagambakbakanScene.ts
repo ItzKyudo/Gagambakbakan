@@ -8,6 +8,7 @@ import { decodePatternArt } from '../patternArt';
 import { attackPose, gaitMotion, skillBurst, smoothMotion, type SkillBurst } from './spiderMotion';
 import { ALL_ABILITY_IDS, getSpiderAbility, type AbilityId } from './abilities';
 import { spiderAbilityIcon, spiderIconHue } from './spiderIcons';
+import { TERRAINS, type TerrainId } from './terrain';
 
 interface Particle {
   x: number;
@@ -50,6 +51,7 @@ export class GagambakbakanScene extends Phaser.Scene {
 
   private dpr: number = 1;
   private bgCanvas!: HTMLCanvasElement;
+  private terrainBackgrounds = new Map<TerrainId, HTMLCanvasElement>();
   private stickCanvas!: HTMLCanvasElement;
   private pondGradient!: CanvasGradient;
   private flies: Array<{ x: number; y: number; ph: number; sp: number }> = [];
@@ -68,6 +70,30 @@ export class GagambakbakanScene extends Phaser.Scene {
 
   constructor() {
     super({ key: 'GagambakbakanScene' });
+  }
+
+  public static createTerrainPreview(canvas: HTMLCanvasElement, thumbnail: HTMLCanvasElement, terrain: TerrainId): (seconds: number) => void {
+    const scene = new GagambakbakanScene();
+    scene.gameState = { terrain, terrainTime: 1, terrainSink: 0, terrainBuds: 0, round: 1 };
+    scene.createTerrainBackgrounds(terrain);
+    const background = scene.terrainBackgrounds.get(terrain)!;
+    thumbnail.getContext('2d')?.drawImage(background, 0, 0, thumbnail.width, thumbnail.height);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return () => {};
+    const draw = (seconds: number) => {
+      scene.gameState.terrainTime = seconds;
+      if (terrain === 'lightning') {
+        const phase = seconds % 15;
+        scene.gameState.terrainStrike = phase >= 13.5 ? { x: 600, warning: 15 - phase } : undefined;
+        scene.gameState.terrainPuddleT = phase < 2 ? 2 - phase : 0;
+      }
+      if (terrain === 'lilypad') scene.gameState.terrainSink = Math.max(0, Math.sin(seconds * .7)) * .45;
+      ctx.drawImage(background, 0, 0);
+      scene.drawStick(ctx);
+      scene.drawTerrainDetails(ctx, seconds);
+    };
+    draw(3);
+    return draw;
   }
 
   private getDpr(): number {
@@ -235,6 +261,163 @@ export class GagambakbakanScene extends Phaser.Scene {
     }
   }
 
+  private createTerrainBackgrounds(only: TerrainId) {
+    const palettes: Record<TerrainId, [string, string, string, string]> = {
+      ember: ['#291e21', '#74412f', '#311e1c', '#1a1518'],
+      dew: ['#143536', '#4b7770', '#254b3e', '#142f2c'],
+      termite: ['#112832', '#31565a', '#243d36', '#132923'],
+      bamboo: ['#244d65', '#9dc3c0', '#548176', '#254f45'],
+      briar: ['#6c6850', '#dab879', '#728b60', '#334c3a'],
+      lightning: ['#151d32', '#4e5369', '#282d45', '#121c2c'],
+      frost: ['#1c304b', '#8bacc3', '#547385', '#263e55'],
+      lilypad: ['#3c344d', '#dc8962', '#696b73', '#283c49'],
+      totem: ['#172b34', '#53605e', '#263d37', '#152829']
+    };
+    for (const terrain of TERRAINS.filter(item => item.id === only)) {
+      const canvas = document.createElement('canvas');
+      canvas.width = CANVAS_WIDTH;
+      canvas.height = CANVAS_HEIGHT;
+      const b = canvas.getContext('2d')!;
+      let seed = TERRAINS.findIndex(item => item.id === terrain.id) + 23;
+      const r = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+      const [sky, horizon, hill, foreground] = palettes[terrain.id];
+      const gradient = b.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
+      gradient.addColorStop(0, sky);
+      gradient.addColorStop(.7, horizon);
+      gradient.addColorStop(1, foreground);
+      b.fillStyle = gradient;
+      b.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+      if (terrain.id === 'bamboo') {
+        b.fillStyle = '#a7c5c58c';
+        for (const [x, peak] of [[80, 205], [340, 145], [780, 175], [1120, 215]]) {
+          b.beginPath(); b.moveTo(x - 145, 375); b.lineTo(x, peak); b.lineTo(x + 155, 375); b.fill();
+        }
+      }
+
+      const ridge = (base: number, amplitude: number, color: string, phase: number) => {
+        b.fillStyle = color;
+        b.beginPath(); b.moveTo(0, CANVAS_HEIGHT);
+        for (let x = 0; x <= CANVAS_WIDTH; x += 12) b.lineTo(x, base + Math.sin(x * .008 + phase) * amplitude + Math.sin(x * .021 + phase) * amplitude * .3);
+        b.lineTo(CANVAS_WIDTH, CANVAS_HEIGHT); b.fill();
+      };
+      ridge(352, 29, hill, 1.4);
+      ridge(434, 24, foreground, 3.2);
+
+      if (terrain.id === 'ember') {
+        for (let i = 0; i < 72; i++) {
+          const x = r() * CANVAS_WIDTH, y = 350 + r() * 155;
+          b.fillStyle = i % 4 ? '#d7522955' : '#ffa55499';
+          b.beginPath(); b.ellipse(x, y, 1 + r() * 4, 1 + r() * 2, 0, 0, Math.PI * 2); b.fill();
+        }
+      }
+
+      if (terrain.id === 'ember' || terrain.id === 'briar' || terrain.id === 'frost') {
+        b.strokeStyle = terrain.id === 'frost' ? '#1a3241' : terrain.id === 'ember' ? '#1c1718' : '#334636';
+        b.lineCap = 'round';
+        for (let i = 0; i < 19; i++) {
+          const x = i < 10 ? r() * 210 : CANVAS_WIDTH - r() * 210;
+          const height = 80 + r() * 155;
+          b.lineWidth = 5 + r() * 13;
+          b.beginPath(); b.moveTo(x, 390); b.quadraticCurveTo(x + (r() - .5) * 65, 290, x + (r() - .5) * 90, 390 - height); b.stroke();
+        }
+      }
+      if (terrain.id === 'dew') {
+        for (const x of [180, 610, 1020]) {
+          const fall = b.createLinearGradient(x - 42, 0, x + 42, 0);
+          fall.addColorStop(0, '#aed9d422'); fall.addColorStop(.5, '#d9f4e2aa'); fall.addColorStop(1, '#aed9d422');
+          b.fillStyle = fall; b.fillRect(x - 42, 90, 84, 300);
+          for (let i = 0; i < 24; i++) {
+            b.fillStyle = '#dbfff077'; b.fillRect(x - 40 + r() * 80, 96 + r() * 270, 1 + r() * 3, 14 + r() * 25);
+          }
+        }
+      }
+      if (terrain.id === 'termite') {
+        b.strokeStyle = '#203333'; b.lineCap = 'round';
+        for (let i = 0; i < 13; i++) {
+          b.lineWidth = 8 + r() * 22;
+          b.beginPath(); b.moveTo(i * 100 - 40, -20); b.bezierCurveTo(i * 100 + 80, 120, i * 100 - 130, 210, i * 100 + 30, 380); b.stroke();
+        }
+        for (let i = 0; i < 31; i++) {
+          const x = r() * CANVAS_WIDTH, y = 330 + r() * 140;
+          b.fillStyle = '#64dce170'; b.beginPath(); b.arc(x, y, 7, Math.PI, 0); b.fill();
+          b.strokeStyle = '#abd9d2'; b.lineWidth = 2; b.beginPath(); b.moveTo(x, y); b.lineTo(x, y + 9); b.stroke();
+        }
+      }
+      if (terrain.id === 'bamboo') {
+        for (let i = 0; i < 14; i++) {
+          const x = r() * CANVAS_WIDTH, y = 80 + r() * 260;
+          b.fillStyle = '#e0eeeb55'; b.beginPath(); b.ellipse(x, y, 90 + r() * 110, 18 + r() * 18, 0, 0, Math.PI * 2); b.fill();
+        }
+        b.strokeStyle = '#244c3d'; b.lineWidth = 18;
+        for (const x of [35, 120, 1090, 1170]) {
+          b.beginPath(); b.moveTo(x, CANVAS_HEIGHT); b.lineTo(x + 40, -20); b.stroke();
+          b.strokeStyle = '#a1bc6e'; b.lineWidth = 2;
+          for (let y = 10; y < CANVAS_HEIGHT; y += 75) { b.beginPath(); b.moveTo(x + 40 - y * 40 / CANVAS_HEIGHT - 9, y); b.lineTo(x + 40 - y * 40 / CANVAS_HEIGHT + 9, y); b.stroke(); }
+          b.strokeStyle = '#244c3d'; b.lineWidth = 18;
+        }
+      }
+      if (terrain.id === 'briar' || terrain.id === 'lilypad') {
+        for (let i = 0; i < 42; i++) {
+          const x = r() * CANVAS_WIDTH, y = 355 + r() * 135;
+          b.fillStyle = terrain.id === 'briar' ? ['#f7d693', '#f19c9a', '#f4e8c6'][i % 3] : '#99b987';
+          b.beginPath(); b.ellipse(x, y, 4 + r() * 8, 3 + r() * 5, r() * 3, 0, Math.PI * 2); b.fill();
+        }
+      }
+      if (terrain.id === 'briar') {
+        b.fillStyle = '#3b342d';
+        for (const [x, y] of [[295, 155], [760, 110], [985, 175]]) {
+          b.beginPath(); b.ellipse(x, y, 5, 3, 0, 0, Math.PI * 2); b.fill();
+          b.fillStyle = '#f7e9bb99';
+          b.beginPath(); b.ellipse(x - 4, y - 5, 4, 2, -.4, 0, Math.PI * 2); b.ellipse(x + 4, y - 5, 4, 2, .4, 0, Math.PI * 2); b.fill();
+          b.fillStyle = '#3b342d';
+        }
+      }
+      if (terrain.id === 'lightning') {
+        b.strokeStyle = '#b8b5e577'; b.lineWidth = 2;
+        for (let i = 0; i < 115; i++) {
+          const x = r() * CANVAS_WIDTH, y = r() * CANVAS_HEIGHT;
+          b.beginPath(); b.moveTo(x, y); b.lineTo(x - 28, y + 78); b.stroke();
+        }
+      }
+      if (terrain.id === 'frost') {
+        b.fillStyle = '#e2f5f2aa';
+        for (let i = 0; i < 95; i++) { b.beginPath(); b.arc(r() * CANVAS_WIDTH, r() * CANVAS_HEIGHT, .6 + r() * 2, 0, Math.PI * 2); b.fill(); }
+      }
+      if (terrain.id === 'lilypad') {
+        b.fillStyle = '#d18e6a'; b.beginPath(); b.arc(870, 115, 52, 0, Math.PI * 2); b.fill();
+        b.fillStyle = '#3b656c88'; b.fillRect(0, 440, CANVAS_WIDTH, 100);
+        b.strokeStyle = '#e8aa7d77'; b.lineWidth = 2;
+        for (let i = 0; i < 34; i++) { const x = r() * CANVAS_WIDTH, y = 450 + r() * 90; b.beginPath(); b.moveTo(x, y); b.lineTo(x + 15 + r() * 45, y); b.stroke(); }
+        for (const [x, y, face] of [[270, 480, 1], [815, 508, -1]]) {
+          b.fillStyle = '#e4b7a0aa'; b.beginPath(); b.ellipse(x, y, 25, 8, 0, 0, Math.PI * 2); b.fill();
+          b.beginPath(); b.moveTo(x - face * 23, y); b.lineTo(x - face * 35, y - 10); b.lineTo(x - face * 35, y + 10); b.fill();
+          b.fillStyle = '#f4d4b988'; b.beginPath(); b.arc(x + face * 14, y - 1, 2, 0, Math.PI * 2); b.fill();
+        }
+        b.strokeStyle = '#253e45'; b.lineWidth = 2;
+        for (const [x, y] of [[385, 190], [975, 245]]) {
+          b.beginPath(); b.moveTo(x - 13, y); b.lineTo(x + 13, y); b.moveTo(x, y - 8); b.lineTo(x, y + 8); b.stroke();
+          b.fillStyle = '#e4b99a88'; b.beginPath(); b.ellipse(x - 6, y - 4, 7, 3, -.5, 0, Math.PI * 2); b.ellipse(x + 6, y - 4, 7, 3, .5, 0, Math.PI * 2); b.fill();
+        }
+      }
+      if (terrain.id === 'totem') {
+        b.fillStyle = '#18282a';
+        for (const x of [230, 600, 970]) {
+          b.fillRect(x - 32, 170, 64, 235);
+          b.beginPath(); b.moveTo(x - 55, 170); b.lineTo(x, 105); b.lineTo(x + 55, 170); b.fill();
+          b.strokeStyle = '#789284'; b.lineWidth = 3; b.strokeRect(x - 23, 204, 46, 92);
+          b.beginPath(); b.arc(x, 240, 8, 0, Math.PI * 2); b.stroke();
+          for (const side of [-1, 1]) for (let leg = 0; leg < 4; leg++) {
+            b.beginPath(); b.moveTo(x + side * 9, 240 + leg * 4); b.lineTo(x + side * 17, 230 + leg * 4); b.lineTo(x + side * 21, 225 + leg * 8); b.stroke();
+          }
+        }
+        b.fillStyle = '#dcebb491';
+        for (let i = 0; i < 29; i++) { b.beginPath(); b.arc(r() * CANVAS_WIDTH, r() * 350, 1 + r() * 2, 0, Math.PI * 2); b.fill(); }
+      }
+      this.terrainBackgrounds.set(terrain.id, canvas);
+    }
+  }
+
   public addFx(fx: any) {
     const isLow = this.quality === 'low';
     if (fx.type === 'spark') {
@@ -385,7 +568,10 @@ export class GagambakbakanScene extends Phaser.Scene {
 
     // Draw background
     if (!this.transparentBg) {
-      ctx.drawImage(this.bgCanvas, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      const terrain = this.gameState?.terrain as TerrainId | undefined;
+      if (terrain && !this.terrainBackgrounds.has(terrain)) this.createTerrainBackgrounds(terrain);
+      const background = terrain && this.terrainBackgrounds.get(terrain);
+      ctx.drawImage(background || this.bgCanvas, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
       // Fireflies (skipped on low quality, reduced on medium)
       if (this.flies.length > 0) {
@@ -411,6 +597,7 @@ export class GagambakbakanScene extends Phaser.Scene {
     if (!isDrafting) {
       // Twig
       this.drawStick(ctx);
+      this.drawTerrainDetails(ctx, t);
 
       // Earthquake tremors
       this.drawQuakes(ctx, t);
@@ -778,10 +965,233 @@ export class GagambakbakanScene extends Phaser.Scene {
   }
 
   private drawStick(ctx: CanvasRenderingContext2D) {
+    const terrain = this.gameState?.terrain as TerrainId | undefined;
+    if (terrain) {
+      this.drawTerrainStick(ctx, terrain);
+      return;
+    }
     if (this.stickCanvas) {
       ctx.drawImage(this.stickCanvas, 0, 0);
     } else {
       this.drawStickToContext(ctx);
+    }
+  }
+
+  private drawTerrainStick(ctx: CanvasRenderingContext2D, terrain: TerrainId) {
+    const { l, r, y, th } = STICK;
+    ctx.save();
+    if (terrain === 'bamboo') {
+      ctx.translate(600, y + th / 2);
+      ctx.rotate((Math.floor((this.gameState?.terrainTime || 0) / 8) % 2 ? 1 : -1) * .012);
+      ctx.translate(-600, -y - th / 2);
+    }
+    const colors: Record<TerrainId, [string, string]> = {
+      ember: ['#51413a', '#171619'], dew: ['#61855e', '#273e34'], termite: ['#907557', '#473b2b'],
+      bamboo: ['#c9d982', '#738746'], briar: ['#597a4b', '#28442f'], lightning: ['#81756c', '#3d3b40'],
+      frost: ['#bdd9dc', '#586c76'], lilypad: ['#9c7858', '#55422e'], totem: ['#a69785', '#514a48']
+    };
+    const [top, bottom] = colors[terrain];
+    const gradient = ctx.createLinearGradient(0, y, 0, y + th + 9);
+    gradient.addColorStop(0, top);
+    gradient.addColorStop(1, bottom);
+    ctx.fillStyle = gradient;
+    ctx.strokeStyle = bottom;
+    ctx.lineWidth = 2;
+    const segments = terrain === 'lilypad' ? [[l - 16, 485], [715, r + 16]] : [[l - 16, r + 16]];
+    for (const [index, [left, right]] of segments.entries()) {
+      ctx.beginPath();
+      const bob = terrain === 'lilypad' ? Math.sin((this.gameState?.terrainTime || 0) * 2 + index * 1.7) * 2 : 0;
+      if (terrain === 'dew') {
+        ctx.moveTo(left, y + 3);
+        ctx.quadraticCurveTo(600, y + 15, right, y + 3);
+        ctx.lineTo(right, y + th + 3);
+        ctx.quadraticCurveTo(600, y + th + 15, left, y + th + 3);
+        ctx.closePath();
+      } else ctx.roundRect(left, y + bob, right - left, th + (terrain === 'termite' ? 16 : 0), 10);
+      ctx.fill();
+      ctx.stroke();
+    }
+    if (terrain === 'lilypad') {
+      ctx.fillStyle = '#548c55';
+      ctx.beginPath();
+      ctx.ellipse(600, y + 8 + (this.gameState?.terrainSink || 0) * 36, 99, 18, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#9dc57d';
+      ctx.beginPath();
+      ctx.ellipse(600, y + 8 + (this.gameState?.terrainSink || 0) * 36, 92, 13, 0, .2, Math.PI * 1.85);
+      ctx.stroke();
+    }
+    if (terrain === 'bamboo') {
+      ctx.strokeStyle = '#5d7536';
+      ctx.lineWidth = 6;
+      for (let x = 235; x < r; x += 180) {
+        ctx.beginPath(); ctx.moveTo(x, y - 4); ctx.lineTo(x, y + th + 3); ctx.stroke();
+      }
+      ctx.strokeStyle = '#9cb85d'; ctx.lineWidth = 10;
+      for (const [x, direction] of [[310, -1], [890, 1]]) {
+        ctx.beginPath(); ctx.moveTo(x, y + 3); ctx.lineTo(x + direction * 80, y - 58); ctx.stroke();
+      }
+    }
+    if (terrain === 'termite') {
+      ctx.fillStyle = '#211e1b';
+      ctx.beginPath(); ctx.ellipse(600, y + 34, 180, 13, 0, Math.PI, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#352c25';
+      for (const x of [260, 345, 885, 970]) { ctx.beginPath(); ctx.arc(x, y + 13, 6, 0, Math.PI * 2); ctx.fill(); }
+    }
+    if (terrain === 'briar') {
+      ctx.fillStyle = '#9c3248';
+      for (const x of (this.gameState?.terrainClearT || 0) > 0 ? [] : [275, 430, 790, 950]) {
+        ctx.beginPath(); ctx.moveTo(x - 16, y + th - 1); ctx.lineTo(x + 2, y + th + 30); ctx.lineTo(x + 16, y + th - 1); ctx.fill();
+      }
+    }
+    if (terrain === 'frost') {
+      ctx.strokeStyle = '#e2f9ff'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(l, y + 2); ctx.lineTo(r, y + 2); ctx.stroke();
+      for (const x of [185, 345, 525, 735, 930, 1080]) {
+        ctx.beginPath(); ctx.moveTo(x, y + th); ctx.lineTo(x + 4, y + th + 14); ctx.stroke();
+      }
+      ctx.strokeStyle = '#658d83'; ctx.lineWidth = 3;
+      for (const x of [120, 1080]) for (let i = -5; i <= 5; i++) {
+        ctx.beginPath(); ctx.moveTo(x, y + th); ctx.lineTo(x + i * 7, y + th + 20 + 4 * (5 - Math.abs(i))); ctx.stroke();
+      }
+    }
+    if (terrain === 'lightning') {
+      ctx.fillStyle = '#d8c8b9';
+      for (const x of [220, 470, 690, 1030]) {
+        ctx.beginPath(); ctx.moveTo(x, y + 1); ctx.lineTo(x + 10, y - 11); ctx.lineTo(x + 7, y + 3); ctx.fill();
+      }
+    }
+    if (terrain === 'totem') {
+      ctx.strokeStyle = '#e7dfcf'; ctx.lineWidth = 4;
+      for (let x = 145; x < r; x += 34) {
+        ctx.beginPath(); ctx.moveTo(x, y + 2); ctx.lineTo(x + 16, y + th); ctx.stroke();
+      }
+    }
+    if (terrain === 'ember') {
+      ctx.strokeStyle = '#f5793d'; ctx.lineWidth = 2;
+      for (const x of [350, 600, 850]) {
+        ctx.beginPath(); ctx.moveTo(x - 23, y + 4); ctx.lineTo(x - 10, y + 12); ctx.lineTo(x + 5, y + 6); ctx.lineTo(x + 24, y + 18); ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
+  private drawTerrainDetails(ctx: CanvasRenderingContext2D, t: number) {
+    const terrain = this.gameState?.terrain as TerrainId | undefined;
+    if (!terrain) return;
+    const { y, th } = STICK;
+    if (terrain === 'ember' || terrain === 'termite') {
+      if (this.gameState?.terrainBroken) {
+        const bg = this.terrainBackgrounds.get(terrain);
+        if (bg) ctx.drawImage(bg, 565, y - 4, 70, th + 14, 565, y - 4, 70, th + 14);
+        else ctx.clearRect(565, y - 4, 70, th + 14);
+      }
+    }
+    if (terrain === 'ember') {
+      ctx.fillStyle = '#fa6b35';
+      for (const x of [335, 565, 705, 915]) {
+        ctx.fillRect(x, y + 5, 45, 2);
+        ctx.globalAlpha = .25 + .25 * Math.sin(t * 3 + x);
+        ctx.fillRect(x + 8, y - 2, 8, 5);
+      }
+      ctx.globalAlpha = 1;
+      const vent = Math.floor((this.gameState?.terrainTime || 0) / 8);
+      if ((this.gameState?.terrainTime || 0) % 8 < .55) {
+        const x = [350, 600, 850][(vent + 2) % 3];
+        ctx.fillStyle = '#f89156aa';
+        for (let i = 0; i < 8; i++) { ctx.beginPath(); ctx.arc(x + Math.sin(i * 7 + t * 4) * 23, y + th + (t * 90 + i * 17) % 80, 2 + i % 2, 0, Math.PI * 2); ctx.fill(); }
+      }
+      ctx.fillStyle = '#a9a6a088';
+      for (let i = 0; i < 18; i++) {
+        const x = (i * 193 + Math.sin(t + i) * 19) % CANVAS_WIDTH;
+        const ashY = (CANVAS_HEIGHT - (i * 47 + t * (16 + i % 4 * 5)) % CANVAS_HEIGHT);
+        ctx.fillRect(x, ashY, 1.5, 2.5);
+      }
+    }
+    if (terrain === 'dew') {
+      ctx.fillStyle = '#82d9d688';
+      ctx.beginPath(); ctx.ellipse(600, y + th + 8, 105, 8, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#d8f3e53b';
+      for (let i = 0; i < 8; i++) {
+        ctx.beginPath(); ctx.ellipse((i * 179 + t * 11) % CANVAS_WIDTH, 325 + i * 19, 90, 10, 0, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    if (terrain === 'bamboo') {
+      ctx.strokeStyle = '#e8f6da55'; ctx.lineWidth = 2;
+      for (let i = 0; i < 12; i++) {
+        const x = (i * 127 + t * 68) % CANVAS_WIDTH;
+        ctx.beginPath(); ctx.moveTo(x, 90 + i * 26); ctx.lineTo(x + 22, 84 + i * 26); ctx.stroke();
+      }
+    }
+    if (terrain === 'briar') {
+      ctx.fillStyle = '#c54d68';
+      for (const [index, x] of [530, 670].entries()) {
+        if ((this.gameState?.terrainBuds || 0) & (1 << index)) continue;
+        ctx.beginPath(); ctx.ellipse(x, y + th + 13, 12, 10, 0, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.fillStyle = '#ef9db085';
+      for (let i = 0; i < 12; i++) {
+        const x = (i * 137 + t * (11 + i % 3 * 5)) % CANVAS_WIDTH;
+        const py = (i * 83 + t * (17 + i % 4 * 3)) % CANVAS_HEIGHT;
+        ctx.beginPath(); ctx.ellipse(x, py, 4, 2, Math.sin(t + i) * .7, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    if (terrain === 'lightning') {
+      ctx.strokeStyle = '#c4c2ec78'; ctx.lineWidth = 1.5;
+      for (let i = 0; i < 30; i++) {
+        const x = (i * 149 - t * 110 + CANVAS_WIDTH * 100) % CANVAS_WIDTH;
+        const ry = (i * 107 + t * 205) % CANVAS_HEIGHT;
+        ctx.beginPath(); ctx.moveTo(x, ry); ctx.lineTo(x - 15, ry + 40); ctx.stroke();
+      }
+      const bg = this.terrainBackgrounds.get('lightning');
+      if (bg) ctx.drawImage(bg, 914, y - 4, 22, th + 14, 914, y - 4, 22, th + 14);
+      else ctx.clearRect(914, y - 4, 22, th + 14);
+      const strike = this.gameState?.terrainStrike;
+      if (strike?.warning > 0) {
+        ctx.fillStyle = `rgba(206,188,255,${.2 + .2 * Math.sin(t * 18)})`;
+        ctx.fillRect(strike.x - 70, y - 7, 140, th + 14);
+      }
+      if ((this.gameState?.terrainPuddleT || 0) > 0) {
+        const index = Math.floor((this.gameState?.terrainTime || 0) / 15) - 1;
+        const x = 250 + ((this.gameState.round * 137 + index * 293) % 700);
+        ctx.fillStyle = '#a7a0ff88';
+        ctx.beginPath(); ctx.ellipse(x, y + th + 7, 110, 8, 0, 0, Math.PI * 2); ctx.fill();
+        if ((this.gameState?.terrainPuddleT || 0) > 1.82) {
+          ctx.strokeStyle = '#f2eaff'; ctx.lineWidth = 6;
+          ctx.beginPath(); ctx.moveTo(x - 28, 0); ctx.lineTo(x + 10, 80); ctx.lineTo(x - 12, 112); ctx.lineTo(x + 19, 160); ctx.lineTo(x, y + 2); ctx.stroke();
+        }
+      }
+    }
+    if (terrain === 'frost') {
+      ctx.fillStyle = '#e8f6f0aa';
+      for (let i = 0; i < 35; i++) {
+        const x = (i * 163 + Math.sin(t + i) * 20) % CANVAS_WIDTH;
+        const snowY = (i * 97 + t * (12 + i % 4 * 4)) % CANVAS_HEIGHT;
+        ctx.beginPath(); ctx.arc(x, snowY, 1 + i % 3 * .5, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    if (terrain === 'totem' && (this.gameState?.terrainClearT || 0) <= 0) {
+      ctx.strokeStyle = '#e8d9dbbb'; ctx.lineWidth = 5;
+      for (const x of [380, 820]) {
+        for (let i = 0; i < 5; i++) {
+          ctx.beginPath(); ctx.moveTo(x - 20 + i * 10, y + th); ctx.lineTo(x - 20 + i * 10 + Math.sin(t + i) * 2, y + th + 80); ctx.stroke();
+        }
+      }
+    }
+    if (terrain === 'totem' && (this.gameState?.terrainFireT || 0) > 0) {
+      ctx.strokeStyle = '#fa9254'; ctx.lineWidth = 3;
+      for (const x of [380, 820]) for (let i = 0; i < 4; i++) {
+        ctx.beginPath(); ctx.moveTo(x - 15 + i * 10, y + th); ctx.quadraticCurveTo(x - 25 + i * 10, y + th + 22, x - 13 + i * 10, y + th + 58); ctx.stroke();
+      }
+    }
+    const label = TERRAINS.find(item => item.id === terrain);
+    if (label && !this.transparentBg) {
+      ctx.font = '600 13px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#101d20aa';
+      ctx.fillRect(365, CANVAS_HEIGHT - 31, 470, 25);
+      ctx.fillStyle = label.accent;
+      ctx.fillText(label.name.toUpperCase(), 600, CANVAS_HEIGHT - 13);
     }
   }
 
@@ -1595,7 +2005,9 @@ export class GagambakbakanScene extends Phaser.Scene {
     }
     const bx = s.x + f * atkXOffset - (s.blocking ? f * 5 : 0) - f * cast * 4;
     let by = STICK.y - BODY_H + (s.blocking ? 5 : 0) + atkYOffset;
-    by -= (s.airT || 0) > 0 ? Math.sin((1 - s.airT / 1.5) * Math.PI) * 48 : 0;
+    const jumpHeight = (s.terrainJumpT || 0) > 0
+      ? Math.sin((1 - s.terrainJumpT / .7) * Math.PI) * (this.gameState?.terrain === 'totem' && [380, 820].some(x => Math.abs(s.x - x) < 45) ? 75 : 48)
+      : (s.airT || 0) > 0 ? Math.sin((1 - s.airT / 1.5) * Math.PI) * 48 : 0;
     by += Math.sin(t * 2.1 + s.id * 1.7) * .55 * (1 - moving) * (1 - hb);
     by -= gait.lift * 1.4 * moving;
     by -= cast * 2;
@@ -1708,6 +2120,13 @@ export class GagambakbakanScene extends Phaser.Scene {
       }
     }
 
+    let groundOffset = s.under ? 42 : 0;
+    if (!s.hang && this.gameState?.terrain === 'dew') groundOffset += 3 + 24 * ((s.x - 84) / 1032) * (1 - (s.x - 84) / 1032);
+    if (!s.hang && this.gameState?.terrain === 'bamboo') groundOffset += (s.x - 600) * (Math.floor((this.gameState?.terrainTime || 0) / 8) % 2 ? 1 : -1) * .012;
+    if (!s.hang && this.gameState?.terrain === 'lilypad') groundOffset += Math.abs(s.x - 600) < 95
+      ? 4 + (this.gameState.terrainSink || 0) * 36
+      : Math.sin((this.gameState.terrainTime || 0) * 2 + (s.x < 600 ? 0 : 1.7)) * 2;
+    ctx.translate(0, groundOffset - jumpHeight);
     ctx.translate(0, byW);
     ctx.scale(1, flip);
     ctx.translate(0, -(STICK.y - BODY_H));

@@ -19,6 +19,9 @@ export class LocalCombat {
   private kb: [number, number] = [0, 0];
   private cool: [number, number] = [0, 0];
   private timeElapsed = 0;
+  private terrainHits = 0;
+  private jumpCd: [number, number] = [0, 0];
+  private thornCd: [number, number] = [0, 0];
   private diff: 'easy' | 'normal' | 'hard' = 'normal';
   public isMuted = false;
   private aiP1 = {
@@ -47,6 +50,9 @@ export class LocalCombat {
   }
 
   public resetRound() {
+    this.terrainHits = 0;
+    this.jumpCd = [0, 0];
+    this.thornCd = [0, 0];
     this.tapTimes = [[], []];
     this.tapBuf = [false, false];
     this.reelCd = [0, 0];
@@ -83,10 +89,89 @@ export class LocalCombat {
     this.stepSpider(this.state.p2, this.state.p1, p2Input, dt);
     this.separate(dt);
     this.stepWebs(dt);
+    this.stepTerrain(dt);
   }
 
   private sfx(name: string) {
     if (!this.isMuted) sound.play(name);
+  }
+
+  private stepTerrain(dt: number) {
+    const state = this.state;
+    if (state.p1.hang || state.p2.hang) return;
+    const previous = state.terrainTime;
+    state.terrainTime += dt;
+    state.terrainClearT = Math.max(0, state.terrainClearT - dt);
+    state.terrainPuddleT = Math.max(0, state.terrainPuddleT - dt);
+    state.terrainFireT = Math.max(0, state.terrainFireT - dt);
+    const players = [state.p1, state.p2];
+    if (state.terrain === 'ember') {
+      for (const s of players) if (!s.hang && !s.ko && s.species !== 'guardian' && [350, 600, 850].some(x => Math.abs(s.x - x) < 55)) {
+        this.hurt(s, 2.5 * dt);
+        if (s.burn > 0) s.igniteStacks = Math.min(5, (s.igniteStacks || 0) + dt * .35);
+      }
+      for (const web of state.webs) if (web.species === 'weaver') web.life -= dt * .3;
+      if (Math.floor(previous / 8) < Math.floor(state.terrainTime / 8)) {
+        const x = [350, 600, 850][Math.floor(previous / 8) % 3];
+        for (const s of players) if (!s.hang && Math.abs(s.x - x) < 58) { s.airT = Math.max(s.airT || 0, .7); s.terrainJumpT = .7; }
+        this.emitFx({ type: 'dust', x, y: STICK.y, count: 12 });
+      }
+    }
+    if (state.terrain === 'dew') for (const s of players) if (!s.hang && !s.ko && Math.abs(s.x - 600) < 105) {
+      s.soak = Math.max(s.soak, 1.5);
+      s.burn = 0;
+    }
+    if (state.terrain === 'bamboo') {
+      const wind = Math.floor(state.terrainTime / 8) % 2 ? 1 : -1;
+      for (const s of players) if (!s.hang && !s.ko && s.species !== 'hunter' && !(s.species === 'wolf' && [235, 415, 595, 775, 955].some(x => Math.abs(s.x - x) < 22))) s.x += wind * 14 * dt;
+      for (const s of players) if (s.species === 'hunter' && (s.terrainJumpT || 0) > 0 && [230, 970].some(x => Math.abs(s.x - x) < 60)) s.airT = Math.max(s.airT || 0, .85);
+    }
+    if (state.terrain === 'briar') for (const s of players) if (!s.hang && !s.ko && s.species !== 'lynx' && state.terrainClearT <= 0 && [275, 430, 790, 950].some(x => Math.abs(s.x - x) < 32)) {
+      this.hurt(s, 4 * dt);
+      s.stun = Math.max(s.stun, .06);
+      if (Math.abs(this.kb[s.id]) > 100 && this.thornCd[s.id] <= 0) {
+        this.hurt(s, 4);
+        s.stun = Math.max(s.stun, .22);
+        this.thornCd[s.id] = .6;
+      }
+    }
+    if (state.terrain === 'lightning') {
+      const strikeIndex = Math.floor(state.terrainTime / 15);
+      const strikeX = 250 + ((state.round * 137 + strikeIndex * 293) % 700);
+      const phase = state.terrainTime % 15;
+      state.terrainStrike = phase >= 13.5 ? { x: strikeX, warning: 15 - phase } : undefined;
+      if (Math.floor(previous / 15) < strikeIndex) {
+        const x = 250 + ((state.round * 137 + (strikeIndex - 1) * 293) % 700);
+        for (const s of players) if (!s.hang && !s.ko && Math.abs(s.x - x) < 72 && (s.airT || 0) <= 0) {
+          this.hurt(s, 9);
+          s.stun = Math.max(s.stun, .8);
+          if (s.soak > 0) this.hurt(s, 5);
+        }
+        state.terrainPuddleT = 2;
+        this.emitFx({ type: 'spark', x, y: STICK.y, col: '#d8c7ff', count: 28, sp: 300 });
+      }
+      if (state.terrainPuddleT > 0) {
+        const x = 250 + ((state.round * 137 + (Math.floor(state.terrainTime / 15) - 1) * 293) % 700);
+        for (const s of players) if (!s.hang && s.soak > 0 && Math.abs(s.x - x) < 110) this.hurt(s, 4 * dt);
+      }
+    }
+    if (state.terrain === 'frost') for (const s of players) if (!s.hang && !s.ko && (s.x < 155 || s.x > 1045) && (s.airT || 0) <= 0) {
+      s.airT = .7;
+      s.terrainJumpT = .7;
+      this.kb[s.id] = s.x < 600 ? 300 : -300;
+    }
+    if (state.terrain === 'lilypad') {
+      const both = players.every(s => !s.hang && !s.ko && Math.abs(s.x - 600) < 95);
+      state.terrainSink = Math.max(0, Math.min(1, state.terrainSink + (both ? dt * .75 : -dt)));
+      if (state.terrainSink >= 1) for (const s of players) if (!s.hang && Math.abs(s.x - 600) < 95) s.soak = Math.max(s.soak, 1);
+    }
+    if (state.terrain === 'totem' && state.terrainFireT > 0) for (const s of players) if (!s.hang && s.species !== 'guardian' && [380, 820].some(x => Math.abs(s.x - x) < 40)) this.hurt(s, 3 * dt);
+    for (const s of players) if (!s.hang && !s.ko) {
+      if (s.grip <= 0) { this.fall(s); continue; }
+      const gap = ((state.terrain === 'ember' || state.terrain === 'termite') && state.terrainBroken && Math.abs(s.x - 600) < 34 && !s.under)
+        || (state.terrain === 'lightning' && s.x > 914 && s.x < 936);
+      if (gap && (s.airT || 0) <= 0 && s.dashT <= 0) this.fall(s);
+    }
   }
 
 private emitFx(fx: any) {
@@ -98,7 +183,34 @@ private emitShake(amount: number) {
 }
 
 private fall(s: LocalPlayerState) {
+  this.state.terrainTime = 0;
+  this.state.terrainBroken = false;
+  this.state.terrainStrike = undefined;
+  this.state.terrainSink = 0;
+  this.state.terrainClearT = 0;
+  this.state.terrainBuds = 0;
+  this.state.terrainPuddleT = 0;
+  this.state.terrainFireT = 0;
+  this.terrainHits = 0;
+  const waiting = s.id === 0 ? this.state.p2 : this.state.p1;
+  if (!waiting.hang && !waiting.ko) {
+    this.kb[waiting.id] = 0;
+    waiting.dashT = 0;
+    waiting.pounce = false;
+    waiting.atkT = 0;
+    waiting.stun = 0;
+    waiting.snare = 0;
+    waiting.tetherT = 0;
+    waiting.terrainJumpT = 0;
+    waiting.burn = 0;
+    waiting.igniteStacks = 0;
+    waiting.venom = 0;
+    waiting.toxin = 0;
+    waiting.bleedT = 0;
+    waiting.bloomT = 0;
+  }
   s.hang = true;
+  s.under = false;
   s.falling = true;
   s.drop = 12;
   s.dropV = 0;
@@ -112,6 +224,7 @@ private fall(s: LocalPlayerState) {
   this.tapBuf[s.id] = false;
   s.dashT = 0;
   s.airT = 0;
+  s.terrainJumpT = 0;
   s.dashBounceBack = undefined;
   s.dashPulse = undefined;
   s.dashStunOnWall = undefined;
@@ -197,6 +310,8 @@ private recover(s: LocalPlayerState) {
   s.stun = 0.25;
   this.kb[s.id] = 0;
   s.x = clamp(s.x, STICK.l + 10, STICK.r - 10);
+  if (this.state.terrainBroken && Math.abs(s.x - 600) < 40) s.x = s.id === 0 ? 550 : 650;
+  if (this.state.terrain === 'lightning' && s.x > 914 && s.x < 936) s.x = 900;
 
   this.emitFx({ type: 'txt', x: s.x, y: LBL_Y, text: 'BACK UP!', col: s.colorLight });
   this.emitFx({ type: 'dust', x: s.x, y: STICK.y + STICK.th, count: 8 });
@@ -316,7 +431,7 @@ private doStrike(a: LocalPlayerState, b: LocalPlayerState) {
   const bodyRadius = 28;
   const maxHitDistance = armReach + bodyRadius; // 124px for light, 136px for heavy
 
-  if (d < -15 || d > maxHitDistance || b.inv > 0 || (b.meleeInvT || 0) > 0 || (b.airT || 0) > 0) return;
+  if (d < -15 || d > maxHitDistance || b.inv > 0 || (b.meleeInvT || 0) > 0 || (b.airT || 0) > 0 || a.under !== b.under) return;
   if (this.evades(b)) return;
 
   const pw = a.power > 0;
@@ -386,8 +501,9 @@ private doStrike(a: LocalPlayerState, b: LocalPlayerState) {
     // Direct hit
     const baseGripDmg = isHeavy ? (pw ? 48 : 32) : (pw ? 26 : 14);
     const meleeBoost = (a.meleeDamageT || 0) > 0 && (!a.meleeDamageRequiresBarrier || (a.barrierHp || 0) > 0) ? a.meleeDamageFraction || 0 : 0;
-    const gripDmg = baseGripDmg * (1 + meleeBoost);
-    const kbForce = isHeavy ? (pw ? 760 : 580) : (pw ? 480 : 300);
+    const bambooDive = this.state.terrain === 'bamboo' && a.species === 'hunter' && (a.airT || 0) > 0 ? 1.25 : 1;
+    const gripDmg = baseGripDmg * (1 + meleeBoost) * bambooDive;
+    const kbForce = (isHeavy ? (pw ? 760 : 580) : (pw ? 480 : 300)) * bambooDive;
     const stunDur = isHeavy ? (pw ? 0.55 : 0.42) : (pw ? 0.32 : 0.20);
     const flash = isHeavy ? 0.24 : 0.16;
     const received = this.hurt(b, (gripDmg + ((a.stealthT || 0) > 0 ? a.nextAttackBonus || 0 : 0)) * ((a.critT || 0) > 0 && Math.random() < (a.critChance || 0) ? 1.5 : 1));
@@ -428,6 +544,7 @@ private doStrike(a: LocalPlayerState, b: LocalPlayerState) {
 }
 
 private hurt(s: LocalPlayerState, damage: number) {
+  if (this.state.status === 'fight' && !s.hang && (s.id === 0 ? this.state.p2 : this.state.p1).hang) return 0;
   let remaining = damage * (1 + .1 * (s.shredStacks || 0)) * (1 - ((s.reductionT || 0) > 0 ? s.reductionFraction || 0 : 0));
   const received = remaining;
   if ((s.barrierHp || 0) > 0) {
@@ -468,8 +585,22 @@ private wallX(s: LocalPlayerState, nextX: number, dashing = false) {
 }
 
 private applySpiderPulse(s: LocalPlayerState, o: LocalPlayerState, pulse: SpiderPulse, originX = s.x) {
+  if (s.hang || o.hang) return;
+  if (this.state.terrain === 'ember' && !this.state.terrainBroken && Math.abs(originX - 600) < 140 && (pulse.detonate || pulse.detonateIgnite)) {
+    this.terrainHits++;
+    if (this.terrainHits >= 2) this.state.terrainBroken = true;
+  }
+  if (this.state.terrain === 'totem' && s.species === 'guardian' && [380, 820].some(x => Math.abs(originX - x) < 90) && (pulse.burn || pulse.ignite)) {
+    this.state.terrainClearT = 4;
+    this.state.terrainFireT = 4;
+  }
+  if (this.state.terrain === 'termite' && s.under !== o.under) return;
+  if (this.state.terrain === 'termite' && s.species === 'wolf' && s.under) pulse = { ...pulse, range: pulse.range * 1.3, stun: (pulse.stun || 0) * 1.3 };
+  if (this.state.terrain === 'totem' && pulse.tremor && (o.airT || 0) > 0 && [380, 820].some(x => Math.abs(o.x - x) < 45)) return;
+  if (this.state.terrain === 'ember' && s.species === 'guardian' && [350, 600, 850].some(x => Math.abs(s.x - x) < 55) && pulse.ignite && o.soak <= 0) pulse = { ...pulse, ignite: pulse.ignite + 1 };
+  if (this.state.terrain === 'briar' && s.species === 'guardian' && (pulse.burn || pulse.ignite)) this.state.terrainClearT = 4;
   const distance = (o.x - originX) * s.face;
-  if (s.hang || o.hang || o.ko || o.inv > 0 || ((o.airT || 0) > 0 && !pulse.tremor) || Math.abs(o.x - originX) > pulse.range || (pulse.front && distance < 0) || (pulse.requiresToxin && !(o.toxin && o.toxin > 0)) || this.evades(o)) return;
+  if (o.ko || o.inv > 0 || ((o.airT || 0) > 0 && !pulse.tremor) || Math.abs(o.x - originX) > pulse.range || (pulse.front && distance < 0) || (pulse.requiresToxin && !(o.toxin && o.toxin > 0)) || this.evades(o)) return;
   if (o.blocking && o.blockT <= PARRY) {
     s.stun = Math.max(s.stun, .45);
     this.emitFx({ type: 'txt', x: o.x, y: LBL_Y, text: 'PARRY!', col: '#ffffff' });
@@ -650,7 +781,7 @@ private stepWebs(dt: number) {
     if (w.zoneRadius && w.zonePulse) {
       if (w.followsOwner) w.x = me.x;
       if (w.life <= 0) { webs.splice(i, 1); continue; }
-      const enemyInside = !t.hang && !t.ko && Math.abs(t.x - w.x) <= w.zoneRadius;
+      const enemyInside = !me.hang && !t.hang && !t.ko && Math.abs(t.x - w.x) <= w.zoneRadius;
       if (w.healOwnerPerSecond && Math.abs(me.x - w.x) <= w.zoneRadius && (!w.healRequiresEnemy || enemyInside)) me.grip = Math.min(MAX_GRIP, me.grip + w.healOwnerPerSecond * dt * (me.toxin ? .7 : 1));
       if (w.grantStealthInterval && Math.abs(me.x - w.x) <= w.zoneRadius && me.atkT <= 0) {
         w.stealthTick = (w.stealthTick || 0) + dt;
@@ -679,8 +810,12 @@ private stepWebs(dt: number) {
       if (j < i) i--;
     }
 
+    if (this.state.terrain === 'totem' && this.state.terrainClearT <= 0 && !w.zoneRadius && [380, 820].some(x => Math.min(previousX, w.x) <= x && Math.max(previousX, w.x) >= x)) {
+      webs.splice(i, 1);
+      continue;
+    }
     let gone = w.life <= 0 || w.x < STICK.l - 20 || w.x > STICK.r + 20;
-    if (!gone && !t.hang && !t.ko && t.inv <= 0 && (t.projectileInvT || 0) <= 0 && Math.abs(w.x - t.x) < 24 && !this.evades(t)) {
+    if (!gone && !me.hang && !t.hang && !t.ko && !t.under && t.inv <= 0 && (t.projectileInvT || 0) <= 0 && Math.abs(w.x - t.x) < 24 && !this.evades(t)) {
       gone = true;
       if ((t.reflectShotsT || 0) > 0) {
         webs.push({ ...w, id: `refl_${Date.now()}_${Math.random()}`, x: t.x, vx: -w.vx, owner: t.id, life: 1.2 });
@@ -853,11 +988,28 @@ private getAiInput(
   return inp;
 }
 
+private tryTerrainJump(s: LocalPlayerState, reel: number) {
+  if (reel <= 0 || s.hang || s.ko || s.stun > 0 || (s.airT || 0) > 0 || this.jumpCd[s.id] > 0) return;
+  s.airT = .7;
+  s.terrainJumpT = .7;
+  this.jumpCd[s.id] = 1.3;
+  this.emitFx({ type: 'dust', x: s.x, y: STICK.y, count: 5 });
+}
+
 private stepSpider(s: LocalPlayerState, o: LocalPlayerState, inp: InputState, dt: number) {
   const id = s.id;
+  this.jumpCd[id] = Math.max(0, this.jumpCd[id] - dt);
+  this.thornCd[id] = Math.max(0, this.thornCd[id] - dt);
+  this.tryTerrainJump(s, inp.reel);
+  if (this.state.terrain === 'termite') {
+    if (!s.under && inp.block && (Math.abs(s.x - 430) < 22 || Math.abs(s.x - 770) < 22)) s.under = true;
+    if (s.under && (s.x < 410 || s.x > 790)) s.under = false;
+  }
   s.hitFlash = Math.max(0, s.hitFlash - dt);
   s.inv = Math.max(0, s.inv - dt);
   s.airT = Math.max(0, (s.airT || 0) - dt);
+  if ((s.terrainJumpT || 0) > 0 && (s.terrainJumpT || 0) <= dt && (this.state.terrain === 'dew' || this.state.terrain === 'frost') && s.species !== 'weaver') this.kb[id] = s.face * 130;
+  s.terrainJumpT = Math.max(0, (s.terrainJumpT || 0) - dt);
   s.disorientT = Math.max(0, (s.disorientT || 0) - dt);
   s.meleeInvT = Math.max(0, (s.meleeInvT || 0) - dt);
   s.stun = Math.max(0, s.stun - dt);
@@ -1012,7 +1164,7 @@ private stepSpider(s: LocalPlayerState, o: LocalPlayerState, inp: InputState, dt
   // Knockback
   if (Math.abs(this.kb[id]) > 2) {
     s.x += this.kb[id] * dt;
-    this.kb[id] *= Math.exp(-7 * dt);
+    this.kb[id] *= Math.exp(-(this.state.terrain === 'dew' && s.species !== 'weaver' ? 5 : this.state.terrain === 'frost' ? 4 : 7) * dt);
     if (s.x < STICK.l || s.x > STICK.r) {
       this.fall(s);
       return;
@@ -1025,7 +1177,8 @@ private stepSpider(s: LocalPlayerState, o: LocalPlayerState, inp: InputState, dt
   if (s.dashT > 0) {
     s.dashT -= dt;
     const desiredX = s.x + s.dashDir * 900 * dt;
-    const boundedX = clamp(desiredX, STICK.l + 6, STICK.r - 6);
+    const tunnel = this.state.terrain === 'termite' && s.under;
+    const boundedX = clamp(desiredX, tunnel ? 420 : STICK.l + 6, tunnel ? 780 : STICK.r - 6);
     let dxn = this.wallX(s, boundedX, true);
     if (dxn !== boundedX || boundedX !== desiredX) s.dashHitWall = true;
     // Dash phases through the opponent; only pounce is body-blocked
@@ -1035,9 +1188,10 @@ private stepSpider(s: LocalPlayerState, o: LocalPlayerState, inp: InputState, dt
     s.x = dxn;
     s.move = 1;
     s.walkPhase += dt * 6;
+    if (s.dashT <= 0 && (this.state.terrain === 'dew' || this.state.terrain === 'frost') && s.species !== 'weaver') this.kb[id] = s.dashDir * 130;
 
     if (s.dashT <= 0 && s.dashPulse) {
-      this.applySpiderPulse(s, o, s.dashHitWall && s.dashStunOnWall ? { ...s.dashPulse, stun: s.dashStunOnWall } : s.dashPulse);
+      this.applySpiderPulse(s, o, s.dashHitWall && s.dashStunOnWall ? { ...s.dashPulse, stun: s.dashStunOnWall * (tunnel && s.species === 'wolf' ? 1.3 : 1) } : s.dashPulse);
       s.dashPulse = undefined;
       s.dashStunOnWall = undefined;
       s.dashHitWall = false;
@@ -1118,7 +1272,10 @@ private stepSpider(s: LocalPlayerState, o: LocalPlayerState, inp: InputState, dt
   }
 
   if (v) {
-    let nx = this.wallX(s, clamp(s.x + v * dt, STICK.l + 6, STICK.r - 6));
+    if (!wait && this.state.terrain === 'bamboo' && !(s.species === 'wolf' && [235, 415, 595, 775, 955].some(x => Math.abs(s.x - x) < 22))) v *= Math.sign(v) === (Math.floor(this.state.terrainTime / 8) % 2 ? 1 : -1) ? 1.25 : .75;
+    if (this.state.terrain === 'lilypad' && Math.abs(s.x - 600) < 95) v *= 1 - this.state.terrainSink * .55;
+    const desiredX = clamp(s.x + v * dt, STICK.l + 6, STICK.r - 6);
+    let nx = wait ? desiredX : this.wallX(s, desiredX);
     if (!o.hang && !o.ko && Math.abs(nx - o.x) < MINDIST && Math.abs(nx - o.x) < Math.abs(s.x - o.x)) {
       nx = s.x;
     }
@@ -1148,12 +1305,27 @@ private stepSpider(s: LocalPlayerState, o: LocalPlayerState, inp: InputState, dt
       s.isHeavy = false;
     }
   } else if (free && (inp.heavy || inp.strike) && this.cool[id] <= 0 && !s.blocking && s.snare <= 0) {
+    if (this.state.terrain === 'briar') for (const [index, x] of [530, 670].entries()) if (Math.abs(s.x - x) < 35 && !(this.state.terrainBuds & (1 << index))) {
+      this.state.terrainBuds |= 1 << index;
+      for (const nearby of [this.state.p1, this.state.p2]) if (!nearby.hang && Math.abs(nearby.x - x) < 75) nearby.grip = Math.min(MAX_GRIP, nearby.grip + 10);
+      this.emitFx({ type: 'spark', x, y: STICK.y - 15, col: '#d5f5a0', count: 9, sp: 90 });
+    }
     if (inp.heavy) {
       inp.heavy = false;
       inp.strike = false;
       s.atkT = 0.0001;
       s.isHeavy = true;
       s.atkId++;
+      if (Math.abs(s.x - 600) < 140 && (this.state.terrain === 'ember' || this.state.terrain === 'termite')) {
+        this.terrainHits++;
+        if (this.terrainHits >= (this.state.terrain === 'termite' ? 1 : 2)) {
+          this.state.terrainBroken = true;
+          if (this.state.terrain === 'termite' && o.under && Math.abs(o.x - 600) < 170) { this.hurt(o, 12); o.stun = Math.max(o.stun, .5); }
+        }
+      }
+      if (s.species === 'guardian' && this.state.terrain === 'briar') this.state.terrainClearT = 4;
+      if (this.state.terrain === 'totem' && [380, 820].some(x => Math.abs(s.x - x) < 90)) this.state.terrainClearT = 4;
+      if (s.species === 'guardian' && this.state.terrain === 'totem' && [380, 820].some(x => Math.abs(s.x - x) < 90)) this.state.terrainFireT = 4;
       s.atkType = 0;
       sound.play('power_strike');
     } else {
@@ -1175,7 +1347,7 @@ private stepSpider(s: LocalPlayerState, o: LocalPlayerState, inp: InputState, dt
 private separate(dt: number) {
   const a = this.state.p1;
   const b = this.state.p2;
-  if (a.hang || b.hang || a.ko || b.ko) return;
+  if (a.hang || b.hang || a.ko || b.ko || a.under !== b.under) return;
   // Let a dashing spider phase through without being shoved back
   if ((a.dashT > 0 && !a.pounce) || (b.dashT > 0 && !b.pounce)) return;
   const dx = b.x - a.x;

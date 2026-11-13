@@ -697,7 +697,7 @@ export const ACTIONS: [keyof KeyBindings, string][] = [
   ['strike', 'Light Attack (0.3s)'],
   ['heavy', 'Heavy Attack (0.6s)'],
   ['block', 'Block'],
-  ['climb', 'Climb (tap)'],
+  ['climb', 'Jump / Climb (tap)'],
   ['s1', 'Skill 1'],
   ['s2', 'Skill 2']
 ];

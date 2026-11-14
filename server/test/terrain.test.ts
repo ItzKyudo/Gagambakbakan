@@ -206,3 +206,48 @@ test('waiting spider ignores lingering damage, webs, and terrain changes', () =>
   assert.equal(state.terrainBroken, false);
   assert.equal(state.webs.length, 1);
 });
+
+test('briar thorns allow spiders to still attack and move without full stun lock', () => {
+  const { state, combat } = arena('briar');
+  state.p1.x = 275;
+  state.p1.species = 'weaver';
+  combat['stepTerrain'](.25);
+  assert.equal(state.p1.stun, 0, 'Spider should not be stun locked on thorns');
+  assert.equal(state.p1.grip, 119, 'Spider still takes thorn prick damage');
+});
+
+test('lightning water rise and 10s sudden drop knockout', () => {
+  const { state, combat } = arena('lightning');
+  state.round = 2;
+  state.roundTimer = 8; // last 10 seconds
+  combat['fall'](state.p1);
+  assert.equal(state.p1.ko, true, 'Falling in final 10 seconds triggers instant water KO');
+});
+
+test('lilypad unaligned projectile block and dash bump penalty', () => {
+  const { state, combat } = arena('lilypad');
+  state.terrainSink = 0.5; // unaligned
+  const shot = { id: 'shot1', x: 490, y: 290, vx: 500, owner: 0, life: 1, k: 'spit' as const };
+  state.webs.push(shot);
+  combat['stepWebs'](.05);
+  assert.equal(state.webs.length, 0, 'Unaligned projectile blocked at driftwood/lilypad boundary');
+
+  // Dash bump penalty
+  state.p1.x = 490;
+  state.p1.dashT = 0.1;
+  state.p1.dashDir = 1;
+  state.p1.grip = 100;
+  combat['stepSpider'](state.p1, state.p2, { left: false, right: false, strike: false, heavy: false, block: false, reel: 0, ab1: 0, ab2: 0 }, .05);
+  assert.equal(state.p1.dashT, 0, 'Dash should be interrupted on unaligned boundary');
+  assert.equal(state.p1.grip, 95, 'Dash bump deals 5 damage');
+});
+
+test('safe positioning selects a non-hazard coordinate for spiders', () => {
+  const { state, combat } = arena('ember');
+  state.terrainBroken = true;
+  // Current x is 600 which is inside broken gap / vent
+  const safeX = combat.getSafeTerrainX('ember', state, 600, 800);
+  assert.notEqual(safeX, 600);
+  assert.ok(Math.abs(safeX - 600) >= 65, 'Safe position must be outside broken gap');
+});
+

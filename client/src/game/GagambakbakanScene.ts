@@ -323,25 +323,92 @@ export class GagambakbakanScene extends Phaser.Scene {
         }
       }
       if (terrain.id === 'dew') {
-        for (const x of [180, 610, 1020]) {
-          const fall = b.createLinearGradient(x - 42, 0, x + 42, 0);
-          fall.addColorStop(0, '#aed9d422'); fall.addColorStop(.5, '#d9f4e2aa'); fall.addColorStop(1, '#aed9d422');
-          b.fillStyle = fall; b.fillRect(x - 42, 90, 84, 300);
+        for (const [x, angle] of [[200, 0.1], [610, -0.04], [980, -0.12]]) {
+          b.save();
+          b.translate(x, 0);
+          b.rotate(angle);
+          const ray = b.createLinearGradient(-50, 0, 50, 0);
+          ray.addColorStop(0, 'rgba(167, 243, 208, 0)');
+          ray.addColorStop(0.5, 'rgba(209, 250, 229, 0.16)');
+          ray.addColorStop(1, 'rgba(167, 243, 208, 0)');
+          b.fillStyle = ray;
+          b.beginPath();
+          b.moveTo(-20, 50);
+          b.lineTo(50, 50);
+          b.lineTo(110, 420);
+          b.lineTo(-70, 420);
+          b.closePath();
+          b.fill();
+          b.restore();
+
           for (let i = 0; i < 24; i++) {
-            b.fillStyle = '#dbfff077'; b.fillRect(x - 40 + r() * 80, 96 + r() * 270, 1 + r() * 3, 14 + r() * 25);
+            b.fillStyle = 'rgba(236, 253, 245, 0.45)';
+            b.beginPath();
+            b.arc(x - 60 + r() * 120, 90 + r() * 280, 1 + r() * 2, 0, Math.PI * 2);
+            b.fill();
           }
         }
       }
       if (terrain.id === 'termite') {
-        b.strokeStyle = '#203333'; b.lineCap = 'round';
-        for (let i = 0; i < 13; i++) {
-          b.lineWidth = 8 + r() * 22;
-          b.beginPath(); b.moveTo(i * 100 - 40, -20); b.bezierCurveTo(i * 100 + 80, 120, i * 100 - 130, 210, i * 100 + 30, 380); b.stroke();
+        // Deep rotting forest understory atmosphere
+        const forestGrad = b.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
+        forestGrad.addColorStop(0, '#120b07');
+        forestGrad.addColorStop(0.5, '#1e140d');
+        forestGrad.addColorStop(1, '#0e0805');
+        b.fillStyle = forestGrad;
+        b.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+        // Massive decaying, mossy ancient tree trunks in the background
+        b.lineCap = 'round';
+        for (let i = 0; i < 7; i++) {
+          const bx = i * 190 - 40 + r() * 50;
+          b.strokeStyle = i % 2 === 0 ? '#1b120c' : '#261911';
+          b.lineWidth = 35 + r() * 45;
+          b.beginPath();
+          b.moveTo(bx, -20);
+          b.bezierCurveTo(bx + r() * 40 - 20, 160, bx + r() * 40 - 20, 320, bx + r() * 50 - 25, CANVAS_HEIGHT + 20);
+          b.stroke();
+
+          // Patches of damp lichen and velvet moss on background trunks
+          b.fillStyle = 'rgba(74, 98, 48, 0.35)';
+          for (let m = 0; m < 5; m++) {
+            b.beginPath();
+            b.ellipse(bx + (r() - 0.5) * 30, 80 + r() * 320, 12 + r() * 16, 6 + r() * 10, r() * 0.5, 0, Math.PI * 2);
+            b.fill();
+          }
         }
-        for (let i = 0; i < 31; i++) {
-          const x = r() * CANVAS_WIDTH, y = 330 + r() * 140;
-          b.fillStyle = '#64dce170'; b.beginPath(); b.arc(x, y, 7, Math.PI, 0); b.fill();
-          b.strokeStyle = '#abd9d2'; b.lineWidth = 2; b.beginPath(); b.moveTo(x, y); b.lineTo(x, y + 9); b.stroke();
+
+        // Realistic bracket shelf fungi (polypore conks) growing on background decaying trunks
+        for (const [fx, fy, fw, fh] of [
+          [160, 140, 32, 14], [175, 165, 24, 10], [530, 220, 36, 16],
+          [720, 110, 28, 12], [890, 280, 42, 18], [910, 310, 26, 11], [1060, 170, 34, 15]
+        ]) {
+          b.fillStyle = '#2b1a11';
+          b.beginPath();
+          b.ellipse(fx, fy + 3, fw * 0.5, fh * 0.5, 0, 0, Math.PI * 2);
+          b.fill();
+
+          const shelfGrad = b.createRadialGradient(fx - fw * 0.3, fy, 2, fx, fy, fw * 0.6);
+          shelfGrad.addColorStop(0, '#d7ccc8');
+          shelfGrad.addColorStop(0.35, '#8d6e63');
+          shelfGrad.addColorStop(0.7, '#4e342e');
+          shelfGrad.addColorStop(1, '#2b1810');
+          b.fillStyle = shelfGrad;
+          b.beginPath();
+          b.ellipse(fx, fy, fw * 0.5, fh * 0.45, 0, 0, Math.PI);
+          b.fill();
+
+          b.strokeStyle = '#efebe9';
+          b.lineWidth = 1.4;
+          b.stroke();
+        }
+
+        // Drifting wood decay spores and fine sawdust motes
+        b.fillStyle = 'rgba(215, 204, 200, 0.4)';
+        for (let i = 0; i < 45; i++) {
+          b.beginPath();
+          b.arc(r() * CANVAS_WIDTH, r() * CANVAS_HEIGHT, 0.8 + r() * 1.6, 0, Math.PI * 2);
+          b.fill();
         }
       }
       if (terrain.id === 'bamboo') {
@@ -374,15 +441,41 @@ export class GagambakbakanScene extends Phaser.Scene {
         }
       }
       if (terrain.id === 'lightning') {
-        b.strokeStyle = '#b8b5e577'; b.lineWidth = 2;
-        for (let i = 0; i < 115; i++) {
-          const x = r() * CANVAS_WIDTH, y = r() * CANVAS_HEIGHT;
-          b.beginPath(); b.moveTo(x, y); b.lineTo(x - 28, y + 78); b.stroke();
-        }
+        const stormGrad = b.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
+        stormGrad.addColorStop(0, 'rgba(18, 24, 38, 0.45)');
+        stormGrad.addColorStop(0.4, 'rgba(28, 36, 52, 0.25)');
+        stormGrad.addColorStop(1, 'rgba(10, 15, 24, 0.55)');
+        b.fillStyle = stormGrad;
+        b.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
       }
       if (terrain.id === 'frost') {
-        b.fillStyle = '#e2f5f2aa';
-        for (let i = 0; i < 95; i++) { b.beginPath(); b.arc(r() * CANVAS_WIDTH, r() * CANVAS_HEIGHT, .6 + r() * 2, 0, Math.PI * 2); b.fill(); }
+        b.strokeStyle = '#e2f5f2cc';
+        b.lineWidth = 1.2;
+        b.lineCap = 'round';
+        for (let i = 0; i < 85; i++) {
+          const sx = r() * CANVAS_WIDTH, sy = r() * CANVAS_HEIGHT, sz = 2.5 + r() * 4.5;
+          b.beginPath();
+          for (let a = 0; a < 3; a++) {
+            const rad = a * Math.PI / 3;
+            const dx = Math.cos(rad) * sz, dy = Math.sin(rad) * sz;
+            b.moveTo(sx - dx, sy - dy);
+            b.lineTo(sx + dx, sy + dy);
+          }
+          b.stroke();
+          if (sz > 4.5) {
+            b.beginPath();
+            for (let a = 0; a < 6; a++) {
+              const rad = a * Math.PI / 3;
+              const bx0 = sx + Math.cos(rad) * (sz * 0.6);
+              const by0 = sy + Math.sin(rad) * (sz * 0.6);
+              const bdx = Math.cos(rad + Math.PI / 2) * (sz * 0.28);
+              const bdy = Math.sin(rad + Math.PI / 2) * (sz * 0.28);
+              b.moveTo(bx0 - bdx, by0 - bdy);
+              b.lineTo(bx0 + bdx, by0 + bdy);
+            }
+            b.stroke();
+          }
+        }
       }
       if (terrain.id === 'lilypad') {
         b.fillStyle = '#d18e6a'; b.beginPath(); b.arc(870, 115, 52, 0, Math.PI * 2); b.fill();
@@ -632,6 +725,9 @@ export class GagambakbakanScene extends Phaser.Scene {
         ctx.restore();
       });
       this.drawAbilityCasts(ctx);
+      if (this.gameState?.terrain === 'termite') {
+        this.drawTermiteForeground(ctx, t);
+      }
       order.forEach((s) => this.drawSpiderName(ctx, revealOwner && s.id !== revealOwner.id && Math.abs(s.x - revealOwner.x) <= (revealOwner.revealRange || 0) ? { ...s, stealthT: 0 } : s));
 
       // Draw Webs & Projectiles
@@ -979,16 +1075,22 @@ export class GagambakbakanScene extends Phaser.Scene {
 
   private drawTerrainStick(ctx: CanvasRenderingContext2D, terrain: TerrainId) {
     const { l, r, y, th } = STICK;
+    const t = this.gameState?.terrainTime || 0;
     ctx.save();
+
+    // Bamboo dynamic continuous swaying flex physics
     if (terrain === 'bamboo') {
+      const wind = Math.floor(t / 8) % 2 ? 1 : -1;
+      const swayAngle = Math.sin(t * 2.2) * 0.014 + wind * 0.024;
       ctx.translate(600, y + th / 2);
-      ctx.rotate((Math.floor((this.gameState?.terrainTime || 0) / 8) % 2 ? 1 : -1) * .012);
+      ctx.rotate(swayAngle);
       ctx.translate(-600, -y - th / 2);
     }
+
     const colors: Record<TerrainId, [string, string]> = {
-      ember: ['#51413a', '#171619'], dew: ['#61855e', '#273e34'], termite: ['#907557', '#473b2b'],
-      bamboo: ['#c9d982', '#738746'], briar: ['#597a4b', '#28442f'], lightning: ['#81756c', '#3d3b40'],
-      frost: ['#bdd9dc', '#586c76'], lilypad: ['#9c7858', '#55422e'], totem: ['#a69785', '#514a48']
+      ember: ['#3e2723', '#1a0d0a'], dew: ['#3e5a3c', '#1b3022'], termite: ['#5d4037', '#2e1c14'],
+      bamboo: ['#c0ca33', '#689f38'], briar: ['#3a6842', '#1a3821'], lightning: ['#37474f', '#1c2427'],
+      frost: ['#37474f', '#1e282d'], lilypad: ['#6d4c41', '#3e2723'], totem: ['#4e342e', '#261b17']
     };
     const [top, bottom] = colors[terrain];
     const gradient = ctx.createLinearGradient(0, y, 0, y + th + 9);
@@ -997,89 +1099,333 @@ export class GagambakbakanScene extends Phaser.Scene {
     ctx.fillStyle = gradient;
     ctx.strokeStyle = bottom;
     ctx.lineWidth = 2;
+
     const segments = terrain === 'lilypad' ? [[l - 16, 485], [715, r + 16]] : [[l - 16, r + 16]];
     for (const [index, [left, right]] of segments.entries()) {
       ctx.beginPath();
-      const bob = terrain === 'lilypad' ? Math.sin((this.gameState?.terrainTime || 0) * 2 + index * 1.7) * 2 : 0;
+      const bob = terrain === 'lilypad' ? Math.sin(t * 2 + index * 1.7) * 2 : 0;
       if (terrain === 'dew') {
-        ctx.moveTo(left, y + 3);
-        ctx.quadraticCurveTo(600, y + 15, right, y + 3);
+        // Natural organic sinuous vine curvature
+        ctx.moveTo(left, y + 2);
+        ctx.bezierCurveTo(left + 220, y + 14, left + 450, y - 4, 600, y + 10);
+        ctx.bezierCurveTo(750, y + 22, right - 220, y - 2, right, y + 3);
         ctx.lineTo(right, y + th + 3);
-        ctx.quadraticCurveTo(600, y + th + 15, left, y + th + 3);
+        ctx.bezierCurveTo(right - 220, y + th - 2, 750, y + th + 22, 600, y + th + 10);
+        ctx.bezierCurveTo(450, y + th - 4, left + 220, y + th + 14, left, y + th + 2);
         ctx.closePath();
-      } else ctx.roundRect(left, y + bob, right - left, th + (terrain === 'termite' ? 16 : 0), 10);
+      } else if (terrain === 'termite') {
+        continue;
+      } else {
+        ctx.roundRect(left, y + bob, right - left, th, 10);
+      }
       ctx.fill();
       ctx.stroke();
     }
-    if (terrain === 'lilypad') {
-      ctx.fillStyle = '#548c55';
-      ctx.beginPath();
-      ctx.ellipse(600, y + 8 + (this.gameState?.terrainSink || 0) * 36, 99, 18, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = '#9dc57d';
-      ctx.beginPath();
-      ctx.ellipse(600, y + 8 + (this.gameState?.terrainSink || 0) * 36, 92, 13, 0, .2, Math.PI * 1.85);
-      ctx.stroke();
-    }
-    if (terrain === 'bamboo') {
-      ctx.strokeStyle = '#5d7536';
-      ctx.lineWidth = 6;
-      for (let x = 235; x < r; x += 180) {
-        ctx.beginPath(); ctx.moveTo(x, y - 4); ctx.lineTo(x, y + th + 3); ctx.stroke();
-      }
-      ctx.strokeStyle = '#9cb85d'; ctx.lineWidth = 10;
-      for (const [x, direction] of [[310, -1], [890, 1]]) {
-        ctx.beginPath(); ctx.moveTo(x, y + 3); ctx.lineTo(x + direction * 80, y - 58); ctx.stroke();
-      }
-    }
-    if (terrain === 'termite') {
-      ctx.fillStyle = '#211e1b';
-      ctx.beginPath(); ctx.ellipse(600, y + 34, 180, 13, 0, Math.PI, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#352c25';
-      for (const x of [260, 345, 885, 970]) { ctx.beginPath(); ctx.arc(x, y + 13, 6, 0, Math.PI * 2); ctx.fill(); }
-    }
-    if (terrain === 'briar') {
-      ctx.fillStyle = '#9c3248';
-      for (const x of (this.gameState?.terrainClearT || 0) > 0 ? [] : [275, 430, 790, 950]) {
-        ctx.beginPath(); ctx.moveTo(x - 16, y + th - 1); ctx.lineTo(x + 2, y + th + 30); ctx.lineTo(x + 16, y + th - 1); ctx.fill();
-      }
-    }
-    if (terrain === 'frost') {
-      ctx.strokeStyle = '#e2f9ff'; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.moveTo(l, y + 2); ctx.lineTo(r, y + 2); ctx.stroke();
-      for (const x of [185, 345, 525, 735, 930, 1080]) {
-        ctx.beginPath(); ctx.moveTo(x, y + th); ctx.lineTo(x + 4, y + th + 14); ctx.stroke();
-      }
-      ctx.strokeStyle = '#658d83'; ctx.lineWidth = 3;
-      for (const x of [120, 1080]) for (let i = -5; i <= 5; i++) {
-        ctx.beginPath(); ctx.moveTo(x, y + th); ctx.lineTo(x + i * 7, y + th + 20 + 4 * (5 - Math.abs(i))); ctx.stroke();
-      }
-    }
-    if (terrain === 'lightning') {
-      ctx.fillStyle = '#d8c8b9';
-      for (const x of [220, 470, 690, 1030]) {
-        ctx.beginPath(); ctx.moveTo(x, y + 1); ctx.lineTo(x + 10, y - 11); ctx.lineTo(x + 7, y + 3); ctx.fill();
-      }
-    }
-    if (terrain === 'totem') {
-      ctx.strokeStyle = '#e7dfcf'; ctx.lineWidth = 4;
-      for (let x = 145; x < r; x += 34) {
-        ctx.beginPath(); ctx.moveTo(x, y + 2); ctx.lineTo(x + 16, y + th); ctx.stroke();
-      }
-    }
+
+    // --- TERRAIN SPECIFIC REALISTIC DETAILS ---
+
+    // 1. Sun-Scorched Ember Branch: Realistic branching glowing magma fissure cracks
     if (terrain === 'ember') {
-      ctx.strokeStyle = '#f5793d'; ctx.lineWidth = 2;
-      for (const x of [350, 600, 850]) {
-        ctx.beginPath(); ctx.moveTo(x - 23, y + 4); ctx.lineTo(x - 10, y + 12); ctx.lineTo(x + 5, y + 6); ctx.lineTo(x + 24, y + 18); ctx.stroke();
+      // Scorched wood grain & longitudinal fissure lines
+      ctx.strokeStyle = '#21110e';
+      ctx.lineWidth = 1.5;
+      for (const offset of [8, 18, 28]) {
+        ctx.beginPath();
+        ctx.moveTo(l - 10, y + offset);
+        for (let gx = l; gx <= r; gx += 50) {
+          ctx.lineTo(gx, y + offset + Math.sin(gx * 0.05 + offset) * 2);
+        }
+        ctx.stroke();
+      }
+
+      // Branching glowing magma cracks with multi-pass heat bloom
+      const crackNodes = [
+        [240, 10, [15, 6, -10, 16, 20, 22]],
+        [350, 6, [-18, 8, 12, 14, -8, 24]],
+        [470, 8, [14, 10, -12, 18, 16, 26]],
+        [600, 12, [-22, 6, 18, 12, 2, 20, 22, 26]],
+        [730, 8, [16, 8, -14, 16, 18, 24]],
+        [850, 10, [-20, 8, 14, 14, -12, 22]],
+        [960, 6, [12, 8, -16, 16, 14, 26]]
+      ];
+
+      for (const [cx, cyOffset, branches] of crackNodes as [number, number, number[]][]) {
+        const pulse = 0.75 + 0.25 * Math.sin(t * 3.5 + cx);
+        // Outer heat glow
+        ctx.save();
+        ctx.globalAlpha = 0.45 * pulse;
+        ctx.strokeStyle = '#ff3d00';
+        ctx.lineWidth = 5;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ctx.moveTo(cx, y + cyOffset);
+        for (let i = 0; i < branches.length; i += 2) {
+          ctx.lineTo(cx + branches[i], y + branches[i + 1]);
+        }
+        ctx.stroke();
+
+        // Inner glowing lava body
+        ctx.globalAlpha = 0.85 * pulse;
+        ctx.strokeStyle = '#ff9100';
+        ctx.lineWidth = 2.4;
+        ctx.stroke();
+
+        // Incandescent white-yellow core
+        ctx.globalAlpha = 0.95;
+        ctx.strokeStyle = '#fff9c4';
+        ctx.lineWidth = 1.1;
+        ctx.stroke();
+        ctx.restore();
       }
     }
+
+    // 2. Moss-Slicked Dew Vine: Lush moss patches, glossy wet specular sheen & water beads
+    if (terrain === 'dew') {
+      // Clustered organic moss cushions
+      const mossClusters = [
+        [180, y + 2, 28, 9], [290, y + 6, 38, 11], [420, y + 3, 34, 10],
+        [530, y + 10, 42, 12], [670, y + 12, 40, 12], [780, y + 4, 35, 10],
+        [910, y + 3, 36, 11], [1010, y + 2, 26, 8]
+      ];
+      for (const [mx, my, mw, mh] of mossClusters) {
+        ctx.fillStyle = '#2e7d32';
+        ctx.beginPath();
+        ctx.ellipse(mx, my, mw, mh, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#43a047';
+        ctx.beginPath();
+        ctx.ellipse(mx - 4, my - 2, mw * 0.7, mh * 0.7, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#81c784';
+        ctx.beginPath();
+        ctx.ellipse(mx - 8, my - 3, mw * 0.4, mh * 0.45, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Continuous glossy wet specular highlight running along the upper curve
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(l - 10, y + 3);
+      ctx.bezierCurveTo(l + 220, y + 14, l + 450, y - 4, 600, y + 10);
+      ctx.bezierCurveTo(750, y + 22, r - 220, y - 2, r + 10, y + 3);
+      ctx.stroke();
+
+      // Gleaming water beads catching light
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+      for (const bx of [220, 340, 480, 570, 630, 720, 860, 950]) {
+        ctx.beginPath();
+        ctx.arc(bx, y + 6 + Math.sin(bx * 0.01) * 4, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    // 3. Hollow Termite-Rotted Log: Truly hollow log with 3D ends, interior cavern, mud tubes, and fungi
+    if (terrain === 'termite') {
+      this.drawHollowTermiteLog(ctx, y, th);
+    }
+
+    // 4. High-Canopy Bamboo Stalk: Articulated culms, realistic swollen nodes & branchlets
+    if (terrain === 'bamboo') {
+      // Bamboo culm nodes every 160px
+      for (let nx = l + 70; nx < r; nx += 160) {
+        // Dark nodal ring
+        ctx.strokeStyle = '#33691e';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(nx, y - 2);
+        ctx.lineTo(nx, y + th + 2);
+        ctx.stroke();
+        // Swollen node highlight ridge
+        ctx.strokeStyle = '#dce775';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(nx + 3, y - 3);
+        ctx.lineTo(nx + 3, y + th + 3);
+        ctx.stroke();
+        // Nodal sheath collar
+        ctx.fillStyle = '#558b2f';
+        ctx.beginPath();
+        ctx.ellipse(nx, y + th / 2, 4, 18, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Sprouting leafy branchlets
+      ctx.strokeStyle = '#8bc34a';
+      ctx.lineWidth = 3;
+      for (const [bx, dir] of [[310, -1], [580, 1], [890, 1]]) {
+        ctx.beginPath();
+        ctx.moveTo(bx, y + 2);
+        ctx.quadraticCurveTo(bx + dir * 30, y - 25, bx + dir * 65, y - 48);
+        ctx.stroke();
+        // Bamboo lanceolate leaves on branchlet
+        ctx.fillStyle = '#7cb342';
+        for (let li = 0; li < 3; li++) {
+          const lx = bx + dir * (20 + li * 16);
+          const ly = y - 12 - li * 12;
+          ctx.beginPath();
+          ctx.ellipse(lx, ly, 14, 4, dir * 0.45 + li * 0.1, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+
+    // 5. Thorny Rose-Briar Stem: Living rose cane, screen-edge roses & recurved prickles
+    if (terrain === 'briar') {
+      // Rose cane longitudinal bark ridges
+      ctx.strokeStyle = '#275230';
+      ctx.lineWidth = 1.3;
+      for (const offset of [5, 11, 17]) {
+        ctx.beginPath();
+        ctx.moveTo(l, y + offset);
+        for (let gx = l; gx <= r; gx += 45) {
+          ctx.lineTo(gx, y + offset + Math.sin(gx * 0.04) * 1.2);
+        }
+        ctx.stroke();
+      }
+
+      // Reddish-bronze sun-blush along cane
+      ctx.fillStyle = 'rgba(139, 58, 58, 0.35)';
+      for (const bx of [190, 360, 530, 710, 890]) {
+        ctx.fillRect(bx, y + 2, 75, th - 4);
+      }
+
+      // Rose cane nodal rings & leaf scars
+      for (const nx of [260, 440, 620, 800, 980]) {
+        ctx.strokeStyle = '#1e4026';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(nx, y);
+        ctx.lineTo(nx, y + th);
+        ctx.stroke();
+
+        ctx.strokeStyle = '#66bb6a';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(nx + 2, y + 1);
+        ctx.lineTo(nx + 2, y + th - 1);
+        ctx.stroke();
+      }
+
+      // Recurved woody rose prickles rooted into the cane
+      const thornPositions = (this.gameState?.terrainClearT || 0) > 0 ? [] : [275, 430, 790, 950];
+      for (const tx of thornPositions) {
+        this.drawCurvedThorn(ctx, tx, y + th - 2, 1, 1.15);
+      }
+
+      // Real blooming wild roses at the edges of the screen
+      // Right edge: full climbing wild rose cluster
+      this.drawEdgeRoseCluster(ctx, CANVAS_WIDTH - 20, y + 8, true);
+
+      // Left edge: climbing wild rose vine & blooming flower
+      this.drawEdgeRoseCluster(ctx, 20, y + 8, false);
+    }
+
+    // 6. Rain-Lashed Lightning Bough: Wet storm bark & conduit points
+    if (terrain === 'lightning') {
+      // Reflective wet sheen
+      ctx.strokeStyle = 'rgba(207, 216, 220, 0.4)';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(l, y + 3);
+      ctx.lineTo(r, y + 3);
+      ctx.stroke();
+
+      // Jagged storm fissures & conduits
+      ctx.strokeStyle = '#546e7a';
+      ctx.lineWidth = 2;
+      for (const x of [220, 470, 690, 1010]) {
+        ctx.beginPath();
+        ctx.moveTo(x, y + 1);
+        ctx.lineTo(x + 12, y + 16);
+        ctx.lineTo(x + 8, y + th);
+        ctx.stroke();
+      }
+    }
+
+    // 7. Frosted Pine Needle Twig: Clustered pine needles, snow ridge & icicles
+    if (terrain === 'frost') {
+      // Snowy ridge on top contour
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.roundRect(l - 12, y - 3, r - l + 24, 7, 3);
+      ctx.fill();
+
+      // Clustered pine needle fascicles (slender needles radiating in bundles)
+      for (const nx of [160, 260, 380, 520, 680, 820, 960, 1040]) {
+        for (let i = -4; i <= 4; i++) {
+          const ang = (Math.PI / 2) + i * 0.18;
+          const len = 22 + (4 - Math.abs(i)) * 4;
+          ctx.strokeStyle = i % 2 ? '#1b5e20' : '#2e7d32';
+          ctx.lineWidth = 2.2;
+          ctx.beginPath();
+          ctx.moveTo(nx, y + th - 2);
+          ctx.lineTo(nx + Math.cos(ang) * len, y + th + Math.sin(ang) * len);
+          ctx.stroke();
+          // Frosted needle tip
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(nx + Math.cos(ang) * len - 1, y + th + Math.sin(ang) * len - 1, 2, 2);
+        }
+      }
+
+      // Transparent crystalline icicles
+      for (const ix of [210, 320, 460, 610, 750, 890]) {
+        const iLen = 14 + ((ix * 7) % 16);
+        const iGrad = ctx.createLinearGradient(ix, y + th, ix, y + th + iLen);
+        iGrad.addColorStop(0, 'rgba(255,255,255,0.9)');
+        iGrad.addColorStop(0.6, 'rgba(224,242,254,0.6)');
+        iGrad.addColorStop(1, 'rgba(186,230,253,0.1)');
+        ctx.fillStyle = iGrad;
+        ctx.beginPath();
+        ctx.moveTo(ix - 3.5, y + th);
+        ctx.lineTo(ix, y + th + iLen);
+        ctx.lineTo(ix + 3.5, y + th);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+
+    // 8. Broken Driftwood & Lilypad Chain: Authentic floating botanical water lilypad
+    if (terrain === 'lilypad') {
+      this.drawActualLilypad(ctx, y, th);
+    }
+
+    // 9. Silk-Wrapped Totem Branch: Spun spider silk wrap bindings
+    if (terrain === 'totem') {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(245, 245, 250, 0.85)';
+      ctx.lineWidth = 3.5;
+      // Cross-woven silk bandages wrapped tightly around the branch
+      for (let x = l + 15; x < r - 15; x += 32) {
+        ctx.beginPath();
+        ctx.moveTo(x, y + 1);
+        ctx.quadraticCurveTo(x + 12, y + th / 2, x + 20, y + th);
+        ctx.stroke();
+        // Fine tensile silk cross-filament
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(x + 18, y + 2);
+        ctx.quadraticCurveTo(x + 8, y + th / 2, x - 2, y + th - 2);
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(245, 245, 250, 0.85)';
+        ctx.lineWidth = 3.5;
+      }
+      ctx.restore();
+    }
+
     ctx.restore();
   }
 
   private drawTerrainDetails(ctx: CanvasRenderingContext2D, t: number) {
     const terrain = this.gameState?.terrain as TerrainId | undefined;
     if (!terrain) return;
-    const { y, th } = STICK;
+    const { l, r, y, th } = STICK;
+
+    // Broken bridge gap in ember / termite
     if (terrain === 'ember' || terrain === 'termite') {
       if (this.gameState?.terrainBroken) {
         const bg = this.terrainBackgrounds.get(terrain);
@@ -1087,111 +1433,380 @@ export class GagambakbakanScene extends Phaser.Scene {
         else ctx.clearRect(565, y - 4, 70, th + 14);
       }
     }
+
+    // 1. Ember: Heat vents, rising cinder embers & smoke
     if (terrain === 'ember') {
-      ctx.fillStyle = '#fa6b35';
-      for (const x of [335, 565, 705, 915]) {
-        ctx.fillRect(x, y + 5, 45, 2);
-        ctx.globalAlpha = .25 + .25 * Math.sin(t * 3 + x);
-        ctx.fillRect(x + 8, y - 2, 8, 5);
+      const vent = Math.floor((this.gameState?.terrainTime || 0) / 8);
+      const isVentActive = ((this.gameState?.terrainTime || 0) % 8) < 1.2;
+      for (const [idx, vx] of [350, 600, 850].entries()) {
+        const active = isVentActive && idx === (vent % 3);
+        const pulse = 0.5 + 0.5 * Math.sin(t * 5 + vx);
+        ctx.fillStyle = active ? '#fff176' : (pulse > 0.6 ? '#ff7043' : '#e64a19');
+        ctx.beginPath();
+        ctx.ellipse(vx, y + th + 4, active ? 22 : 14, active ? 7 : 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (active) {
+          ctx.fillStyle = 'rgba(255, 145, 0, 0.7)';
+          for (let i = 0; i < 9; i++) {
+            const ex = vx + Math.sin(i * 3 + t * 6) * 20;
+            const ey = y + th - ((t * 110 + i * 19) % 75);
+            ctx.beginPath();
+            ctx.arc(ex, ey, 2.5 + (i % 2), 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+      // Rising ambient volcanic ash & embers
+      ctx.fillStyle = '#ffab40';
+      for (let i = 0; i < 24; i++) {
+        const ax = (i * 179 + Math.sin(t + i) * 22) % CANVAS_WIDTH;
+        const ay = (CANVAS_HEIGHT - (i * 43 + t * (20 + (i % 4) * 6)) % CANVAS_HEIGHT);
+        ctx.globalAlpha = 0.3 + 0.4 * Math.sin(t * 2 + i);
+        ctx.fillRect(ax, ay, 2, 2.8);
       }
       ctx.globalAlpha = 1;
-      const vent = Math.floor((this.gameState?.terrainTime || 0) / 8);
-      if ((this.gameState?.terrainTime || 0) % 8 < .55) {
-        const x = [350, 600, 850][(vent + 2) % 3];
-        ctx.fillStyle = '#f89156aa';
-        for (let i = 0; i < 8; i++) { ctx.beginPath(); ctx.arc(x + Math.sin(i * 7 + t * 4) * 23, y + th + (t * 90 + i * 17) % 80, 2 + i % 2, 0, Math.PI * 2); ctx.fill(); }
-      }
-      ctx.fillStyle = '#a9a6a088';
-      for (let i = 0; i < 18; i++) {
-        const x = (i * 193 + Math.sin(t + i) * 19) % CANVAS_WIDTH;
-        const ashY = (CANVAS_HEIGHT - (i * 47 + t * (16 + i % 4 * 5)) % CANVAS_HEIGHT);
-        ctx.fillRect(x, ashY, 1.5, 2.5);
-      }
     }
+
+    // 2. Dew: Middle collected water puddle & falling teardrop droplets with impact ripples
     if (terrain === 'dew') {
-      ctx.fillStyle = '#82d9d688';
-      ctx.beginPath(); ctx.ellipse(600, y + th + 8, 105, 8, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#d8f3e53b';
-      for (let i = 0; i < 8; i++) {
-        ctx.beginPath(); ctx.ellipse((i * 179 + t * 11) % CANVAS_WIDTH, 325 + i * 19, 90, 10, 0, 0, Math.PI * 2); ctx.fill();
+      // Glistening water pool in the center
+      const poolGrad = ctx.createRadialGradient(600, y + th + 6, 4, 600, y + th + 6, 75);
+      poolGrad.addColorStop(0, 'rgba(178, 235, 242, 0.85)');
+      poolGrad.addColorStop(0.6, 'rgba(77, 182, 172, 0.55)');
+      poolGrad.addColorStop(1, 'rgba(38, 166, 154, 0)');
+      ctx.fillStyle = poolGrad;
+      ctx.beginPath();
+      ctx.ellipse(600, y + th + 6, 75, 10, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Falling teardrop droplets under gravity
+      for (let i = 0; i < 4; i++) {
+        const dropX = 570 + i * 20;
+        const phase = (t * 2.2 + i * 0.75) % 1.0;
+        const dropY = (y + th + 4) + phase * phase * 165;
+        if (phase < 0.88) {
+          // Teardrop shape
+          ctx.fillStyle = 'rgba(224, 247, 250, 0.9)';
+          ctx.beginPath();
+          ctx.moveTo(dropX, dropY - 5);
+          ctx.quadraticCurveTo(dropX + 2.5, dropY, dropX, dropY + 3.5);
+          ctx.quadraticCurveTo(dropX - 2.5, dropY, dropX, dropY - 5);
+          ctx.fill();
+        } else {
+          // Splash impact ripple on pond water
+          const rPhase = (phase - 0.88) / 0.12;
+          ctx.strokeStyle = `rgba(224, 247, 250, ${(1 - rPhase) * 0.75})`;
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.ellipse(dropX, POND_Y + 14, 5 + rPhase * 24, 1.5 + rPhase * 6, 0, 0, Math.PI * 2);
+          ctx.stroke();
+        }
       }
     }
+
+    // 3. Termite: Realistic wood frass, chewed sawdust flakes & drifting subterranean spores
+    if (terrain === 'termite') {
+      ctx.save();
+      for (let i = 0; i < 28; i++) {
+        const hx = i % 2 === 0 ? 430 : 770;
+        const drift = Math.sin(t * 1.8 + i) * 32;
+        const fx = hx + drift;
+        const fy = y + 18 + ((t * 42 + i * 18) % 110);
+        ctx.fillStyle = i % 3 === 0 ? '#efebe9' : (i % 2 === 0 ? '#d7ccc8' : '#bcaaa4');
+        ctx.globalAlpha = 0.55 * (1 - (fy - y - 18) / 110);
+        ctx.beginPath();
+        ctx.arc(fx, fy, 1.2 + (i % 3) * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    // 4. Bamboo: Sweeping aerodynamic wind ribbons & tumbling swirling bamboo leaves
     if (terrain === 'bamboo') {
-      ctx.strokeStyle = '#e8f6da55'; ctx.lineWidth = 2;
-      for (let i = 0; i < 12; i++) {
-        const x = (i * 127 + t * 68) % CANVAS_WIDTH;
-        ctx.beginPath(); ctx.moveTo(x, 90 + i * 26); ctx.lineTo(x + 22, 84 + i * 26); ctx.stroke();
+      const wind = Math.floor(t / 8) % 2 ? 1 : -1;
+      const windSp = wind * 340;
+
+      // Flowing wind streamline ribbons
+      ctx.strokeStyle = 'rgba(232, 245, 233, 0.35)';
+      ctx.lineWidth = 1.8;
+      for (let i = 0; i < 6; i++) {
+        const streamY = 70 + i * 42;
+        const startX = ((i * 240 + t * windSp) % (CANVAS_WIDTH + 300)) - 150;
+        ctx.beginPath();
+        ctx.moveTo(startX, streamY);
+        ctx.bezierCurveTo(startX + wind * 100, streamY - 8, startX + wind * 180, streamY + 8, startX + wind * 280, streamY);
+        ctx.stroke();
+      }
+
+      // Tumbling bamboo leaves carried by wind
+      for (let i = 0; i < 14; i++) {
+        const lx = ((i * 97 + t * (windSp * 0.85) + CANVAS_WIDTH * 10) % CANVAS_WIDTH);
+        const ly = (i * 35 + Math.sin(t * 3 + i) * 16) % (POND_Y - 40);
+        const lAngle = t * 4 + i;
+        ctx.save();
+        ctx.translate(lx, ly);
+        ctx.rotate(lAngle);
+        ctx.fillStyle = i % 2 ? '#7cb342' : '#9ccc65';
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 11, 3.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
       }
     }
+
+    // 5. Briar: Falling rose petals fluttering in the background
     if (terrain === 'briar') {
-      ctx.fillStyle = '#c54d68';
-      for (const [index, x] of [530, 670].entries()) {
-        if ((this.gameState?.terrainBuds || 0) & (1 << index)) continue;
-        ctx.beginPath(); ctx.ellipse(x, y + th + 13, 12, 10, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.save();
+      for (let i = 0; i < 32; i++) {
+        const px = ((i * 139 + Math.sin(t * 1.6 + i * 2.1) * 45 - t * 18 + CANVAS_WIDTH * 10) % CANVAS_WIDTH);
+        const py = ((i * 79 + t * 68) % (POND_Y + 50));
+        const rot = t * 2.2 + i * 1.3;
+        const flutter = Math.sin(t * 3.4 + i);
+        const pSize = 7 + (i % 5) * 2;
+
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.rotate(rot);
+        ctx.scale(1, 0.4 + 0.6 * Math.abs(flutter));
+
+        // Curving velvety rose petal
+        const pGrad = ctx.createRadialGradient(0, 0, 1, 0, 0, pSize);
+        pGrad.addColorStop(0, i % 3 === 0 ? '#ff80ab' : (i % 2 === 0 ? '#e91e63' : '#c2185b'));
+        pGrad.addColorStop(0.7, '#880e4f');
+        pGrad.addColorStop(1, '#4a0024');
+        ctx.fillStyle = pGrad;
+
+        ctx.beginPath();
+        ctx.moveTo(0, -pSize);
+        ctx.bezierCurveTo(pSize * 0.9, -pSize * 0.7, pSize * 1.1, pSize * 0.5, 0, pSize);
+        ctx.bezierCurveTo(-pSize * 1.1, pSize * 0.5, -pSize * 0.9, -pSize * 0.7, 0, -pSize);
+        ctx.fill();
+
+        // Delicate petal curl highlight
+        ctx.strokeStyle = 'rgba(255, 205, 225, 0.45)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(0, -pSize * 0.3, pSize * 0.5, -0.4, Math.PI + 0.4);
+        ctx.stroke();
+
+        ctx.restore();
       }
-      ctx.fillStyle = '#ef9db085';
-      for (let i = 0; i < 12; i++) {
-        const x = (i * 137 + t * (11 + i % 3 * 5)) % CANVAS_WIDTH;
-        const py = (i * 83 + t * (17 + i % 4 * 3)) % CANVAS_HEIGHT;
-        ctx.beginPath(); ctx.ellipse(x, py, 4, 2, Math.sin(t + i) * .7, 0, Math.PI * 2); ctx.fill();
-      }
+      ctx.restore();
     }
+
+    // 6. Lightning: Realistic moderate-speed rain droplets with unified directional angle and physics
     if (terrain === 'lightning') {
-      ctx.strokeStyle = '#c4c2ec78'; ctx.lineWidth = 1.5;
-      for (let i = 0; i < 30; i++) {
-        const x = (i * 149 - t * 110 + CANVAS_WIDTH * 100) % CANVAS_WIDTH;
-        const ry = (i * 107 + t * 205) % CANVAS_HEIGHT;
-        ctx.beginPath(); ctx.moveTo(x, ry); ctx.lineTo(x - 15, ry + 40); ctx.stroke();
+      const waterRise = Math.min(105, ((this.gameState?.round || 1) - 1) * 35);
+      const currentPondY = POND_Y - waterRise;
+
+      ctx.save();
+      // Unified rain fall vector: moderate, realistic speed (~390 px/s down, -123 px/s windward)
+      const slope = -0.315; // windward drift ratio dx / dy
+      const vyBg = 310;
+      const vxBg = vyBg * slope; // -97.65
+      const angleBg = Math.atan2(vyBg, vxBg);
+
+      const vyFg = 390;
+      const vxFg = vyFg * slope; // -122.85
+      const angleFg = Math.atan2(vyFg, vxFg);
+
+      const totalH = CANVAS_HEIGHT + 70;
+      const totalW = CANVAS_WIDTH + 340;
+
+      // Layer 1: Background mist drizzle (soft, fine streaks)
+      for (let i = 0; i < 55; i++) {
+        const period = totalH / vyBg;
+        const phase = (((t + i * 0.187) % period) / period);
+        const ry = -35 + phase * totalH;
+        const shiftX = phase * totalH * slope;
+        const rx = (((i * 83 + shiftX) % totalW + totalW) % totalW) - 170;
+        const dropLen = 14 + (i % 4) * 4;
+
+        ctx.save();
+        ctx.translate(rx, ry);
+        ctx.rotate(angleBg);
+        ctx.strokeStyle = 'rgba(180, 205, 230, 0.3)';
+        ctx.lineWidth = 1.1;
+        ctx.beginPath();
+        ctx.moveTo(-dropLen, 0);
+        ctx.lineTo(0, 0);
+        ctx.stroke();
+        ctx.restore();
       }
-      const bg = this.terrainBackgrounds.get('lightning');
-      if (bg) ctx.drawImage(bg, 914, y - 4, 22, th + 14, 914, y - 4, 22, th + 14);
-      else ctx.clearRect(914, y - 4, 22, th + 14);
+
+      // Layer 2: Foreground realistic moving rain droplets (distinct teardrop bodies & glints)
+      for (let i = 0; i < 48; i++) {
+        const period = totalH / vyFg;
+        const phase = (((t + i * 0.163) % period) / period);
+        const ry = -35 + phase * totalH;
+        const shiftX = phase * totalH * slope;
+        const rx = (((i * 97 + shiftX) % totalW + totalW) % totalW) - 170;
+
+        const dropLen = 18 + (i % 5) * 5;
+        const domeR = 1.4 + (i % 3) * 0.4;
+
+        ctx.save();
+        ctx.translate(rx, ry);
+        ctx.rotate(angleFg);
+
+        // Tapered luminous droplet streak along direction of fall
+        const dropGrad = ctx.createLinearGradient(-dropLen, 0, 0, 0);
+        dropGrad.addColorStop(0, 'rgba(175, 210, 240, 0)');
+        dropGrad.addColorStop(0.5, 'rgba(215, 235, 255, 0.45)');
+        dropGrad.addColorStop(0.9, 'rgba(245, 250, 255, 0.85)');
+        dropGrad.addColorStop(1, '#ffffff');
+
+        ctx.strokeStyle = dropGrad;
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(-dropLen, 0);
+        ctx.lineTo(-domeR * 0.5, 0);
+        ctx.stroke();
+
+        // Leading teardrop dome facing exactly where the droplet is heading
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.ellipse(0, 0, domeR, domeR * 0.7, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Crystal highlight on droplet
+        ctx.fillStyle = 'rgba(224, 242, 254, 0.9)';
+        ctx.beginPath();
+        ctx.arc(-domeR * 0.3, -domeR * 0.2, domeR * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+
+        // Active contact splashes matching impact angle on the stick
+        if (Math.abs(ry - y) < 12 && rx >= l && rx <= r) {
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.arc(rx, y + 2, 3.5, Math.PI * 0.8, Math.PI * 1.9);
+          ctx.stroke();
+
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.arc(rx - 2, y - 2 - Math.sin(t * 15 + i) * 2, 1.1, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Active contact ripples on the rising water pool
+        if (ry >= currentPondY - 4 && ry <= currentPondY + 10) {
+          ctx.strokeStyle = 'rgba(224, 242, 254, 0.6)';
+          ctx.lineWidth = 1.1;
+          ctx.beginPath();
+          ctx.ellipse(rx, currentPondY, 5, 2, 0, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+
+      // Multi-forked dendritic lightning bolt
       const strike = this.gameState?.terrainStrike;
       if (strike?.warning > 0) {
-        ctx.fillStyle = `rgba(206,188,255,${.2 + .2 * Math.sin(t * 18)})`;
+        ctx.fillStyle = `rgba(206, 188, 255, ${0.25 + 0.25 * Math.sin(t * 22)})`;
         ctx.fillRect(strike.x - 70, y - 7, 140, th + 14);
       }
+
       if ((this.gameState?.terrainPuddleT || 0) > 0) {
-        const index = Math.floor((this.gameState?.terrainTime || 0) / 15) - 1;
-        const x = 250 + ((this.gameState.round * 137 + index * 293) % 700);
-        ctx.fillStyle = '#a7a0ff88';
-        ctx.beginPath(); ctx.ellipse(x, y + th + 7, 110, 8, 0, 0, Math.PI * 2); ctx.fill();
-        if ((this.gameState?.terrainPuddleT || 0) > 1.82) {
-          ctx.strokeStyle = '#f2eaff'; ctx.lineWidth = 6;
-          ctx.beginPath(); ctx.moveTo(x - 28, 0); ctx.lineTo(x + 10, 80); ctx.lineTo(x - 12, 112); ctx.lineTo(x + 19, 160); ctx.lineTo(x, y + 2); ctx.stroke();
+        const puddleX = 250 + ((this.gameState.round * 137 + (Math.floor(t / 15) - 1) * 293) % 700);
+        ctx.fillStyle = '#b388ff88';
+        ctx.beginPath();
+        ctx.ellipse(puddleX, y + th + 7, 110, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Forked lightning discharge
+        if ((this.gameState?.terrainPuddleT || 0) > 1.7) {
+          ctx.save();
+          // Full sky flash
+          ctx.fillStyle = 'rgba(237, 231, 246, 0.35)';
+          ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.moveTo(puddleX - 40, 0);
+          ctx.lineTo(puddleX - 10, 60);
+          ctx.lineTo(puddleX + 20, 95);
+          ctx.lineTo(puddleX - 8, 140);
+          ctx.lineTo(puddleX + 15, 195);
+          ctx.lineTo(puddleX, y + 2);
+          // Branch forks
+          ctx.moveTo(puddleX - 10, 60);
+          ctx.lineTo(puddleX - 55, 110);
+          ctx.moveTo(puddleX + 20, 95);
+          ctx.lineTo(puddleX + 60, 150);
+          ctx.stroke();
+          ctx.restore();
         }
       }
     }
+
+    // 7. Frost: Realistic 6-fold dendritic snowflakes
     if (terrain === 'frost') {
-      ctx.fillStyle = '#e8f6f0aa';
-      for (let i = 0; i < 35; i++) {
-        const x = (i * 163 + Math.sin(t + i) * 20) % CANVAS_WIDTH;
-        const snowY = (i * 97 + t * (12 + i % 4 * 4)) % CANVAS_HEIGHT;
-        ctx.beginPath(); ctx.arc(x, snowY, 1 + i % 3 * .5, 0, Math.PI * 2); ctx.fill();
+      for (let i = 0; i < 28; i++) {
+        const sx = (i * 149 + Math.sin(t * 0.8 + i) * 24) % CANVAS_WIDTH;
+        const sy = (i * 89 + t * (16 + (i % 4) * 5)) % CANVAS_HEIGHT;
+        const sSize = 4.5 + (i % 3) * 2.5;
+        const sAngle = t * (0.4 + (i % 3) * 0.2) + i;
+        this.drawSnowflake(ctx, sx, sy, sSize, sAngle);
       }
     }
-    if (terrain === 'totem' && (this.gameState?.terrainClearT || 0) <= 0) {
-      ctx.strokeStyle = '#e8d9dbbb'; ctx.lineWidth = 5;
-      for (const x of [380, 820]) {
-        for (let i = 0; i < 5; i++) {
-          ctx.beginPath(); ctx.moveTo(x - 20 + i * 10, y + th); ctx.lineTo(x - 20 + i * 10 + Math.sin(t + i) * 2, y + th + 80); ctx.stroke();
+
+    // 8. Totem: Woven silk curtains & realistic burning combustion animation
+    if (terrain === 'totem') {
+      const isFire = (this.gameState?.terrainFireT || 0) > 0;
+      const isCleared = (this.gameState?.terrainClearT || 0) > 0 && !isFire;
+      if (!isCleared) {
+        for (const cx of [380, 820]) {
+          // Hanging woven silk curtains with wave sway
+          ctx.save();
+          ctx.strokeStyle = isFire ? '#ffcc80' : 'rgba(245, 245, 250, 0.75)';
+          ctx.lineWidth = 4;
+          for (let i = 0; i < 7; i++) {
+            const threadX = cx - 24 + i * 8;
+            const sway = Math.sin(t * 2.5 + i * 0.8) * 3;
+            ctx.beginPath();
+            ctx.moveTo(threadX, y + th);
+            ctx.bezierCurveTo(threadX + sway, y + th + 28, threadX - sway, y + th + 56, threadX + sway * 1.5, y + th + 82);
+            ctx.stroke();
+          }
+          ctx.restore();
+
+          // Realistic burning animation: fire tongues, crawling glowing embers & ash
+          if (isFire) {
+            ctx.save();
+            // Flame tongues
+            for (let f = 0; f < 5; f++) {
+              const fx = cx - 20 + f * 10 + Math.sin(t * 8 + f) * 2;
+              const fy = y + th + 18 + Math.sin(t * 12 + f) * 6;
+              const flameGrad = ctx.createLinearGradient(fx, fy + 25, fx, fy - 18);
+              flameGrad.addColorStop(0, '#ff1744');
+              flameGrad.addColorStop(0.5, '#ff9100');
+              flameGrad.addColorStop(1, '#ffea00');
+              ctx.fillStyle = flameGrad;
+              ctx.beginPath();
+              ctx.moveTo(fx - 6, fy + 25);
+              ctx.quadraticCurveTo(fx + 8, fy, fx, fy - 18);
+              ctx.quadraticCurveTo(fx - 8, fy, fx - 6, fy + 25);
+              ctx.fill();
+            }
+
+            // Rising spark embers
+            ctx.fillStyle = '#ffe082';
+            for (let e = 0; e < 6; e++) {
+              const ex = cx - 18 + e * 8 + Math.sin(t * 9 + e) * 8;
+              const ey = y + th + 30 - ((t * 90 + e * 20) % 70);
+              ctx.beginPath();
+              ctx.arc(ex, ey, 1.8, 0, Math.PI * 2);
+              ctx.fill();
+            }
+            ctx.restore();
+          }
         }
       }
-    }
-    if (terrain === 'totem' && (this.gameState?.terrainFireT || 0) > 0) {
-      ctx.strokeStyle = '#fa9254'; ctx.lineWidth = 3;
-      for (const x of [380, 820]) for (let i = 0; i < 4; i++) {
-        ctx.beginPath(); ctx.moveTo(x - 15 + i * 10, y + th); ctx.quadraticCurveTo(x - 25 + i * 10, y + th + 22, x - 13 + i * 10, y + th + 58); ctx.stroke();
-      }
-    }
-    const label = TERRAINS.find(item => item.id === terrain);
-    if (label && !this.transparentBg) {
-      ctx.font = '600 13px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillStyle = '#101d20aa';
-      ctx.fillRect(365, CANVAS_HEIGHT - 31, 470, 25);
-      ctx.fillStyle = label.accent;
-      ctx.fillText(label.name.toUpperCase(), 600, CANVAS_HEIGHT - 13);
     }
   }
 
@@ -2123,8 +2738,8 @@ export class GagambakbakanScene extends Phaser.Scene {
     let groundOffset = s.under ? 42 : 0;
     if (!s.hang && this.gameState?.terrain === 'dew') groundOffset += 3 + 24 * ((s.x - 84) / 1032) * (1 - (s.x - 84) / 1032);
     if (!s.hang && this.gameState?.terrain === 'bamboo') groundOffset += (s.x - 600) * (Math.floor((this.gameState?.terrainTime || 0) / 8) % 2 ? 1 : -1) * .012;
-    if (!s.hang && this.gameState?.terrain === 'lilypad') groundOffset += Math.abs(s.x - 600) < 95
-      ? 4 + (this.gameState.terrainSink || 0) * 36
+    if (!s.hang && this.gameState?.terrain === 'lilypad') groundOffset += Math.abs(s.x - 600) < 115
+      ? (this.gameState.terrainSink || 0) * 36
       : Math.sin((this.gameState.terrainTime || 0) * 2 + (s.x < 600 ? 0 : 1.7)) * 2;
     ctx.translate(0, groundOffset - jumpHeight);
     ctx.translate(0, byW);
@@ -3908,6 +4523,24 @@ export class GagambakbakanScene extends Phaser.Scene {
       ctx.restore();
     }
 
+    if (s.under) {
+      // Cavity shadow overlay over the spider while tunneling inside the log
+      ctx.save();
+      ctx.fillStyle = 'rgba(12, 8, 4, 0.45)';
+      ctx.beginPath();
+      ctx.ellipse(bx, by, 34, 24, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Tunneling scuttle frass kick
+      ctx.fillStyle = '#d7ccc8';
+      for (let fi = 0; fi < 6; fi++) {
+        const sx = bx + Math.sin(t * 12 + fi * 1.5) * 18;
+        const sy = by + 8 + Math.cos(t * 10 + fi) * 6;
+        ctx.globalAlpha = 0.6;
+        ctx.fillRect(sx, sy, 2, 2);
+      }
+      ctx.restore();
+    }
 
     ctx.restore();
   }
@@ -3939,6 +4572,988 @@ export class GagambakbakanScene extends Phaser.Scene {
     ctx.restore();
   }
 
+  private drawSnowflake(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, angle: number) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    ctx.strokeStyle = '#e0f2fe';
+    ctx.lineWidth = Math.max(1, size * 0.16);
+    ctx.lineCap = 'round';
+    for (let i = 0; i < 6; i++) {
+      ctx.rotate(Math.PI / 3);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(0, size);
+      // Main branch needle
+      const b1 = size * 0.55;
+      ctx.moveTo(-size * 0.28, b1 - size * 0.18);
+      ctx.lineTo(0, b1);
+      ctx.lineTo(size * 0.28, b1 - size * 0.18);
+      // Tip branch needle
+      const b2 = size * 0.82;
+      ctx.moveTo(-size * 0.2, b2 - size * 0.14);
+      ctx.lineTo(0, b2);
+      ctx.lineTo(size * 0.2, b2 - size * 0.14);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  private drawRose(ctx: CanvasRenderingContext2D, cx: number, cy: number, scale: number = 1) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(scale, scale);
+
+    // Green briar leaflets
+    ctx.fillStyle = '#1b5e20';
+    for (const [lx, ly, rot] of [[-14, 6, -0.6], [14, 8, 0.7], [-8, 16, 0.1]]) {
+      ctx.save();
+      ctx.translate(lx, ly);
+      ctx.rotate(rot);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 11, 5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Calyx sepals
+    ctx.fillStyle = '#2e7d32';
+    for (let a = 0; a < Math.PI * 2; a += (Math.PI * 2) / 5) {
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(Math.cos(a) * 14, Math.sin(a) * 14);
+      ctx.lineTo(Math.cos(a + 0.3) * 5, Math.sin(a + 0.3) * 5);
+      ctx.fill();
+    }
+
+    // Spiraling rose petals
+    const petalLayers = [
+      { r: 15, col: '#880e4f', count: 6, offset: 0 },
+      { r: 12, col: '#ad1457', count: 5, offset: 0.3 },
+      { r: 9, col: '#d81b60', count: 5, offset: 0.6 },
+      { r: 6.5, col: '#e91e63', count: 4, offset: 0.9 },
+      { r: 4, col: '#f48fb1', count: 3, offset: 1.2 }
+    ];
+
+    for (const layer of petalLayers) {
+      ctx.fillStyle = layer.col;
+      for (let i = 0; i < layer.count; i++) {
+        const ang = (i / layer.count) * Math.PI * 2 + layer.offset;
+        const px = Math.cos(ang) * (layer.r * 0.45);
+        const py = Math.sin(ang) * (layer.r * 0.45);
+        ctx.beginPath();
+        ctx.ellipse(px, py, layer.r * 0.65, layer.r * 0.45, ang, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // Golden stamen core
+    ctx.fillStyle = '#ffeb3b';
+    ctx.beginPath();
+    ctx.arc(0, 0, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  private drawCurvedThorn(ctx: CanvasRenderingContext2D, x: number, y: number, dirY: number, size: number = 1) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(size, size * dirY);
+
+    const thornGrad = ctx.createLinearGradient(0, 0, 4, 26);
+    thornGrad.addColorStop(0, '#3e2723');
+    thornGrad.addColorStop(0.5, '#880e4f');
+    thornGrad.addColorStop(0.85, '#d32f2f');
+    thornGrad.addColorStop(1, '#ff8a80');
+
+    ctx.fillStyle = thornGrad;
+    ctx.beginPath();
+    ctx.moveTo(-12, 0);
+    ctx.quadraticCurveTo(-4, 10, 2, 26);
+    ctx.quadraticCurveTo(5, 12, 10, 0);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(255, 205, 210, 0.6)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(-4, 4);
+    ctx.quadraticCurveTo(-1, 14, 2, 25);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  private drawEdgeRoseCluster(ctx: CanvasRenderingContext2D, edgeX: number, cy: number, isRight: boolean) {
+    ctx.save();
+    const dir = isRight ? -1 : 1;
+
+    // Climbing thorny briar cane entering from edge
+    ctx.strokeStyle = '#2d5a37';
+    ctx.lineWidth = 9;
+    ctx.beginPath();
+    ctx.moveTo(edgeX, cy + (isRight ? 60 : -40));
+    ctx.quadraticCurveTo(edgeX + dir * 55, cy + 15, edgeX + dir * 105, cy - 10);
+    ctx.stroke();
+
+    // Serrated briar leaves along climbing vine
+    ctx.fillStyle = '#1b5e20';
+    for (const [lx, ly, rot] of [[45, -25, -0.4], [75, 20, 0.5], [105, -30, -0.2]]) {
+      ctx.save();
+      ctx.translate(edgeX + dir * lx, cy + ly);
+      ctx.rotate(rot * dir);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 18, 9, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Leaf vein
+      ctx.strokeStyle = '#4caf50';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(-16, 0);
+      ctx.lineTo(16, 0);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Real blooming rose at screen edge
+    const mainRoseX = edgeX + dir * (isRight ? 58 : 50);
+    const mainRoseY = cy - 8;
+    this.drawRose(ctx, mainRoseX, mainRoseY, isRight ? 2.5 : 2.0);
+
+    // Secondary blooming rose bud
+    const budX = edgeX + dir * (isRight ? 95 : 85);
+    const budY = cy + 32;
+    this.drawRose(ctx, budX, budY, isRight ? 1.4 : 1.2);
+
+    ctx.restore();
+  }
+
+  private drawWaterLilyBlossom(ctx: CanvasRenderingContext2D, cx: number, cy: number, scale: number = 1) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(scale, scale);
+
+    // Dark green outer sepals supporting the floating flower
+    ctx.fillStyle = '#1b4d24';
+    for (let a = 0; a < 4; a++) {
+      const ang = (a / 4) * Math.PI * 2 + 0.35;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(Math.cos(ang - 0.22) * 15, Math.sin(ang - 0.22) * 11);
+      ctx.lineTo(Math.cos(ang) * 19, Math.sin(ang) * 14);
+      ctx.lineTo(Math.cos(ang + 0.22) * 15, Math.sin(ang + 0.22) * 11);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // Outer and inner layers of sculpted white-to-pink pointed petals
+    const petalLayers = [
+      { count: 10, rad: 16, radY: 12, col: '#fce4ec', tipCol: '#f8bbd0' },
+      { count: 8, rad: 12.5, radY: 9.5, col: '#ffffff', tipCol: '#f48fb1' },
+      { count: 6, rad: 9, radY: 7, col: '#ffffff', tipCol: '#f06292' }
+    ];
+
+    for (let l = 0; l < petalLayers.length; l++) {
+      const { count, rad, radY, col, tipCol } = petalLayers[l];
+      for (let p = 0; p < count; p++) {
+        const ang = (p / count) * Math.PI * 2 + l * 0.45;
+        const petGrad = ctx.createLinearGradient(0, 0, Math.cos(ang) * rad, Math.sin(ang) * radY);
+        petGrad.addColorStop(0, '#ffffff');
+        petGrad.addColorStop(0.65, col);
+        petGrad.addColorStop(1, tipCol);
+        ctx.fillStyle = petGrad;
+
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.quadraticCurveTo(Math.cos(ang - 0.24) * (rad * 0.7), Math.sin(ang - 0.24) * (radY * 0.7), Math.cos(ang) * rad, Math.sin(ang) * radY);
+        ctx.quadraticCurveTo(Math.cos(ang + 0.24) * (rad * 0.7), Math.sin(ang + 0.24) * (radY * 0.7), 0, 0);
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+        ctx.lineWidth = 0.6;
+        ctx.stroke();
+      }
+    }
+
+    // Radiant golden-yellow stamen crown with anther pollen tips
+    ctx.fillStyle = '#ffb300';
+    ctx.beginPath();
+    ctx.arc(0, 0, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#ffd600';
+    for (let s = 0; s < 10; s++) {
+      const sa = (s / 10) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.arc(Math.cos(sa) * 3.5, Math.sin(sa) * 3.5, 1.1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.restore();
+  }
+
+  private drawActualLilypad(ctx: CanvasRenderingContext2D, y: number, th: number) {
+    const isHanging = (this.gameState?.p1?.hang && Math.abs((this.gameState.p1.x || 0) - 600) < 115)
+      || (this.gameState?.p2?.hang && Math.abs((this.gameState.p2.x || 0) - 600) < 115);
+    const sinkOffset = (isHanging ? 0.95 : (this.gameState?.terrainSink || 0)) * 36;
+    const cx = 600;
+    const cy = y + 14 + sinkOffset;
+    const rx = 126;
+    const ry = 36;
+    const nodeX = cx - 14;
+    const nodeY = cy - 2;
+
+    ctx.save();
+
+    // 1. Water shadow cast on pond directly beneath the floating pad
+    ctx.fillStyle = 'rgba(10, 26, 18, 0.45)';
+    ctx.beginPath();
+    ctx.ellipse(cx + 4, cy + 14, rx + 6, ry + 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 2. Submerged fleshy rubbery petiole stem descending from underside
+    ctx.strokeStyle = '#2d4a2a';
+    ctx.lineWidth = 7;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(nodeX, nodeY + 6);
+    ctx.bezierCurveTo(nodeX - 15, cy + 30, nodeX - 8, cy + 65, nodeX - 25, cy + 110);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(100, 160, 90, 0.35)';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(nodeX - 1, nodeY + 6);
+    ctx.bezierCurveTo(nodeX - 16, cy + 30, nodeX - 9, cy + 65, nodeX - 26, cy + 110);
+    ctx.stroke();
+
+    // 3. Submerged underside floating ribs peeking through
+    ctx.strokeStyle = 'rgba(28, 54, 30, 0.55)';
+    ctx.lineWidth = 3;
+    for (let a = 0.5; a < Math.PI * 1.9; a += 0.45) {
+      ctx.beginPath();
+      ctx.moveTo(nodeX, nodeY);
+      ctx.lineTo(cx + Math.cos(a) * (rx * 0.95), cy + Math.sin(a) * (ry * 0.95));
+      ctx.stroke();
+    }
+
+    // 4. Botanical Lilypad Leaf Body with Deep V-Cleft Sinus
+    // Cleft angles: from margin angle ~0.38 rad down to center node, then around to ~0.08 rad
+    const cleftAngle1 = 0.38;
+    const cleftAngle2 = 0.08;
+
+    ctx.beginPath();
+    ctx.moveTo(nodeX, nodeY);
+    const steps = 48;
+    for (let i = 0; i <= steps; i++) {
+      const a = cleftAngle1 + (i / steps) * (Math.PI * 2 - (cleftAngle1 - cleftAngle2));
+      const wave = 1 + 0.022 * Math.sin(a * 7);
+      const px = cx + Math.cos(a) * rx * wave;
+      const py = cy + Math.sin(a) * ry * wave;
+      ctx.lineTo(px, py);
+    }
+    ctx.lineTo(nodeX, nodeY);
+    ctx.closePath();
+
+    // Rich waxy leaf radial gradient
+    const padGrad = ctx.createRadialGradient(nodeX, nodeY, 6, cx, cy, rx);
+    padGrad.addColorStop(0, '#7cb342');   // pale green petiole node
+    padGrad.addColorStop(0.25, '#43a047'); // vibrant spring green
+    padGrad.addColorStop(0.65, '#2e7d32'); // rich emerald blade
+    padGrad.addColorStop(0.92, '#1b5e20'); // deep forest leaf zone
+    padGrad.addColorStop(1, '#144517');    // dark underside edge
+    ctx.fillStyle = padGrad;
+    ctx.fill();
+
+    // 5. Pale upturned vertical rim lip catching ambient light
+    ctx.strokeStyle = '#a5d6a7';
+    ctx.lineWidth = 2.4;
+    ctx.stroke();
+
+    // Inner rim shadow for 3D cupped rim effect
+    ctx.strokeStyle = 'rgba(15, 60, 25, 0.45)';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    // 6. Intricate branching primary and secondary leaf veins
+    ctx.save();
+    ctx.clip();
+
+    const veinAngles = [
+      0.65, 0.95, 1.30, 1.65, 2.05, 2.45, 2.85, 3.25, 3.65, 4.05, 4.45, 4.85, 5.25, 5.65, 5.95
+    ];
+    for (const va of veinAngles) {
+      const destX = cx + Math.cos(va) * (rx * 0.94);
+      const destY = cy + Math.sin(va) * (ry * 0.94);
+      const midX = (nodeX + destX) * 0.5 + Math.sin(va * 2) * 4;
+      const midY = (nodeY + destY) * 0.5 + Math.cos(va * 2) * 2;
+
+      ctx.strokeStyle = 'rgba(165, 214, 167, 0.55)';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(nodeX, nodeY);
+      ctx.quadraticCurveTo(midX, midY, destX, destY);
+      ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(165, 214, 167, 0.32)';
+      ctx.lineWidth = 1.0;
+      const fork1X = destX + Math.cos(va - 0.18) * 16;
+      const fork1Y = destY + Math.sin(va - 0.18) * 8;
+      ctx.beginPath();
+      ctx.moveTo(midX, midY);
+      ctx.lineTo(fork1X, fork1Y);
+      ctx.stroke();
+
+      const fork2X = destX + Math.cos(va + 0.18) * 16;
+      const fork2Y = destY + Math.sin(va + 0.18) * 8;
+      ctx.beginPath();
+      ctx.moveTo(midX, midY);
+      ctx.lineTo(fork2X, fork2Y);
+      ctx.stroke();
+    }
+
+    // Concentric reticulate web lines
+    ctx.strokeStyle = 'rgba(165, 214, 167, 0.15)';
+    ctx.lineWidth = 0.8;
+    for (const rFrac of [0.35, 0.65]) {
+      ctx.beginPath();
+      ctx.ellipse(nodeX, nodeY, rx * rFrac, ry * rFrac, 0, cleftAngle1, cleftAngle2 + Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // 7. Waxy Beaded Water Droplets with Lotus Effect
+    const droplets = [
+      [cx - 52, cy - 8, 3.8],
+      [cx - 48, cy - 12, 1.8],
+      [cx - 20, cy + 12, 4.5], // fat central droplet
+      [cx - 15, cy + 15, 2.2],
+      [cx + 38, cy - 10, 3.2],
+      [cx + 42, cy - 7, 1.6],
+      [cx + 65, cy + 6, 2.6],
+      [cx - 75, cy + 4, 2.4]
+    ];
+    for (const [dx, dy, dr] of droplets) {
+      ctx.fillStyle = 'rgba(8, 30, 15, 0.45)';
+      ctx.beginPath();
+      ctx.ellipse(dx + 1.2, dy + 1.2, dr * 1.05, dr * 0.75, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      const dropGrad = ctx.createRadialGradient(dx - dr * 0.3, dy - dr * 0.3, 0.5, dx, dy, dr);
+      dropGrad.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+      dropGrad.addColorStop(0.3, 'rgba(224, 242, 254, 0.75)');
+      dropGrad.addColorStop(0.8, 'rgba(186, 230, 253, 0.45)');
+      dropGrad.addColorStop(1, 'rgba(100, 180, 130, 0.6)');
+      ctx.fillStyle = dropGrad;
+      ctx.beginPath();
+      ctx.ellipse(dx, dy, dr, dr * 0.75, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(dx - dr * 0.35, dy - dr * 0.25, dr * 0.28, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+      ctx.lineWidth = 0.7;
+      ctx.beginPath();
+      ctx.arc(dx, dy + dr * 0.2, dr * 0.55, 0.2, Math.PI - 0.2);
+      ctx.stroke();
+    }
+
+    // 8. Weathered splintered driftwood junction rings at ends
+    for (const jx of [485, 715]) {
+      ctx.fillStyle = '#4e342e';
+      ctx.beginPath();
+      ctx.ellipse(jx, y + th / 2, 5, th / 2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#2b1712';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+      ctx.strokeStyle = '#8d6e63';
+      ctx.beginPath();
+      ctx.ellipse(jx, y + th / 2, 2.5, th / 3.5, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // 9. Blooming Water Lily Flower nestled at the right cleft margin
+    this.drawWaterLilyBlossom(ctx, cx + 88, cy + 6, 1.25);
+
+    // 10. Small floating lily bud beside it
+    ctx.save();
+    ctx.translate(cx + 116, cy + 18);
+    ctx.fillStyle = '#2e7d32';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 7, 4, 0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#f48fb1';
+    ctx.beginPath();
+    ctx.ellipse(-2, -3, 5, 2.5, -0.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.restore();
+  }
+
+  private drawHollowTermiteLog(ctx: CanvasRenderingContext2D, y: number, th: number) {
+    const { l, r } = STICK;
+    const x0 = l - 16;
+    const x1 = r + 16;
+    const logHeight = th + 10;
+    const cy = y + logHeight / 2;
+
+    ctx.save();
+
+    // 1. Back Interior Wall of the Hollow Cavern (x = 390 to 810)
+    // Dark hollow cavern depth revealed where wood has decomposed
+    const interiorGrad = ctx.createLinearGradient(0, y + 2, 0, y + logHeight);
+    interiorGrad.addColorStop(0, '#0a0503');
+    interiorGrad.addColorStop(0.35, '#190e09');
+    interiorGrad.addColorStop(0.75, '#24140d');
+    interiorGrad.addColorStop(1, '#0e0705');
+    ctx.fillStyle = interiorGrad;
+    ctx.fillRect(390, y + 2, 420, logHeight - 2);
+
+    // Carved subterranean termite gallery tunnels in the rear cavity wall
+    // Longitudinal undulating foraging chambers gnawed smooth by termite mandibles
+    ctx.strokeStyle = '#2d180f';
+    ctx.lineWidth = 4;
+    for (const [gy, amp, freq, phase] of [
+      [y + 10, 3.5, 0.04, 0.5],
+      [y + 18, 4.2, 0.035, 1.8],
+      [y + 26, 3.8, 0.045, 3.2],
+      [y + 34, 3.0, 0.038, 4.7]
+    ]) {
+      ctx.beginPath();
+      for (let gx = 395; gx <= 805; gx += 8) {
+        const py = gy + Math.sin(gx * freq + phase) * amp;
+        if (gx === 395) ctx.moveTo(gx, py);
+        else ctx.lineTo(gx, py);
+      }
+      ctx.stroke();
+    }
+
+    // Vertical inter-connecting gallery crawlways
+    ctx.strokeStyle = '#1b0d08';
+    ctx.lineWidth = 3;
+    for (const cx of [430, 480, 535, 595, 660, 715, 770]) {
+      ctx.beginPath();
+      ctx.moveTo(cx, y + 6);
+      ctx.bezierCurveTo(cx - 6, y + 18, cx + 8, y + 28, cx + 2, y + logHeight - 4);
+      ctx.stroke();
+    }
+
+    // Accumulated fine wood frass (digested wood pellets & crumbly sawdust) on gallery floor
+    ctx.fillStyle = '#8d6e63';
+    for (let fx = 392; fx <= 808; fx += 5) {
+      const frassH = 2 + Math.sin(fx * 0.12) * 1.5 + (Math.sin(fx * 0.03) > 0.3 ? 2 : 0);
+      ctx.fillRect(fx, y + logHeight - frassH, 3.5, frassH);
+    }
+    ctx.fillStyle = '#c68a4c';
+    for (let fx = 395; fx <= 805; fx += 9) {
+      ctx.fillRect(fx, y + logHeight - 1.5, 2, 1.5);
+    }
+
+    // 2. Borehole Entrances (Dark 3D interior depths at x = 430 and x = 770)
+    for (const hx of [430, 770]) {
+      // Deep pitch-black inner tunnel core
+      ctx.fillStyle = '#050201';
+      ctx.beginPath();
+      ctx.ellipse(hx, y + 19, 16, 12, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Chewed inner perimeter ring with jagged teeth
+      ctx.strokeStyle = '#3e2723';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Termite aeration pinholes (breathing vents)
+      ctx.fillStyle = '#080402';
+      for (const [px, py] of [[hx - 24, y + 8], [hx + 26, y + 9], [hx - 15, y + 32], [hx + 20, y + 33]]) {
+        ctx.beginPath();
+        ctx.arc(px, py, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // 3. Solid/Rotted Outer Bark Trunk Rails (Left side: x0 to 400, Right side: 800 to x1)
+    const barkGrad = ctx.createLinearGradient(0, y, 0, y + logHeight);
+    barkGrad.addColorStop(0, '#5d4037');
+    barkGrad.addColorStop(0.3, '#3e2723');
+    barkGrad.addColorStop(0.8, '#271710');
+    barkGrad.addColorStop(1, '#1b0e09');
+    ctx.fillStyle = barkGrad;
+
+    // Left trunk section (x0 to 410)
+    ctx.beginPath();
+    ctx.moveTo(x0, y);
+    ctx.lineTo(410, y);
+    ctx.lineTo(395, y + logHeight);
+    ctx.lineTo(x0, y + logHeight);
+    ctx.closePath();
+    ctx.fill();
+
+    // Right trunk section (790 to x1)
+    ctx.beginPath();
+    ctx.moveTo(790, y);
+    ctx.lineTo(x1, y);
+    ctx.lineTo(x1, y + logHeight);
+    ctx.lineTo(805, y + logHeight);
+    ctx.closePath();
+    ctx.fill();
+
+    // Upper Structural Bark Rail across the middle cavern (y to y + 8)
+    // Allows spiders to walk across the top of the hollow log
+    const topRailGrad = ctx.createLinearGradient(0, y, 0, y + 9);
+    topRailGrad.addColorStop(0, '#4e342e');
+    topRailGrad.addColorStop(1, '#271710');
+    ctx.fillStyle = topRailGrad;
+    ctx.beginPath();
+    ctx.rect(390, y, 420, 8);
+    ctx.fill();
+
+    // Gnawed jagged bottom splinters hanging from the top rail
+    ctx.fillStyle = '#5d4037';
+    for (let sx = 405; sx <= 795; sx += 14) {
+      const sh = 3 + Math.sin(sx * 0.1) * 2.5;
+      ctx.beginPath();
+      ctx.moveTo(sx - 4, y + 8);
+      ctx.lineTo(sx, y + 8 + sh);
+      ctx.lineTo(sx + 4, y + 8);
+      ctx.fill();
+    }
+
+    // 4. 3D Cutaway Trunk Ends
+    // Left End: True 3D hollow cylindrical trunk cross-section
+    ctx.save();
+    // Outer rotted bark rim
+    ctx.fillStyle = '#2e1c14';
+    ctx.beginPath();
+    ctx.ellipse(x0, cy, 18, logHeight * 0.52, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#1a0d08';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    // Sapwood growth rings
+    ctx.fillStyle = '#6d4c41';
+    ctx.beginPath();
+    ctx.ellipse(x0, cy, 13, logHeight * 0.42, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = '#8d6e63';
+    ctx.lineWidth = 1.2;
+    for (const rMul of [0.75, 0.55]) {
+      ctx.beginPath();
+      ctx.ellipse(x0, cy, 13 * rMul, logHeight * 0.42 * rMul, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // Pitch-black completely hollow core void
+    ctx.fillStyle = '#000000';
+    ctx.beginPath();
+    ctx.ellipse(x0, cy, 7, logHeight * 0.28, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Ragged inner gnawed teeth
+    ctx.strokeStyle = '#3e2723';
+    ctx.lineWidth = 1.6;
+    ctx.stroke();
+    ctx.restore();
+
+    // Right End: Fractured snapped hollow trunk fibers
+    ctx.fillStyle = '#3e2723';
+    ctx.beginPath();
+    ctx.moveTo(x1, y);
+    for (let py = y; py <= y + logHeight; py += 5) {
+      const px = x1 + Math.sin(py * 0.4) * 5 + (py % 10 === 0 ? 6 : -2);
+      ctx.lineTo(px, py);
+    }
+    ctx.lineTo(x1 - 10, y + logHeight);
+    ctx.lineTo(x1 - 10, y);
+    ctx.closePath();
+    ctx.fill();
+
+    // Dark fracture void at right end
+    ctx.fillStyle = '#080402';
+    ctx.beginPath();
+    ctx.ellipse(x1 - 4, cy, 6, logHeight * 0.32, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 5. Deep Longitudinal Bark Furrows & Cubical Rot Fractures
+    ctx.strokeStyle = '#1b0e09';
+    ctx.lineWidth = 1.6;
+    for (const bx of [
+      x0 + 15, x0 + 45, x0 + 80, x0 + 120, x0 + 160,
+      820, 860, 900, 940, 980
+    ]) {
+      ctx.beginPath();
+      ctx.moveTo(bx, y + 2);
+      ctx.bezierCurveTo(bx + 6, y + 14, bx - 8, y + 26, bx + 2, y + logHeight - 2);
+      ctx.stroke();
+
+      // Horizontal checking cracks (brown cubical rot pattern)
+      for (const cyy of [y + 10, y + 22, y + 34]) {
+        ctx.beginPath();
+        ctx.moveTo(bx - 12, cyy + (bx % 5));
+        ctx.lineTo(bx + 12, cyy + (bx % 5));
+        ctx.stroke();
+      }
+    }
+
+    // 6. Termite Mud Shelter Tubes (Subterranean earthy foraging tunnels)
+    ctx.strokeStyle = '#4e342e';
+    ctx.lineWidth = 3.6;
+    ctx.lineCap = 'round';
+    for (const [tx, ty1, ty2, curve] of [
+      [275, y + logHeight + 4, y + 6, -16],
+      [360, y + logHeight + 6, y + 14, 12],
+      [740, y + logHeight + 5, y + 16, 14],
+      [880, y + logHeight + 4, y + 8, -18],
+      [960, y + logHeight + 6, y + 12, 10]
+    ]) {
+      ctx.beginPath();
+      ctx.moveTo(tx, ty1);
+      ctx.quadraticCurveTo(tx + curve, (ty1 + ty2) / 2, tx + curve * 0.4, ty2);
+      ctx.stroke();
+
+      // Mud texture highlights & granules
+      ctx.strokeStyle = '#795548';
+      ctx.lineWidth = 1.4;
+      ctx.stroke();
+    }
+
+    // 7. Velvet Green Moss Patches along damp rotted top bark
+    ctx.fillStyle = '#33691e';
+    for (const [mx, mw] of [[x0 + 35, 65], [x0 + 130, 50], [830, 70], [930, 55]]) {
+      ctx.beginPath();
+      ctx.ellipse(mx, y + 1, mw * 0.5, 3.5, 0, 0, Math.PI);
+      ctx.fill();
+    }
+    ctx.fillStyle = '#558b2f';
+    for (const [mx, mw] of [[x0 + 50, 35], [850, 40]]) {
+      ctx.beginPath();
+      ctx.ellipse(mx, y + 0.5, mw * 0.5, 2, 0, 0, Math.PI);
+      ctx.fill();
+    }
+
+    // 8. Bracket Shelf Fungi (Polypore Conks / Trametes versicolor)
+    for (const [fx, fy, fw, fh] of [
+      [310, y + 4, 38, 14],
+      [325, y + 15, 26, 10],
+      [560, y + 6, 24, 9],
+      [890, y + 6, 42, 16],
+      [905, y + 18, 28, 11]
+    ]) {
+      // Conk shadow
+      ctx.fillStyle = '#1c0f0a';
+      ctx.beginPath();
+      ctx.ellipse(fx, fy + 2, fw * 0.5, fh * 0.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Banded concentric rings of the bracket conk
+      const shelfGrad = ctx.createRadialGradient(fx - fw * 0.25, fy, 2, fx, fy, fw * 0.55);
+      shelfGrad.addColorStop(0, '#d7ccc8');
+      shelfGrad.addColorStop(0.3, '#8d6e63');
+      shelfGrad.addColorStop(0.65, '#4e342e');
+      shelfGrad.addColorStop(1, '#271710');
+      ctx.fillStyle = shelfGrad;
+      ctx.beginPath();
+      ctx.ellipse(fx, fy, fw * 0.5, fh * 0.45, 0, 0, Math.PI);
+      ctx.fill();
+
+      // Cream white outer growth margin
+      ctx.strokeStyle = '#efebe9';
+      ctx.lineWidth = 1.3;
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
+  private drawTermiteForeground(ctx: CanvasRenderingContext2D, t: number) {
+    const { y, th } = STICK;
+    ctx.save();
+
+    // Foreground lower bark lip of the hollow rotted gallery
+    const barkGrad = ctx.createLinearGradient(0, y + 16, 0, y + th + 24);
+    barkGrad.addColorStop(0, '#2e1c14');
+    barkGrad.addColorStop(0.5, '#3e2723');
+    barkGrad.addColorStop(1, '#1b0f0b');
+    ctx.fillStyle = barkGrad;
+
+    // Draw the front lip of the hollow log that partially covers the spider in the tunnel
+    ctx.beginPath();
+    ctx.moveTo(390, y + 24);
+    ctx.bezierCurveTo(480, y + 26, 720, y + 26, 810, y + 24);
+    ctx.lineTo(815, y + th + 18);
+    ctx.bezierCurveTo(720, y + th + 20, 480, y + th + 20, 385, y + th + 18);
+    ctx.closePath();
+    ctx.fill();
+
+    // Rotted wood fiber ridges on front bark
+    ctx.strokeStyle = '#4e342e';
+    ctx.lineWidth = 1.8;
+    for (let rx = 405; rx <= 795; rx += 38) {
+      ctx.beginPath();
+      ctx.moveTo(rx, y + 24);
+      ctx.lineTo(rx + 8, y + th + 18);
+      ctx.stroke();
+    }
+
+    // Foreground rim of entrance boreholes at 430 and 770
+    for (const hx of [430, 770]) {
+      // Lower outer rim lip
+      ctx.strokeStyle = '#a1887f';
+      ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      ctx.arc(hx, y + 18, 14, 0, Math.PI);
+      ctx.stroke();
+
+      // Splintered wood fibers around hole entry
+      ctx.strokeStyle = '#5d4037';
+      ctx.lineWidth = 1.4;
+      for (const ang of [0.3, 0.8, 1.5, 2.3, 2.8]) {
+        const ex = hx + Math.cos(ang) * 14;
+        const ey = y + 18 + Math.sin(ang) * 14;
+        ctx.beginPath();
+        ctx.moveTo(ex, ey);
+        ctx.lineTo(ex + Math.cos(ang) * 5, ey + Math.sin(ang) * 5);
+        ctx.stroke();
+      }
+    }
+
+    // Active tunneling sawdust puffs when any player is inside the tunnel
+    const p1 = this.gameState?.p1;
+    const p2 = this.gameState?.p2;
+    for (const s of [p1, p2]) {
+      if (s && s.under) {
+        // Fine sawdust and digested wood frass particles kicked up
+        for (let p = 0; p < 10; p++) {
+          const px = s.x + Math.sin(t * 14 + p * 1.8) * 24;
+          const py = y + 18 + ((t * 40 + p * 12) % 24);
+          ctx.fillStyle = p % 2 === 0 ? '#efebe9' : '#c68a4c';
+          ctx.globalAlpha = 0.65 * (1 - (py - y - 18) / 24);
+          ctx.fillRect(px, py, 2.4, 2.4);
+        }
+
+        // Sawdust puff plume billowing out of the boreholes
+        for (const hx of [430, 770]) {
+          if (Math.abs(s.x - hx) < 45) {
+            ctx.fillStyle = 'rgba(215, 204, 200, 0.35)';
+            ctx.beginPath();
+            ctx.arc(hx + Math.sin(t * 10) * 8, y + 12 - ((t * 20) % 18), 7, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+    }
+    ctx.restore();
+  }
+
+  private drawMoltenLava(ctx: CanvasRenderingContext2D, t: number, dang: number) {
+    const lavaGrad = ctx.createLinearGradient(0, POND_Y - 10, 0, CANVAS_HEIGHT);
+    lavaGrad.addColorStop(0, '#ff7a00');
+    lavaGrad.addColorStop(0.2, '#e63900');
+    lavaGrad.addColorStop(0.6, '#990f02');
+    lavaGrad.addColorStop(1, '#2b0703');
+
+    ctx.fillStyle = lavaGrad;
+    ctx.beginPath();
+    ctx.moveTo(0, CANVAS_HEIGHT);
+    for (let x = 0; x <= CANVAS_WIDTH; x += 12) {
+      ctx.lineTo(x, POND_Y + Math.sin(x * 0.03 + t * 2.2) * 3 + Math.sin(x * 0.07 + t * 1.4) * 1.5);
+    }
+    ctx.lineTo(CANVAS_WIDTH, CANVAS_HEIGHT);
+    ctx.closePath();
+    ctx.fill();
+
+    // Searing molten rim glow
+    ctx.strokeStyle = '#ffe082';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    for (let x = 0; x <= CANVAS_WIDTH; x += 12) {
+      const yy = POND_Y + Math.sin(x * 0.03 + t * 2.2) * 3 + Math.sin(x * 0.07 + t * 1.4) * 1.5;
+      if (x) ctx.lineTo(x, yy); else ctx.moveTo(x, yy);
+    }
+    ctx.stroke();
+
+    // Floating dark basalt crust plates
+    ctx.fillStyle = '#220b08';
+    for (let i = 0; i < 9; i++) {
+      const cx = ((i * 140 + t * 10) % (CANVAS_WIDTH + 80)) - 40;
+      const cy = POND_Y + 16 + (i % 3) * 12 + Math.sin(t * 1.5 + i) * 2;
+      const w = 45 + (i % 4) * 18;
+      const h = 10 + (i % 3) * 4;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, w, h, Math.sin(i + t * 0.5) * 0.1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Glowing magma veins between crust plates
+    ctx.strokeStyle = '#ff9100';
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i < 6; i++) {
+      const rx = (i * 210 + 60 + Math.sin(t + i) * 20) % CANVAS_WIDTH;
+      const ry = POND_Y + 22 + (i % 3) * 10;
+      ctx.beginPath();
+      ctx.moveTo(rx - 25, ry);
+      ctx.lineTo(rx, ry + Math.sin(t * 3 + i) * 3);
+      ctx.lineTo(rx + 25, ry);
+      ctx.stroke();
+    }
+
+    // Bubbling magma domes that swell and pop
+    for (let i = 0; i < 5; i++) {
+      const bx = (i * 260 + 110) % CANVAS_WIDTH;
+      const bPhase = (t * 1.6 + i * 1.7) % (Math.PI * 2);
+      if (Math.sin(bPhase) > 0) {
+        const br = Math.sin(bPhase) * (6 + (i % 3) * 3);
+        const by = POND_Y + 10 + (i % 2) * 8;
+        ctx.fillStyle = '#fff176';
+        ctx.beginPath();
+        ctx.arc(bx, by, br, Math.PI, 0);
+        ctx.fill();
+        ctx.fillStyle = '#ff6d00';
+        ctx.beginPath();
+        ctx.arc(bx, by, br * 0.65, Math.PI, 0);
+        ctx.fill();
+      }
+    }
+
+    // Heat danger glow
+    if (dang > 0.25) {
+      ctx.fillStyle = `rgba(255, 61, 0, ${((dang - 0.25) * 0.6).toFixed(3)})`;
+      ctx.fillRect(0, POND_Y - 14, CANVAS_WIDTH, CANVAS_HEIGHT - POND_Y + 14);
+    }
+  }
+
+  private drawSnowPowder(ctx: CanvasRenderingContext2D, t: number, dang: number) {
+    // Back snow drift
+    const backGrad = ctx.createLinearGradient(0, POND_Y - 15, 0, CANVAS_HEIGHT);
+    backGrad.addColorStop(0, '#e0f2fe');
+    backGrad.addColorStop(0.4, '#bae6fd');
+    backGrad.addColorStop(1, '#38bdf8');
+    ctx.fillStyle = backGrad;
+    ctx.beginPath();
+    ctx.moveTo(0, CANVAS_HEIGHT);
+    for (let x = 0; x <= CANVAS_WIDTH; x += 14) {
+      ctx.lineTo(x, POND_Y - 4 + Math.sin(x * 0.012 + 1) * 12 + Math.sin(x * 0.035) * 4);
+    }
+    ctx.lineTo(CANVAS_WIDTH, CANVAS_HEIGHT);
+    ctx.closePath();
+    ctx.fill();
+
+    // Front soft powder drift
+    const frontGrad = ctx.createLinearGradient(0, POND_Y - 5, 0, CANVAS_HEIGHT);
+    frontGrad.addColorStop(0, '#ffffff');
+    frontGrad.addColorStop(0.2, '#f0f9ff');
+    frontGrad.addColorStop(0.7, '#bae6fd');
+    frontGrad.addColorStop(1, '#0284c7');
+    ctx.fillStyle = frontGrad;
+    ctx.beginPath();
+    ctx.moveTo(0, CANVAS_HEIGHT);
+    for (let x = 0; x <= CANVAS_WIDTH; x += 10) {
+      ctx.lineTo(x, POND_Y + 4 + Math.sin(x * 0.018 + 2.5) * 9 + Math.sin(x * 0.04) * 3);
+    }
+    ctx.lineTo(CANVAS_WIDTH, CANVAS_HEIGHT);
+    ctx.closePath();
+    ctx.fill();
+
+    // Snow crest rim
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    for (let x = 0; x <= CANVAS_WIDTH; x += 10) {
+      const yy = POND_Y + 4 + Math.sin(x * 0.018 + 2.5) * 9 + Math.sin(x * 0.04) * 3;
+      if (x) ctx.lineTo(x, yy); else ctx.moveTo(x, yy);
+    }
+    ctx.stroke();
+
+    // Sparkling crystalline snowflakes on powder surface
+    ctx.fillStyle = '#ffffff';
+    for (let i = 0; i < 22; i++) {
+      const sx = (i * 61 + 35) % CANVAS_WIDTH;
+      const sy = POND_Y + 10 + (i % 5) * 11 + Math.sin(i) * 3;
+      const glint = 0.4 + 0.6 * Math.sin(t * 3.5 + i * 2.3);
+      if (glint > 0.5) {
+        ctx.globalAlpha = glint;
+        ctx.fillRect(sx - 1, sy - 1, 2.5, 2.5);
+      }
+    }
+    ctx.globalAlpha = 1;
+
+    // Soft frosty danger glow when near bottom
+    if (dang > 0.35) {
+      ctx.fillStyle = `rgba(186, 230, 253, ${((dang - 0.35) * 0.5).toFixed(3)})`;
+      ctx.fillRect(0, POND_Y - 8, CANVAS_WIDTH, CANVAS_HEIGHT - POND_Y + 8);
+    }
+  }
+
+  private drawPetalBed(ctx: CanvasRenderingContext2D, t: number, dang: number) {
+    const pondY = POND_Y;
+    ctx.save();
+
+    // Deep velvety wine/burgundy underlayer
+    const bedGrad = ctx.createLinearGradient(0, pondY, 0, CANVAS_HEIGHT);
+    bedGrad.addColorStop(0, '#4a0818');
+    bedGrad.addColorStop(0.3, '#320410');
+    bedGrad.addColorStop(1, '#150106');
+    ctx.fillStyle = bedGrad;
+    ctx.beginPath();
+    ctx.moveTo(0, CANVAS_HEIGHT);
+    for (let x = 0; x <= CANVAS_WIDTH; x += 15) {
+      ctx.lineTo(x, pondY + Math.sin(x * 0.035 + t * 1.5) * 2.5);
+    }
+    ctx.lineTo(CANVAS_WIDTH, CANVAS_HEIGHT);
+    ctx.closePath();
+    ctx.fill();
+
+    // Billowing drifts of fallen rose petals
+    const petalColors = ['#880e4f', '#ad1457', '#b71c1c', '#c2185b', '#e91e63', '#f48fb1', '#6a0a24'];
+    for (let p = 0; p < 54; p++) {
+      const px = (p * 23.5) % CANVAS_WIDTH;
+      const row = Math.floor(p / 18);
+      const py = pondY + 6 + row * 22 + Math.sin(t * 1.8 + p * 0.7) * 2.5;
+      const rot = Math.sin(p * 1.3) * 0.8 + Math.cos(t * 1.4 + p) * 0.15;
+      const pLen = 13 + (p % 5) * 3;
+      const pWid = 7 + (p % 4) * 2;
+
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.rotate(rot);
+      ctx.fillStyle = petalColors[p % petalColors.length];
+      ctx.beginPath();
+      ctx.ellipse(0, 0, pLen, pWid, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Petal curl highlight
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(-pLen * 0.2, 0, pWid * 0.7, -0.6, 0.6);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Swirling petals if a spider dangles close
+    if (dang > 0.35) {
+      const swirlP = (dang - 0.35) * 1.5;
+      for (let s = 0; s < 14; s++) {
+        const sx = (s * 95 + t * 120) % CANVAS_WIDTH;
+        const sy = pondY - 15 + Math.sin(t * 4 + s) * 20;
+        ctx.save();
+        ctx.translate(sx, sy);
+        ctx.rotate(t * 5 + s);
+        ctx.globalAlpha = Math.min(1, swirlP);
+        ctx.fillStyle = petalColors[s % 4];
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 11, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    ctx.restore();
+  }
+
   private drawPond(ctx: CanvasRenderingContext2D, t: number) {
     if (this.transparentBg) return;
     let dang = 0;
@@ -3949,11 +5564,28 @@ export class GagambakbakanScene extends Phaser.Scene {
       });
     }
 
+    const terrain = this.gameState?.terrain as TerrainId | undefined;
+    if (terrain === 'ember') {
+      this.drawMoltenLava(ctx, t, dang);
+      return;
+    }
+    if (terrain === 'frost') {
+      this.drawSnowPowder(ctx, t, dang);
+      return;
+    }
+    if (terrain === 'briar') {
+      this.drawPetalBed(ctx, t, dang);
+      return;
+    }
+
+    const waterRise = terrain === 'lightning' ? Math.min(105, ((this.gameState?.round || 1) - 1) * 35) : 0;
+    const pondY = POND_Y - waterRise;
+
     ctx.fillStyle = this.pondGradient || 'rgba(14,56,68,.96)';
     ctx.beginPath();
     ctx.moveTo(0, CANVAS_HEIGHT);
     for (let x = 0; x <= CANVAS_WIDTH; x += 12) {
-      ctx.lineTo(x, POND_Y + Math.sin(x * 0.035 + t * 1.8) * 2.2);
+      ctx.lineTo(x, pondY + Math.sin(x * 0.035 + t * 1.8) * 2.2);
     }
     ctx.lineTo(CANVAS_WIDTH, CANVAS_HEIGHT);
     ctx.closePath();
@@ -3962,15 +5594,15 @@ export class GagambakbakanScene extends Phaser.Scene {
     // Red danger glow when close to water
     if (dang > 0.35) {
       ctx.fillStyle = `rgba(232,89,63,${((dang - 0.35) * 0.45).toFixed(3)})`;
-      ctx.fillRect(0, POND_Y - 6, CANVAS_WIDTH, CANVAS_HEIGHT - POND_Y + 6);
+      ctx.fillRect(0, pondY - 6, CANVAS_WIDTH, CANVAS_HEIGHT - pondY + 6);
     }
 
     // Pond rim highlight
-    ctx.strokeStyle = 'rgba(190,235,240,.45)';
-    ctx.lineWidth = 1.6;
+    ctx.strokeStyle = terrain === 'lightning' ? 'rgba(226, 232, 240, 0.75)' : 'rgba(190,235,240,.45)';
+    ctx.lineWidth = terrain === 'lightning' ? 2.4 : 1.6;
     ctx.beginPath();
     for (let x2 = 0; x2 <= CANVAS_WIDTH; x2 += 12) {
-      const yy = POND_Y + Math.sin(x2 * 0.035 + t * 1.8) * 2.2;
+      const yy = pondY + Math.sin(x2 * 0.035 + t * 1.8) * 2.2;
       if (x2) ctx.lineTo(x2, yy); else ctx.moveTo(x2, yy);
     }
     ctx.stroke();
@@ -3982,17 +5614,17 @@ export class GagambakbakanScene extends Phaser.Scene {
       const rx = (r * 185 + 90) % CANVAS_WIDTH;
       const ph = (t * 0.4 + r * 0.37) % 1;
       ctx.beginPath();
-      ctx.ellipse(rx, POND_Y + 26 + r * 9, 10 + ph * 34, 2 + ph * 5, 0, 0, Math.PI * 2);
+      ctx.ellipse(rx, pondY + 26 + r * 9, 10 + ph * 34, 2 + ph * 5, 0, 0, Math.PI * 2);
       ctx.globalAlpha = 1 - ph;
       ctx.stroke();
       ctx.globalAlpha = 1;
     }
 
-    // Lily pads
+    // Lily pads in water
     ctx.fillStyle = 'rgba(52,104,64,.95)';
     [[180, 0], [480, 1.4], [780, 2.6], [1040, 0.8]].forEach(([px, offset]) => {
       ctx.beginPath();
-      ctx.ellipse(px, POND_Y + 14 + Math.sin(t * 1.2 + offset) * 1.2, 26, 6, 0, 0, Math.PI * 2);
+      ctx.ellipse(px, pondY + 14 + Math.sin(t * 1.2 + offset) * 1.2, 26, 6, 0, 0, Math.PI * 2);
       ctx.fill();
     });
   }

@@ -123,16 +123,21 @@ export class LocalCombat {
     }
     if (state.terrain === 'bamboo') {
       const wind = Math.floor(state.terrainTime / 8) % 2 ? 1 : -1;
-      for (const s of players) if (!s.hang && !s.ko && s.species !== 'hunter' && !(s.species === 'wolf' && [235, 415, 595, 775, 955].some(x => Math.abs(s.x - x) < 22))) s.x += wind * 14 * dt;
+      const gust = 1 + 0.45 * Math.sin(state.terrainTime * 2.2);
+      const windPush = wind * 55 * gust;
+      for (const s of players) if (!s.hang && !s.ko && s.species !== 'hunter' && !(s.species === 'wolf' && [235, 415, 595, 775, 955].some(x => Math.abs(s.x - x) < 22))) {
+        s.x = clamp(s.x + windPush * dt, STICK.l + 6, STICK.r - 6);
+      }
       for (const s of players) if (s.species === 'hunter' && (s.terrainJumpT || 0) > 0 && [230, 970].some(x => Math.abs(s.x - x) < 60)) s.airT = Math.max(s.airT || 0, .85);
     }
-    if (state.terrain === 'briar') for (const s of players) if (!s.hang && !s.ko && s.species !== 'lynx' && state.terrainClearT <= 0 && [275, 430, 790, 950].some(x => Math.abs(s.x - x) < 32)) {
-      this.hurt(s, 4 * dt);
-      s.stun = Math.max(s.stun, .06);
-      if (Math.abs(this.kb[s.id]) > 100 && this.thornCd[s.id] <= 0) {
-        this.hurt(s, 4);
-        s.stun = Math.max(s.stun, .22);
-        this.thornCd[s.id] = .6;
+    if (state.terrain === 'briar') {
+      for (const s of players) if (!s.hang && !s.ko && s.species !== 'lynx' && state.terrainClearT <= 0 && [275, 430, 790, 950].some(x => Math.abs(s.x - x) < 32)) {
+        this.hurt(s, 4 * dt);
+        // Player is not hard-stun locked so they can still move and attack
+        if (Math.abs(this.kb[s.id]) > 100 && this.thornCd[s.id] <= 0) {
+          this.hurt(s, 4);
+          this.thornCd[s.id] = .6;
+        }
       }
     }
     if (state.terrain === 'lightning') {
@@ -174,7 +179,50 @@ export class LocalCombat {
     }
   }
 
-private emitFx(fx: any) {
+  public getSafeTerrainX(terrain: string, state: any, currentX: number, avoidX?: number): number {
+    const l = STICK.l + 30;
+    const r = STICK.r - 30;
+    const candidates = [240, 360, 480, 600, 720, 840, 960].filter(x => x >= l && x <= r);
+
+    const isHazard = (x: number): boolean => {
+      if (terrain === 'ember') {
+        if (state.terrainBroken && Math.abs(x - 600) < 65) return true;
+        if ([350, 600, 850].some(vx => Math.abs(x - vx) < 60)) return true;
+      } else if (terrain === 'termite') {
+        if (state.terrainBroken && Math.abs(x - 600) < 65) return true;
+      } else if (terrain === 'briar') {
+        if (state.terrainClearT <= 0 && [275, 430, 790, 950].some(tx => Math.abs(x - tx) < 45)) return true;
+      } else if (terrain === 'lightning') {
+        if (x > 905 && x < 945) return true;
+        const strikeX = state.terrainStrike?.x;
+        if (strikeX !== undefined && Math.abs(x - strikeX) < 85) return true;
+        if (state.terrainPuddleT > 0) {
+          const puddleX = 250 + ((state.round * 137 + (Math.floor(state.terrainTime / 15) - 1) * 293) % 700);
+          if (Math.abs(x - puddleX) < 115) return true;
+        }
+      } else if (terrain === 'totem') {
+        if (state.terrainFireT > 0 && [380, 820].some(tx => Math.abs(x - tx) < 60)) return true;
+      } else if (terrain === 'frost') {
+        if (x < 170 || x > 1030) return true;
+      } else if (terrain === 'lilypad') {
+        if (Math.abs(x - 495) < 35 || Math.abs(x - 705) < 35) return true;
+      }
+      return false;
+    };
+
+    let safeList = candidates.filter(x => !isHazard(x));
+    if (safeList.length === 0) safeList = [currentX < 600 ? 300 : 900];
+
+    if (avoidX !== undefined) {
+      const spaced = safeList.filter(x => Math.abs(x - avoidX) >= 110);
+      if (spaced.length > 0) safeList = spaced;
+    }
+
+    safeList.sort((a, b) => Math.abs(a - currentX) - Math.abs(b - currentX));
+    return safeList[0];
+  }
+
+  private emitFx(fx: any) {
   if (this.onFx) this.onFx(fx);
 }
 
@@ -282,15 +330,30 @@ private fall(s: LocalPlayerState) {
   s.x = clamp(s.x, STICK.l, STICK.r);
   s.falls++;
 
+  // Last 10 seconds of round in lightning terrain: instant water hit KO!
+  const roundTimer = this.state.roundTimer !== undefined ? this.state.roundTimer : 60;
+  if (this.state.terrain === 'lightning' && roundTimer <= 10) {
+    s.drop = MAXDROP;
+    this.emitFx({ type: 'txt', x: s.x, y: LBL_Y, text: 'SURGE HIT!', col: '#a7a0ff' });
+    this.emitFx({ type: 'splash', x: s.x, y: POND_Y });
+    this.knockOut(s);
+    return;
+  }
+
+  const nearWaterLilypad = this.state.terrain === 'lilypad' && Math.abs(s.x - 600) < 115;
+  const doubleTaps = this.state.terrain === 'lightning' || nearWaterLilypad;
+  s.tapLift = doubleTaps ? TAP * 0.5 : TAP;
+
   const f = Math.min(s.falls - 1, FATIGUE_MAX);
-  s.tapLift = TAP;
-  s.depth = Math.min(FALL_DEPTH + 12 * f, MAXDROP - 30);
+  const lightningWaterRise = this.state.terrain === 'lightning' ? Math.min(105, (Math.max(1, this.state.round) - 1) * 35) : 0;
+  const effectiveMaxDrop = MAXDROP - lightningWaterRise;
+  s.depth = Math.min(FALL_DEPTH + 12 * f, effectiveMaxDrop - 24);
   s.hangT = 0;
   s.hold = Math.min(10, Math.max(1, s.falls));
   this.tapTimes[s.id] = [];
   s.rate = 0;
 
-  this.emitFx({ type: 'txt', x: s.x, y: LBL_Y, text: s.falls > 1 ? `FALL Ã—${s.falls}` : 'FALL!', col: '#e8593f' });
+  this.emitFx({ type: 'txt', x: s.x, y: LBL_Y, text: s.falls > 1 ? `FALL ×${s.falls}` : 'FALL!', col: '#e8593f' });
   this.emitFx({ type: 'dust', x: s.x, y: STICK.y + STICK.th, count: 6 });
   this.emitShake(6);
   this.sfx('fall');
@@ -309,9 +372,7 @@ private recover(s: LocalPlayerState) {
   s.inv = 1.1;
   s.stun = 0.25;
   this.kb[s.id] = 0;
-  s.x = clamp(s.x, STICK.l + 10, STICK.r - 10);
-  if (this.state.terrainBroken && Math.abs(s.x - 600) < 40) s.x = s.id === 0 ? 550 : 650;
-  if (this.state.terrain === 'lightning' && s.x > 914 && s.x < 936) s.x = 900;
+  s.x = this.getSafeTerrainX(this.state.terrain, this.state, s.x, opponent.x);
 
   this.emitFx({ type: 'txt', x: s.x, y: LBL_Y, text: 'BACK UP!', col: s.colorLight });
   this.emitFx({ type: 'dust', x: s.x, y: STICK.y + STICK.th, count: 8 });
@@ -814,6 +875,16 @@ private stepWebs(dt: number) {
       webs.splice(i, 1);
       continue;
     }
+    if (this.state.terrain === 'lilypad' && Math.abs(this.state.terrainSink) > 0.15 && !w.zoneRadius) {
+      const crossesLeft = (previousX < 495 && w.x >= 495) || (previousX > 495 && w.x <= 495);
+      const crossesRight = (previousX < 705 && w.x >= 705) || (previousX > 705 && w.x <= 705);
+      if (crossesLeft || crossesRight) {
+        webs.splice(i, 1);
+        this.emitFx({ type: 'splash', x: w.x, y: STICK.y + 12 });
+        this.emitFx({ type: 'dust', x: w.x, y: STICK.y + 12, count: 6 });
+        continue;
+      }
+    }
     let gone = w.life <= 0 || w.x < STICK.l - 20 || w.x > STICK.r + 20;
     if (!gone && !me.hang && !t.hang && !t.ko && !t.under && t.inv <= 0 && (t.projectileInvT || 0) <= 0 && Math.abs(w.x - t.x) < 24 && !this.evades(t)) {
       gone = true;
@@ -1150,9 +1221,11 @@ private stepSpider(s: LocalPlayerState, o: LocalPlayerState, inp: InputState, dt
     }
 
     s.face = o.x >= s.x ? 1 : -1;
+    const lightningWaterRise = this.state.terrain === 'lightning' ? Math.min(105, (Math.max(1, this.state.round) - 1) * 35) : 0;
+    const effectiveMaxDrop = MAXDROP - lightningWaterRise;
     if (s.drop <= 0) this.recover(s);
-    else if (s.hangT >= 10.0 || s.drop >= MAXDROP) {
-      s.drop = MAXDROP;
+    else if (s.hangT >= 10.0 || s.drop >= effectiveMaxDrop) {
+      s.drop = effectiveMaxDrop;
       if (s.hangT >= 10.0) {
         this.emitFx({ type: 'txt', x: s.x, y: LBL_Y, text: 'TIME UP!', col: '#e8593f' });
       }
@@ -1177,6 +1250,19 @@ private stepSpider(s: LocalPlayerState, o: LocalPlayerState, inp: InputState, dt
   if (s.dashT > 0) {
     s.dashT -= dt;
     const desiredX = s.x + s.dashDir * 900 * dt;
+    if (this.state.terrain === 'lilypad' && Math.abs(this.state.terrainSink) > 0.15) {
+      const crossesLeft = (s.x < 495 && desiredX >= 495) || (s.x > 495 && desiredX <= 495);
+      const crossesRight = (s.x < 705 && desiredX >= 705) || (s.x > 705 && desiredX <= 705);
+      if (crossesLeft || crossesRight) {
+        s.dashT = 0;
+        s.dashPulse = undefined;
+        this.hurt(s, 5);
+        this.emitFx({ type: 'spark', x: s.x, y: STICK.y, col: '#a4e3a0', count: 8, sp: 150 });
+        this.emitFx({ type: 'txt', x: s.x, y: LBL_Y, text: 'BUMP! -5', col: '#ff6b6b' });
+        this.emitShake(5);
+        this.sfx('guardbreak');
+      }
+    }
     const tunnel = this.state.terrain === 'termite' && s.under;
     const boundedX = clamp(desiredX, tunnel ? 420 : STICK.l + 6, tunnel ? 780 : STICK.r - 6);
     let dxn = this.wallX(s, boundedX, true);
@@ -1265,14 +1351,16 @@ private stepSpider(s: LocalPlayerState, o: LocalPlayerState, inp: InputState, dt
     }
   }
   if (wait && free && s.stun <= 0) {
-    let wtx = s.id === 0 ? 440 : 760;
-    if (Math.abs(wtx - o.x) < 300) wtx = o.x < 600 ? 950 : 250;
+    const wtx = this.getSafeTerrainX(this.state.terrain, this.state, s.id === 0 ? 440 : 760, o.x);
     const wdx = wtx - s.x;
     v = Math.abs(wdx) > 3 ? Math.sign(wdx) * SPEED * 1.3 : 0;
   }
 
   if (v) {
-    if (!wait && this.state.terrain === 'bamboo' && !(s.species === 'wolf' && [235, 415, 595, 775, 955].some(x => Math.abs(s.x - x) < 22))) v *= Math.sign(v) === (Math.floor(this.state.terrainTime / 8) % 2 ? 1 : -1) ? 1.25 : .75;
+    if (!wait && this.state.terrain === 'bamboo' && !(s.species === 'wolf' && [235, 415, 595, 775, 955].some(x => Math.abs(s.x - x) < 22))) {
+      const wind = Math.floor(this.state.terrainTime / 8) % 2 ? 1 : -1;
+      v *= Math.sign(v) === wind ? 1.30 : 0.70;
+    }
     if (this.state.terrain === 'lilypad' && Math.abs(s.x - 600) < 95) v *= 1 - this.state.terrainSink * .55;
     const desiredX = clamp(s.x + v * dt, STICK.l + 6, STICK.r - 6);
     let nx = wait ? desiredX : this.wallX(s, desiredX);

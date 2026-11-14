@@ -1,6 +1,6 @@
 import { sound } from '../../audio';
 import { signInUser, signOutUser, signUpUser, validateUsername } from '../../auth';
-import { loadTurnstileScript, renderTurnstile, resetTurnstile } from '../../turnstile';
+import { loadTurnstileScript, renderTurnstile, resetTurnstile, removeTurnstile } from '../../turnstile';
 import { mountDemoFightArena } from './demoArena';
 
 export interface AccountState {
@@ -55,17 +55,32 @@ export function bindAccountEvents(
   };
 
   const ensureTurnstile = () => {
-    if (state.widgetId) return;
+    const widgetEl = container.querySelector('#turnstileWidget') as HTMLElement | null;
+    if (!widgetEl) return;
+
+    // If already mounted with active children in this element, avoid re-mounting
+    if (state.widgetId && widgetEl.children.length > 0) return;
+
+    // If widgetId was previously assigned but the DOM element was replaced, clean up stale widget
+    if (state.widgetId) {
+      removeTurnstile(state.widgetId);
+      state.widgetId = null;
+    }
+
     loadTurnstileScript().then(() => {
-      const widgetEl = container.querySelector('#turnstileWidget') as HTMLElement | null;
-      if (widgetEl && !state.widgetId) {
+      const el = container.querySelector('#turnstileWidget') as HTMLElement | null;
+      if (el && !state.widgetId) {
         state.widgetId = renderTurnstile(
-          widgetEl,
+          el,
           (token) => {
             state.captchaToken = token;
           },
           () => {
             state.captchaToken = null;
+          },
+          (errorCode) => {
+            state.captchaToken = null;
+            console.warn(`[Turnstile] Challenge encountered error: ${errorCode}`);
           }
         );
       }
@@ -206,13 +221,8 @@ export function bindAccountEvents(
         showAlert({ type: 'success', text: `Welcome, ${username}! Your callsign is active.` });
       }
     } else {
-      // Login
-      const hasTurnstileWidget = Boolean(container.querySelector('#turnstileWidget'));
-      if (hasTurnstileWidget && !state.captchaToken && typeof (window as any).turnstile !== 'undefined') {
-        showAlert({ type: 'error', text: 'Please complete the anti-spam verification.' });
-        return;
-      }
-
+      // Login - Pass captcha token if available, but do not client-block submission if Turnstile
+      // failed or is still loading (Supabase handles authentication and server-side verification).
       setSubmitLoading(true);
       showAlert(null);
 
@@ -234,7 +244,11 @@ export function bindAccountEvents(
   formAuth?.addEventListener('submit', submitHandler);
 
   return () => {
-    resetTurnstile(state.widgetId);
+    if (state.widgetId) {
+      removeTurnstile(state.widgetId);
+      state.widgetId = null;
+    }
+    state.captchaToken = null;
     cleanupArena?.();
   };
 }

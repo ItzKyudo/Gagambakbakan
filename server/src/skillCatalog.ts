@@ -3,6 +3,12 @@ export const SKILL_CATALOG = {
   "weaver": {
     "name": "Orb Weaver",
     "element": "Water",
+    "innatePassive": {
+    "name": "Soaked Strike",
+    "trigger": "Heavy Attack",
+    "effect": "Soaked (15% slow, 3s)",
+    "description": "Heavy Attack applies Soaked (15% slow for 3s)"
+},
     "nodes": {
       "S1": {
         "name": "Dewdrop Lash",
@@ -12,7 +18,11 @@ export const SKILL_CATALOG = {
         "icon": "A glowing cyan silk thread coiled inside a falling water droplet.",
         "tier": 1,
         "cost": 0,
-        "requires": []
+        "requires": [],
+        "tags": ["Single-Target","Projectile","CC (Slow)"],
+        "damage": "40 (+60% Light ATK) • 15% Slow",
+        "range": "7m Line",
+        "duration": "Debuff: 3s"
       },
       "S2": {
         "name": "Surface Tension Glide",
@@ -22,7 +32,11 @@ export const SKILL_CATALOG = {
         "icon": "Four spider leg tips resting on concentric blue water ripples.",
         "tier": 1,
         "cost": 0,
-        "requires": []
+        "requires": [],
+        "tags": ["Mobility (Dash)","Buff (Speed)"],
+        "damage": "+40% Move Speed • Ignores terrain friction",
+        "range": "Self (6m travel)",
+        "duration": "Buff: 2s"
       },
       "S3": {
         "name": "Condensation Snare",
@@ -32,7 +46,11 @@ export const SKILL_CATALOG = {
         "icon": "An octagonal spiderweb sparkling with three oversized aqua pearls.",
         "tier": 1,
         "cost": 0,
-        "requires": []
+        "requires": [],
+        "tags": ["AoE","Trap / Hazard","CC (Root, Slow)"],
+        "damage": "30 (+40% Light ATK) • Root + Soaked",
+        "range": "3m Radius",
+        "duration": "Root: 1.2s"
       },
       "S4": {
         "name": "Mist Veil Carapace",
@@ -42,7 +60,11 @@ export const SKILL_CATALOG = {
         "icon": "A spider carapace half-submerged in swirling pale-blue fog.",
         "tier": 1,
         "cost": 0,
-        "requires": []
+        "requires": [],
+        "tags": ["Defense (Mitigation)","Cleanse"],
+        "damage": "25% Damage Reduction • Cleanses Ignite",
+        "range": "Self",
+        "duration": "Buff: 3.5s"
       },
       "S5": {
         "name": "Pressurized Fang Jet",
@@ -54,7 +76,11 @@ export const SKILL_CATALOG = {
         "cost": 1,
         "requires": [
           "S1"
-        ]
+        ],
+        "tags": ["Line / Piercing","Projectile","CC (Knockback)"],
+        "damage": "65 (+80% Heavy ATK) • 2.5m Knockback on Soaked",
+        "range": "8m Beam",
+        "duration": "Instant"
       },
       "S6": {
         "name": "Riptide Pendulum",
@@ -67,7 +93,11 @@ export const SKILL_CATALOG = {
         "requires": [
           "S1",
           "S2"
-        ]
+        ],
+        "tags": ["Mobility (Grapple)","Displacement (Pull)","Single-Target"],
+        "damage": "55 (+70% Light ATK) • Pulls target 2.5m",
+        "range": "7m Tether",
+        "duration": "Instant"
       },
       "S7": {
         "name": "Fogbank Slipstream",
@@ -80,19 +110,27 @@ export const SKILL_CATALOG = {
         "requires": [
           "S2",
           "S3"
-        ]
+        ],
+        "tags": ["Mobility (Dash)","AoE (Zone)","Buff (Evasion)"],
+        "damage": "+20% Evasion • Obscures enemy vision",
+        "range": "4m Dash / 4m Cloud",
+        "duration": "Zone: 3s"
       },
       "S8": {
         "name": "Whirlpool Radial Web",
         "cooldown": 12.0,
-        "description": "Expands an active **Condensation Snare** into a spinning vortex that drags nearby enemies toward its center over 2.5s.",
+        "description": "Spins a 3.5m whirlpool web that drags nearby enemies toward its center over 2.5s. Gains +25% pull strength if cast on an existing **Condensation Snare**.",
         "animation": "Plunges front legs into the ground, causing the nearby web trap to spin rapidly like a whirlpool drain.",
         "icon": "A spiral water vortex woven with geometric white silk spokes.",
         "tier": 2,
         "cost": 1,
         "requires": [
           "S3"
-        ]
+        ],
+        "tags": ["AoE","Trap / Hazard","Displacement (Pull)"],
+        "damage": "Continuous inward vortex drag",
+        "range": "3.5m Radius",
+        "duration": "Vortex: 2.5s"
       },
       "S9": {
         "name": "Capillary Spines",
@@ -105,7 +143,11 @@ export const SKILL_CATALOG = {
         "requires": [
           "S3",
           "S4"
-        ]
+        ],
+        "tags": ["Buff (Thorns / Reflect)","CC (Slow)"],
+        "damage": "35 (+50% Light ATK) reflect per melee hit + Soaked",
+        "range": "Self (Melee)",
+        "duration": "Buff: 4s"
       },
       "S10": {
         "name": "Osmotic Regeneration",
@@ -118,7 +160,11 @@ export const SKILL_CATALOG = {
         "requires": [
           "S4",
           "S9"
-        ]
+        ],
+        "tags": ["AoE (Drain)","Sustain (Heal)"],
+        "damage": "Heals 45 HP (+40% Light ATK) per web/Soaked foe",
+        "range": "6m Radius",
+        "duration": "Over 3s"
       },
       "S11": {
         "name": "Geyser Rupture Bite",
@@ -131,7 +177,11 @@ export const SKILL_CATALOG = {
         "requires": [
           "S5",
           "S6"
-        ]
+        ],
+        "tags": ["Melee","Single-Target","CC (Knock-up)"],
+        "damage": "80 (+100% Heavy ATK) • 0.8s Knock-up on Soaked",
+        "range": "3m Lunge",
+        "duration": "Instant"
       },
       "S12": {
         "name": "Monsoon Vault",
@@ -144,7 +194,11 @@ export const SKILL_CATALOG = {
         "requires": [
           "S6",
           "S7"
-        ]
+        ],
+        "tags": ["Mobility (Leap)","AoE","Trap / Hazard"],
+        "damage": "70 (+85% Heavy ATK) • Spawns S3 Snare on land",
+        "range": "6m Leap / 3.5m AoE",
+        "duration": "Instant"
       },
       "S13": {
         "name": "Undertow Tether",
@@ -157,7 +211,11 @@ export const SKILL_CATALOG = {
         "requires": [
           "S7",
           "S8"
-        ]
+        ],
+        "tags": ["Single-Target","Displacement (Yank)","CC (Stun)"],
+        "damage": "Yanks back if distance > 5m + 1s Stun",
+        "range": "6m Range",
+        "duration": "Tether: 3s"
       },
       "S14": {
         "name": "Deluge Barrier",
@@ -170,11 +228,15 @@ export const SKILL_CATALOG = {
         "requires": [
           "S8",
           "S9"
-        ]
+        ],
+        "tags": ["Terrain / Wall","Projectile Block","CC (Slow)"],
+        "damage": "Blocks projectiles • 50% Slow to enemies passing",
+        "range": "6m Wide Wall",
+        "duration": "Wall: 4s"
       },
       "S15": {
         "name": "Abyssal Maelstrom Loom",
-        "cooldown": 30.0,
+        "cooldown": 20.0,
         "description": "Spins a massive 10m hydro-vortex for 5s that continuously pulls enemies inward, deals 35 damage per second, and refreshes **Soaked**.",
         "animation": "Leaps to the center, anchors eight giant hydro-cables outward, and spins violently to create a roaring whirlpool storm.",
         "icon": "A dark-blue oceanic maelstrom framed by an intricate golden-cyan orb web.",
@@ -184,11 +246,15 @@ export const SKILL_CATALOG = {
           "S11",
           "S12",
           "S13"
-        ]
+        ],
+        "tags": ["Ultimate","AoE (DoT)","Displacement (Pull)","CC (Slow)"],
+        "damage": "28 dmg/s (+24% Light ATK/s) • Strong inward pull",
+        "range": "6m Radius",
+        "duration": "Duration: 4s"
       },
       "S16": {
         "name": "Mirror Lake Sanctum",
-        "cooldown": 35.0,
+        "cooldown": 22.0,
         "description": "Floods an 8m arena with calm, reflective water for 6s. Inside, the Orb Weaver gains 35% cooldown reduction, immunity to roots, and heals 25 HP/s.",
         "animation": "Gently taps the ground with one pedipalp, sending out a serene turquoise ripple that turns the floor into a glowing mirror pond.",
         "icon": "A serene lotus-shaped spiderweb floating on glowing sapphire water.",
@@ -198,13 +264,23 @@ export const SKILL_CATALOG = {
           "S10",
           "S13",
           "S14"
-        ]
+        ],
+        "tags": ["Ultimate","AoE (Zone)","Buff (CDR, Root-Immune)","Sustain (Heal)"],
+        "damage": "+35% CDR, Root Immunity, 20 HP/s heal",
+        "range": "5m Radius",
+        "duration": "Duration: 5s"
       }
     }
   },
   "hunter": {
     "name": "Jumping Spider",
     "element": "Air",
+    "innatePassive": {
+    "name": "Tailwind Surge",
+    "trigger": "Heavy Attack",
+    "effect": "+1 Tailwind stack",
+    "description": "Heavy Attack grants +1 Tailwind stack on hit"
+},
     "nodes": {
       "S1": {
         "name": "Wind-Cutter Pounce",
@@ -214,7 +290,11 @@ export const SKILL_CATALOG = {
         "icon": "Two cute oversized spider eyes gleaming behind a sharp cyan wind slash.",
         "tier": 1,
         "cost": 0,
-        "requires": []
+        "requires": [],
+        "tags": ["Mobility (Leap)","Single-Target","Buff (Stacking)"],
+        "damage": "45 (+65% Light ATK) • +1 Tailwind stack (max 4)",
+        "range": "4m Leap",
+        "duration": "Instant"
       },
       "S2": {
         "name": "Thermal Updraft Hop",
@@ -224,7 +304,11 @@ export const SKILL_CATALOG = {
         "icon": "A jumping spider silhouette ascending above three upward wind chevrons.",
         "tier": 1,
         "cost": 0,
-        "requires": []
+        "requires": [],
+        "tags": ["Mobility (Vertical Leap)","Evasion"],
+        "damage": "Launches 5m vertically • Dodges ground attacks",
+        "range": "Vertical Self",
+        "duration": "Hover: 1.5s"
       },
       "S3": {
         "name": "Gust Tether",
@@ -234,7 +318,11 @@ export const SKILL_CATALOG = {
         "icon": "A taut silk dragline wrapped in a swirling mint-green tornado coil.",
         "tier": 1,
         "cost": 0,
-        "requires": []
+        "requires": [],
+        "tags": ["Mobility (Grapple)","Displacement (Pull-Down)"],
+        "damage": "Pulls self to target OR slams airborne foe to ground",
+        "range": "8m Line",
+        "duration": "Instant"
       },
       "S4": {
         "name": "Barometric Eye Focus",
@@ -244,7 +332,11 @@ export const SKILL_CATALOG = {
         "icon": "Four glowing emerald-cyan spider eyes surrounded by wind-wave radar rings.",
         "tier": 1,
         "cost": 0,
-        "requires": []
+        "requires": [],
+        "tags": ["Buff (Crit Chance)","Utility (True Sight)"],
+        "damage": "+25% Crit Chance • Reveals stealthed enemies",
+        "range": "8m Aura",
+        "duration": "Buff: 4s"
       },
       "S5": {
         "name": "Vacuum Fang Strike",
@@ -256,7 +348,11 @@ export const SKILL_CATALOG = {
         "cost": 1,
         "requires": [
           "S1"
-        ]
+        ],
+        "tags": ["Projectile","Line / Piercing","Trap-Break"],
+        "damage": "60 (+75% Light ATK) • Destroys web/vine traps",
+        "range": "8m Line",
+        "duration": "Instant"
       },
       "S6": {
         "name": "Gale-Force Dropkick",
@@ -269,7 +365,11 @@ export const SKILL_CATALOG = {
         "requires": [
           "S1",
           "S2"
-        ]
+        ],
+        "tags": ["Aerial Dive","Single-Target","Mobility (Disengage)"],
+        "damage": "70 (+90% Heavy ATK) • Bounces back 3m on hit",
+        "range": "6m Diagonal Dive",
+        "duration": "Instant"
       },
       "S7": {
         "name": "Zephyr Mirage",
@@ -282,7 +382,11 @@ export const SKILL_CATALOG = {
         "requires": [
           "S2",
           "S3"
-        ]
+        ],
+        "tags": ["Mobility (Side-Dash)","Decoy / Illusion","CC (Knockback)"],
+        "damage": "Leaves decoy; bursts for 2.5m Knockback if struck",
+        "range": "3.5m Dash / 2.5m Burst",
+        "duration": "Decoy: 1.5s"
       },
       "S8": {
         "name": "Cyclone Anchor",
@@ -294,7 +398,11 @@ export const SKILL_CATALOG = {
         "cost": 1,
         "requires": [
           "S3"
-        ]
+        ],
+        "tags": ["Trap / Hazard","AoE","CC (Knock-up)"],
+        "damage": "Launches stepping enemies 4m into the air (1s)",
+        "range": "2.5m Radius",
+        "duration": "Trap: 3s"
       },
       "S9": {
         "name": "Tailwind Deflection",
@@ -307,7 +415,11 @@ export const SKILL_CATALOG = {
         "requires": [
           "S3",
           "S4"
-        ]
+        ],
+        "tags": ["Defense (Projectile Reflect)","Buff (Stacking)"],
+        "damage": "Reflects projectiles at 100% dmg + 1 Tailwind",
+        "range": "Frontal Arc",
+        "duration": "Parry: 1.5s"
       },
       "S10": {
         "name": "Jetstream Carapace",
@@ -320,7 +432,11 @@ export const SKILL_CATALOG = {
         "requires": [
           "S4",
           "S9"
-        ]
+        ],
+        "tags": ["Defense (Shield)","Cleanse"],
+        "damage": "40 HP Shield per Tailwind stack (max 160) + Cleanse",
+        "range": "Self",
+        "duration": "Shield: 4s"
       },
       "S11": {
         "name": "Sonic Boom Ambush",
@@ -333,7 +449,11 @@ export const SKILL_CATALOG = {
         "requires": [
           "S5",
           "S6"
-        ]
+        ],
+        "tags": ["Mobility (Teleport)","Single-Target","CC (Silence)"],
+        "damage": "95 (+105% Heavy ATK) • Silences skills for 1s",
+        "range": "10m Blink",
+        "duration": "Instant"
       },
       "S12": {
         "name": "Stratosphere Ballooning",
@@ -346,7 +466,11 @@ export const SKILL_CATALOG = {
         "requires": [
           "S6",
           "S7"
-        ]
+        ],
+        "tags": ["Mobility (Flight)","Untargetable (Melee)"],
+        "damage": "Free aerial flight; immune to melee attacks",
+        "range": "Aerial Self",
+        "duration": "Flight: 3.5s"
       },
       "S13": {
         "name": "Vortex Downburst",
@@ -359,7 +483,11 @@ export const SKILL_CATALOG = {
         "requires": [
           "S7",
           "S8"
-        ]
+        ],
+        "tags": ["Aerial Slam","AoE","Displacement (Pull)","CC (Knock-up)"],
+        "damage": "75 (+90% Heavy ATK) • Pulls inward + 0.8s Knock-up",
+        "range": "3.5m Radius",
+        "duration": "Instant"
       },
       "S14": {
         "name": "Squall Wall",
@@ -372,11 +500,15 @@ export const SKILL_CATALOG = {
         "requires": [
           "S8",
           "S9"
-        ]
+        ],
+        "tags": ["Terrain / Zone","Buff (Speed)","CC (Pushback)"],
+        "damage": "+50% Ally Speed • Pushes enemies backward",
+        "range": "5m Corridor",
+        "duration": "Zone: 4s"
       },
       "S15": {
         "name": "Hurricane Sky-Breaker",
-        "cooldown": 28.0,
+        "cooldown": 18.0,
         "description": "Grabs an enemy with a wind-tether, rockets both spiders high into the air, strikes them 5 times from different angles, and slams them down for 160 total damage.",
         "animation": "Uppercuts the foe into a towering tornado, ricochets between wind rings in rapid cyan flashes, and piledrives them into the arena floor.",
         "icon": "A towering cyclone crossed by five glowing zig-zag strike trails.",
@@ -386,11 +518,15 @@ export const SKILL_CATALOG = {
           "S11",
           "S12",
           "S13"
-        ]
+        ],
+        "tags": ["Ultimate","Single-Target","CC (Airborne Lock)","Multi-Hit"],
+        "damage": "130 (5 × 26 + 96% Heavy ATK) • Aerial combo slam",
+        "range": "5m Grab Range",
+        "duration": "Combo: 1.8s"
       },
       "S16": {
         "name": "Eye of the Tempest",
-        "cooldown": 32.0,
+        "cooldown": 20.0,
         "description": "Surrounds the Jumping Spider with a 7m mobile storm ring for 6s. Enemies touching the outer ring are knocked back and take 40 damage; inside, jump cooldowns are reduced by 60%.",
         "animation": "Stands calmly in a crystal-clear center while a violent, roaring wall of swirling wind and static orbits at a 7-meter radius.",
         "icon": "A calm glowing spider eye framed inside a raging circular hurricane.",
@@ -400,13 +536,23 @@ export const SKILL_CATALOG = {
           "S10",
           "S13",
           "S14"
-        ]
+        ],
+        "tags": ["Ultimate","AoE (Aura)","CC (Knockback)","Buff (CDR)"],
+        "damage": "32 dmg + Knockback on ring touch • -60% Jump CDs",
+        "range": "4.5m Moving Ring",
+        "duration": "Duration: 5s"
       }
     }
   },
   "guardian": {
     "name": "Huntsman",
     "element": "Fire",
+    "innatePassive": {
+    "name": "Igniting Blow",
+    "trigger": "Heavy Attack",
+    "effect": "1 Ignite stack",
+    "description": "Heavy Attack applies 1 stack of Ignite (6 burn/s, 4s)"
+},
     "nodes": {
       "S1": {
         "name": "Cinder Fang Slash",
@@ -416,7 +562,11 @@ export const SKILL_CATALOG = {
         "icon": "Twin jagged fangs glowing like white-hot forged iron with sparks flying.",
         "tier": 1,
         "cost": 0,
-        "requires": []
+        "requires": [],
+        "tags": ["Melee","Multi-Hit","DoT (Ignite)"],
+        "damage": "35 (2 hits, +55% Light ATK) • +1 Ignite (6/s)",
+        "range": "2.5m Melee",
+        "duration": "DoT: 4s"
       },
       "S2": {
         "name": "Flashfire Dash",
@@ -426,7 +576,11 @@ export const SKILL_CATALOG = {
         "icon": "A flat, blurred spider silhouette streaking forward with a blazing flame tail.",
         "tier": 1,
         "cost": 0,
-        "requires": []
+        "requires": [],
+        "tags": ["Mobility (Dash)","AoE (Trail)","DoT (Ignite)"],
+        "damage": "20 dmg/s fire trail • Applies 1 Ignite",
+        "range": "6m Dash",
+        "duration": "Trail: 2.5s"
       },
       "S3": {
         "name": "Ember Spark Trap",
@@ -436,7 +590,11 @@ export const SKILL_CATALOG = {
         "icon": "A charred silk cocoon cracked open to reveal a glowing orange magma core.",
         "tier": 1,
         "cost": 0,
-        "requires": []
+        "requires": [],
+        "tags": ["Trap / Hazard","AoE","DoT (Ignite)"],
+        "damage": "50 (+65% Light ATK) • Applies 2 Ignite stacks",
+        "range": "3m Explosion",
+        "duration": "Trap: 12s"
       },
       "S4": {
         "name": "Molten Molt",
@@ -446,7 +604,11 @@ export const SKILL_CATALOG = {
         "icon": "A cracked dark spider shell bursting apart from internal golden fire.",
         "tier": 1,
         "cost": 0,
-        "requires": []
+        "requires": [],
+        "tags": ["Cleanse","Buff (Attack Speed)"],
+        "damage": "Cleanses all Slows/Roots • +30% Attack Speed",
+        "range": "Self",
+        "duration": "Buff: 4s"
       },
       "S5": {
         "name": "Searing Mandible Flurry",
@@ -458,7 +620,11 @@ export const SKILL_CATALOG = {
         "cost": 1,
         "requires": [
           "S1"
-        ]
+        ],
+        "tags": ["Melee","Multi-Hit","Cooldown Reset"],
+        "damage": "75 (4 hits, +95% Light ATK) • -0.5s S2 CD per hit",
+        "range": "2.8m Cone",
+        "duration": "Channel: 1.2s"
       },
       "S6": {
         "name": "Blazing Blitz",
@@ -471,7 +637,11 @@ export const SKILL_CATALOG = {
         "requires": [
           "S1",
           "S2"
-        ]
+        ],
+        "tags": ["Mobility (Lunge)","Single-Target","CC (Stun)"],
+        "damage": "60 (+80% Heavy ATK) • 0.6s Stun if 3+ Ignite",
+        "range": "7m Lunge",
+        "duration": "Instant"
       },
       "S7": {
         "name": "Smoke Screen Scuttle",
@@ -484,7 +654,11 @@ export const SKILL_CATALOG = {
         "requires": [
           "S2",
           "S3"
-        ]
+        ],
+        "tags": ["AoE (Zone)","CC (Blind)","Buff (Speed)"],
+        "damage": "Blinds enemies inside (2s) • +35% Move Speed",
+        "range": "3.2m Radius",
+        "duration": "Cloud: 3.5s"
       },
       "S8": {
         "name": "Ring of Ash",
@@ -496,7 +670,11 @@ export const SKILL_CATALOG = {
         "cost": 1,
         "requires": [
           "S3"
-        ]
+        ],
+        "tags": ["AoE (Perimeter)","Trap / Hazard","DoT (Ignite)"],
+        "damage": "65 (+75% Light ATK) on crossing + 2 Ignite",
+        "range": "3.5m Ring",
+        "duration": "Ring: 3s"
       },
       "S9": {
         "name": "Flame-Backlash Shell",
@@ -509,7 +687,11 @@ export const SKILL_CATALOG = {
         "requires": [
           "S3",
           "S4"
-        ]
+        ],
+        "tags": ["Defense (AoE Retaliation)","DoT (Ignite)"],
+        "damage": "40 (+50% Light ATK) AoE nova when hit + 1 Ignite",
+        "range": "3m Aura",
+        "duration": "Buff: 3s"
       },
       "S10": {
         "name": "Cauterize Wounds",
@@ -522,7 +704,11 @@ export const SKILL_CATALOG = {
         "requires": [
           "S4",
           "S9"
-        ]
+        ],
+        "tags": ["Sustain (Burst Heal)"],
+        "damage": "Heals 80 HP + 15 HP per active Ignite stack",
+        "range": "8m Scan",
+        "duration": "Instant"
       },
       "S11": {
         "name": "Detonating Bite",
@@ -535,7 +721,11 @@ export const SKILL_CATALOG = {
         "requires": [
           "S5",
           "S6"
-        ]
+        ],
+        "tags": ["Melee","Single-Target","Burst / Detonate"],
+        "damage": "55 (+80% Heavy ATK) + 25 dmg per Ignite consumed",
+        "range": "2.5m Melee",
+        "duration": "Instant"
       },
       "S12": {
         "name": "Afterburner Overdrive",
@@ -548,7 +738,11 @@ export const SKILL_CATALOG = {
         "requires": [
           "S6",
           "S7"
-        ]
+        ],
+        "tags": ["Buff (Speed + ATK Speed)","AoE (Trail)"],
+        "damage": "+40% Move Speed, +25% ATK Speed, continuous fire wake",
+        "range": "Self",
+        "duration": "Buff: 5s"
       },
       "S13": {
         "name": "Pyre Lockdown",
@@ -561,7 +755,11 @@ export const SKILL_CATALOG = {
         "requires": [
           "S7",
           "S8"
-        ]
+        ],
+        "tags": ["Projectile","CC (Root)","DoT (Ignite)"],
+        "damage": "Roots target 1.8s • Applies 1 Ignite every 0.6s",
+        "range": "6.5m Line",
+        "duration": "Root: 1.8s"
       },
       "S14": {
         "name": "Scorched Earth Trail",
@@ -574,11 +772,15 @@ export const SKILL_CATALOG = {
         "requires": [
           "S8",
           "S9"
-        ]
+        ],
+        "tags": ["Map-Wide","AoE (DoT)","Trap-Destroy"],
+        "damage": "Ignites all webs into 50 dmg/s hazards; destroys traps",
+        "range": "Arena-Wide",
+        "duration": "Burn: 3s"
       },
       "S15": {
         "name": "Supernova Guillotine",
-        "cooldown": 30.0,
+        "cooldown": 20.0,
         "description": "Sprints at unstoppable speed toward a target, grabs them, leaps into a fiery mid-air spin, and slams down for 150 damage (executes targets below 15% HP).",
         "animation": "Turns into a streaking crimson comet, latches onto the foe, spins into a blazing fire-wheel, and detonates on ground impact.",
         "icon": "A spinning crimson fire-wheel centered on a skull-patterned spider abdomen.",
@@ -588,11 +790,15 @@ export const SKILL_CATALOG = {
           "S11",
           "S12",
           "S13"
-        ]
+        ],
+        "tags": ["Ultimate","Mobility (Dash-Grab)","Execute"],
+        "damage": "120 (+100% Heavy ATK) • Executes targets below 15% HP",
+        "range": "5m Dash",
+        "duration": "Instant"
       },
       "S16": {
         "name": "Hellfire Crucible",
-        "cooldown": 35.0,
+        "cooldown": 22.0,
         "description": "Transforms a 9m radius into a volcanic caldera for 6s. Enemies inside cannot leave without dashing, take 20 burn damage/s, and suffer maximum **Ignite** stacks.",
         "animation": "Tears open the arena floor with all eight legs, raising a circular wall of jagged magma rock and roaring flames.",
         "icon": "A ring of jagged volcanic pillars surrounding a blazing inferno pit.",
@@ -602,13 +808,23 @@ export const SKILL_CATALOG = {
           "S10",
           "S13",
           "S14"
-        ]
+        ],
+        "tags": ["Ultimate","Terrain / Arena Cage","AoE (DoT)"],
+        "damage": "Traps foes inside • 16 dmg/s + max Ignite stacks",
+        "range": "5.5m Arena Ring",
+        "duration": "Duration: 5s"
       }
     }
   },
   "wolf": {
     "name": "Wolf Spider",
     "element": "Land",
+    "innatePassive": {
+    "name": "Armor Crush",
+    "trigger": "Heavy Attack",
+    "effect": "Armor Shred (-8%)",
+    "description": "Heavy Attack applies 1 stack of Armor Shred (-8%, 4s)"
+},
     "nodes": {
       "S1": {
         "name": "Granite Jaw Crush",
@@ -618,7 +834,11 @@ export const SKILL_CATALOG = {
         "icon": "Two massive, jagged stone mandibles crushing a cracked shield.",
         "tier": 1,
         "cost": 0,
-        "requires": []
+        "requires": [],
+        "tags": ["Melee","Single-Target","Debuff (Armor Shred)"],
+        "damage": "50 (+70% Heavy ATK) • -10% Armor (stacks 3x)",
+        "range": "2.5m Melee",
+        "duration": "Debuff: 4s"
       },
       "S2": {
         "name": "Burrow Tunnel",
@@ -628,7 +848,11 @@ export const SKILL_CATALOG = {
         "icon": "A spider emerging half-way out of a cracked earthen burrow hole.",
         "tier": 1,
         "cost": 0,
-        "requires": []
+        "requires": [],
+        "tags": ["Mobility (Subterranean)","Untargetable","AoE"],
+        "damage": "Untargetable underground; 40 (+50% Heavy ATK) on emerge",
+        "range": "7m Tunnel",
+        "duration": "Burrow: 2.5s"
       },
       "S3": {
         "name": "Seismic Stomp",
@@ -638,7 +862,11 @@ export const SKILL_CATALOG = {
         "icon": "Two heavy spider legs slamming into fractured earth with shockwave lines.",
         "tier": 1,
         "cost": 0,
-        "requires": []
+        "requires": [],
+        "tags": ["AoE","CC (Ground / Jump-Lock)"],
+        "damage": "45 (+65% Heavy ATK) • Grounds airborne foes (2s)",
+        "range": "4m Radius",
+        "duration": "Instant"
       },
       "S4": {
         "name": "Shale Armor Plating",
@@ -648,7 +876,11 @@ export const SKILL_CATALOG = {
         "icon": "A wolf spider carapace armored with interlocking hexagonal stone plates.",
         "tier": 1,
         "cost": 0,
-        "requires": []
+        "requires": [],
+        "tags": ["Defense (Shield)","CC Immunity (Knockback)"],
+        "damage": "90 HP Shield (+15% Max HP) • Knockback immune",
+        "range": "Self",
+        "duration": "Shield: 4s"
       },
       "S5": {
         "name": "Tectonic Maul",
@@ -660,7 +892,11 @@ export const SKILL_CATALOG = {
         "cost": 1,
         "requires": [
           "S1"
-        ]
+        ],
+        "tags": ["Melee","Grab / Slam","Bonus vs Shredded"],
+        "damage": "75 (+95% Heavy ATK) • +25 bonus dmg if Armor shredded",
+        "range": "2.5m Grab",
+        "duration": "Instant"
       },
       "S6": {
         "name": "Sinkhole Breach",
@@ -673,7 +909,11 @@ export const SKILL_CATALOG = {
         "requires": [
           "S1",
           "S2"
-        ]
+        ],
+        "tags": ["AoE","Displacement (Pull)","Mobility"],
+        "damage": "60 (+75% Heavy ATK) • Pulls enemies to center",
+        "range": "5m Range / 3m AoE",
+        "duration": "Instant"
       },
       "S7": {
         "name": "Sandstorm Prowl",
@@ -686,7 +926,11 @@ export const SKILL_CATALOG = {
         "requires": [
           "S2",
           "S3"
-        ]
+        ],
+        "tags": ["AoE (Aura)","CC (Slow + Blind)"],
+        "damage": "25% Slow + reduces enemy vision range",
+        "range": "3.2m Moving Aura",
+        "duration": "Aura: 3.5s"
       },
       "S8": {
         "name": "Faultline Fissure",
@@ -698,7 +942,11 @@ export const SKILL_CATALOG = {
         "cost": 1,
         "requires": [
           "S3"
-        ]
+        ],
+        "tags": ["Line AoE","CC (Stun + Ground)"],
+        "damage": "65 (+80% Heavy ATK) • 1s Stun + Tremor",
+        "range": "7m Line",
+        "duration": "Instant"
       },
       "S9": {
         "name": "Quartz Thorns",
@@ -711,12 +959,16 @@ export const SKILL_CATALOG = {
         "requires": [
           "S3",
           "S4"
-        ]
+        ],
+        "tags": ["Buff (Melee Damage)","Defense (Thorns)"],
+        "damage": "+20% Melee DMG & 30% Melee Reflect while shielded",
+        "range": "Self",
+        "duration": "Buff: 4s"
       },
       "S10": {
         "name": "Bedrock Fortification",
         "cooldown": 15.0,
-        "description": "Anchors legs into the earth for 4s, reducing all incoming damage by 45% and regenerating 30 HP/s while remaining mobile at 70% speed.",
+        "description": "Anchors legs into the earth for 4s, reducing all incoming damage by 25% and regenerating 18 HP/s while remaining mobile at 70% speed.",
         "animation": "Turns dark basalt-gray as heavy stone roots visibly tether its legs to the ground with every heavy step.",
         "icon": "A monolithic stone spider emblem framed by an unbreakable iron-rock bastion.",
         "tier": 3,
@@ -724,7 +976,11 @@ export const SKILL_CATALOG = {
         "requires": [
           "S4",
           "S9"
-        ]
+        ],
+        "tags": ["Defense (Mitigation)","Sustain (HoT)"],
+        "damage": "25% Damage Reduction + 18 HP/s heal (-30% speed)",
+        "range": "Self",
+        "duration": "Buff: 4s"
       },
       "S11": {
         "name": "Obsidian Impale",
@@ -737,7 +993,11 @@ export const SKILL_CATALOG = {
         "requires": [
           "S5",
           "S6"
-        ]
+        ],
+        "tags": ["Single-Target","DoT (Bleed)"],
+        "damage": "90 (+105% Heavy ATK) + 15 dmg/s Bleed (3s)",
+        "range": "5.5m Target",
+        "duration": "Instant"
       },
       "S12": {
         "name": "Landslide Charge",
@@ -750,7 +1010,11 @@ export const SKILL_CATALOG = {
         "requires": [
           "S6",
           "S7"
-        ]
+        ],
+        "tags": ["Mobility (Charge)","Displacement (Drag)","CC (Stun)"],
+        "damage": "70 (+85% Heavy ATK) • Drags foes; 1.2s Wall-Stun",
+        "range": "5.5m Charge",
+        "duration": "Instant"
       },
       "S13": {
         "name": "Quicksand Pit",
@@ -763,7 +1027,11 @@ export const SKILL_CATALOG = {
         "requires": [
           "S7",
           "S8"
-        ]
+        ],
+        "tags": ["AoE (Zone)","CC (Heavy Slow + Dash-Lock)"],
+        "damage": "20%→70% escalating Slow • Disables dashes/jumps",
+        "range": "3.6m Radius",
+        "duration": "Zone: 4s"
       },
       "S14": {
         "name": "Monolith Pillar",
@@ -776,11 +1044,15 @@ export const SKILL_CATALOG = {
         "requires": [
           "S8",
           "S9"
-        ]
+        ],
+        "tags": ["Terrain / Wall","Projectile Block","AoE"],
+        "damage": "Blocks movement/projectiles + 2.5m Tremor pulse",
+        "range": "3m Wide Pillar",
+        "duration": "Wall: 5s"
       },
       "S15": {
         "name": "Cataclysmic Meteor Slam",
-        "cooldown": 32.0,
+        "cooldown": 20.0,
         "description": "Burrows deep, launches high into the air encased in a giant boulder, and crashes down onto a target area for 155 AoE damage and a 1.8s stun.",
         "animation": "Dives underground, erupts skyward wrapped in a massive craggy rock sphere, and plummets down, shattering the arena floor on impact.",
         "icon": "A giant glowing fissure meteor crashing into a shattered stone arena.",
@@ -790,11 +1062,15 @@ export const SKILL_CATALOG = {
           "S11",
           "S12",
           "S13"
-        ]
+        ],
+        "tags": ["Ultimate","Mobility (Leap)","AoE","CC (Stun)"],
+        "damage": "125 (+104% Heavy ATK) • 1.8s AoE Stun",
+        "range": "5.5m Leap / 3m AoE",
+        "duration": "Instant"
       },
       "S16": {
         "name": "Continental Bastion",
-        "cooldown": 36.0,
+        "cooldown": 22.0,
         "description": "Raises a 10m ring of jagged canyon walls around the battlefield for 5.5s. Inside, the Wolf Spider gains a 200 HP stone shield and its attacks trigger mini-aftershocks.",
         "animation": "Roars and slams all eight legs sequentially, causing towering stone cliffs to erupt in a full circle around both combatants.",
         "icon": "A circular fortress of jagged stone cliffs surrounding an amber spider crest.",
@@ -804,13 +1080,23 @@ export const SKILL_CATALOG = {
           "S10",
           "S13",
           "S14"
-        ]
+        ],
+        "tags": ["Ultimate","Terrain / Arena Cage","Defense","AoE"],
+        "damage": "Traps foes in canyon ring • 160 HP Shield + aftershocks",
+        "range": "6m Arena Ring",
+        "duration": "Duration: 4.5s"
       }
     }
   },
   "lynx": {
     "name": "Lynx Spider",
     "element": "Nature",
+    "innatePassive": {
+    "name": "Toxic Fang",
+    "trigger": "Heavy Attack",
+    "effect": "Toxin (3s)",
+    "description": "Heavy Attack applies Toxin (-30% healing, 5 dmg/s for 3s)"
+},
     "nodes": {
       "S1": {
         "name": "Caustic Sap Spit",
@@ -820,7 +1106,11 @@ export const SKILL_CATALOG = {
         "icon": "A glowing lime-green venom droplet dripping from two thorny fangs.",
         "tier": 1,
         "cost": 0,
-        "requires": []
+        "requires": [],
+        "tags": ["Projectile","Single-Target","DoT","Debuff (Anti-Heal)"],
+        "damage": "40 (+65% Light ATK) • -30% Healing + 5 dmg/s (4s)",
+        "range": "9m Line",
+        "duration": "Debuff: 4s"
       },
       "S2": {
         "name": "Vine Swing Leap",
@@ -830,7 +1120,11 @@ export const SKILL_CATALOG = {
         "icon": "A vibrant green vine curled into a hook with small pointed leaves.",
         "tier": 1,
         "cost": 0,
-        "requires": []
+        "requires": [],
+        "tags": ["Mobility (Grapple-Leap)","Buff (Speed)"],
+        "damage": "Vaults 6m; +25% Move Speed near nature hazards (2s)",
+        "range": "6m Leap",
+        "duration": "Instant"
       },
       "S3": {
         "name": "Briar Thicket Snare",
@@ -840,7 +1134,11 @@ export const SKILL_CATALOG = {
         "icon": "A tangled knot of emerald vines covered in sharp crimson thorns.",
         "tier": 1,
         "cost": 0,
-        "requires": []
+        "requires": [],
+        "tags": ["AoE (Zone)","Trap / Hazard","Sustain (Leech)"],
+        "damage": "15 dmg/m walked + heals Lynx 10 HP/s",
+        "range": "3.5m Radius",
+        "duration": "Patch: 6s"
       },
       "S4": {
         "name": "Chlorophyll Camouflage",
@@ -850,7 +1148,11 @@ export const SKILL_CATALOG = {
         "icon": "A spider silhouette half-morphed into a serrated green leaf.",
         "tier": 1,
         "cost": 0,
-        "requires": []
+        "requires": [],
+        "tags": ["Stealth (Invisibility)","Buff (Empowered Hit)"],
+        "damage": "Invisible for 3s • Next hit deals +35 bonus dmg",
+        "range": "Self",
+        "duration": "Stealth: 3s"
       },
       "S5": {
         "name": "Neurotoxin Volley",
@@ -862,7 +1164,11 @@ export const SKILL_CATALOG = {
         "cost": 1,
         "requires": [
           "S1"
-        ]
+        ],
+        "tags": ["Projectile","Cone AoE","Debuff (ATK Speed Slow)"],
+        "damage": "3 × 30 (+40% Light ATK each) • -25% ATK Speed if 2+ hit",
+        "range": "8m Cone",
+        "duration": "Debuff: 3s"
       },
       "S6": {
         "name": "Needle-Leaf Pounce",
@@ -875,7 +1181,11 @@ export const SKILL_CATALOG = {
         "requires": [
           "S1",
           "S2"
-        ]
+        ],
+        "tags": ["Mobility (Dash-Retreat)","Single-Target"],
+        "damage": "60 (+80% Heavy ATK) • Auto-backflips 4m after hit",
+        "range": "5m Dash",
+        "duration": "Instant"
       },
       "S7": {
         "name": "Spore Cloud Retreat",
@@ -888,7 +1198,11 @@ export const SKILL_CATALOG = {
         "requires": [
           "S2",
           "S3"
-        ]
+        ],
+        "tags": ["Mobility (Backflip)","AoE (Zone)","CC (Confuse)"],
+        "damage": "Applies Toxin + inverts enemy movement inputs (1s)",
+        "range": "4m Backflip / 4m Cloud",
+        "duration": "Cloud: 3s"
       },
       "S8": {
         "name": "Strangler Root Bind",
@@ -900,7 +1214,11 @@ export const SKILL_CATALOG = {
         "cost": 1,
         "requires": [
           "S3"
-        ]
+        ],
+        "tags": ["Single-Target","CC (Root)","Sustain (Life Drain)"],
+        "damage": "Roots Toxined foe 1.6s • Drains 40 HP (+50% Light ATK)",
+        "range": "7m Range",
+        "duration": "Root: 1.6s"
       },
       "S9": {
         "name": "Barkskin Symbiosis",
@@ -913,7 +1231,11 @@ export const SKILL_CATALOG = {
         "requires": [
           "S3",
           "S4"
-        ]
+        ],
+        "tags": ["Defense (Mitigation)","Thorns (Poison)"],
+        "damage": "25% Damage Reduction • Applies Toxin to melee attackers",
+        "range": "Self",
+        "duration": "Buff: 4s"
       },
       "S10": {
         "name": "Photosynthetic Mend",
@@ -926,7 +1248,11 @@ export const SKILL_CATALOG = {
         "requires": [
           "S4",
           "S9"
-        ]
+        ],
+        "tags": ["Sustain (Heal)"],
+        "damage": "Heals 75 HP (+50% Light ATK); +50% heal in Briar/Stealth",
+        "range": "Self",
+        "duration": "Over 3s"
       },
       "S11": {
         "name": "Necrotic Bloom Bite",
@@ -939,7 +1265,11 @@ export const SKILL_CATALOG = {
         "requires": [
           "S5",
           "S6"
-        ]
+        ],
+        "tags": ["Single-Target","Delayed AoE Burst"],
+        "damage": "65 (+80% Heavy ATK) + 55 (+70% Light ATK) burst after 2s",
+        "range": "6m Range / 3.5m Burst",
+        "duration": "Delay: 2s"
       },
       "S12": {
         "name": "Canopy Ambush",
@@ -952,7 +1282,11 @@ export const SKILL_CATALOG = {
         "requires": [
           "S6",
           "S7"
-        ]
+        ],
+        "tags": ["Mobility (Teleport-Drop)","AoE","Cooldown Reset"],
+        "damage": "75 (+90% Heavy ATK) • Resets S1 Caustic Sap Spit",
+        "range": "8m Range / 3m AoE",
+        "duration": "Instant"
       },
       "S13": {
         "name": "Hallucinogenic Pollen",
@@ -965,7 +1299,11 @@ export const SKILL_CATALOG = {
         "requires": [
           "S7",
           "S8"
-        ]
+        ],
+        "tags": ["AoE","Decoy / Illusion"],
+        "damage": "50 (+60% Light ATK) • Spawns 2 fake attacking clones",
+        "range": "4m Range / 2.4m AoE",
+        "duration": "Clones: 2.5s"
       },
       "S14": {
         "name": "Overgrowth Barricade",
@@ -978,11 +1316,15 @@ export const SKILL_CATALOG = {
         "requires": [
           "S8",
           "S9"
-        ]
+        ],
+        "tags": ["Terrain / Wall","AoE (DoT)"],
+        "damage": "Blocks movement • Lashes foes within 2m for 25 dmg/s",
+        "range": "3.6m Wide Wall",
+        "duration": "Wall: 4.5s"
       },
       "S15": {
         "name": "Viper-Vine Execution",
-        "cooldown": 30.0,
+        "cooldown": 20.0,
         "description": "Unleashes four giant venomous viper-vines from spinnerets that lash forward 10m, impaling the target for 145 damage, pulling them into a **Briar Thicket**, and draining 75 HP.",
         "animation": "Rears up as four colossal, serpent-headed thorny vines burst from behind it, strike the enemy simultaneously, and siphon glowing green life energy back.",
         "icon": "Four serpent-shaped thorny vines striking inward with dripping emerald venom.",
@@ -992,11 +1334,15 @@ export const SKILL_CATALOG = {
           "S11",
           "S12",
           "S13"
-        ]
+        ],
+        "tags": ["Ultimate","Line / Multi-Tendril","Displacement (Pull)","Sustain"],
+        "damage": "116 (+96% Light ATK) • Pulls into Briar + drains 60 HP",
+        "range": "6m Line",
+        "duration": "Instant"
       },
       "S16": {
         "name": "Primeval Jungle Domain",
-        "cooldown": 35.0,
+        "cooldown": 22.0,
         "description": "Overgrows an 9m radius into a dense jungle canopy for 6s. Inside, the Lynx Spider re-enters stealth every 1.5s when not attacking, gains +30% ranged spit speed, and enemies suffer constant **Toxin**.",
         "animation": "Releases a burst of emerald spores that instantly covers the arena floor in lush ferns, glowing toxic flowers, and hanging canopy vines.",
         "icon": "A glowing emerald spider emblem crowned by a lush, overgrown jungle canopy.",
@@ -1006,7 +1352,11 @@ export const SKILL_CATALOG = {
           "S10",
           "S13",
           "S14"
-        ]
+        ],
+        "tags": ["Ultimate","AoE (Zone)","Stealth","DoT (Poison)"],
+        "damage": "Re-stealths every 1.5s, +30% spit speed, permanent Toxin",
+        "range": "5.5m Radius",
+        "duration": "Duration: 5s"
       }
     }
   }

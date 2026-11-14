@@ -1,4 +1,4 @@
-import { ALL_ABILITY_IDS, getSpiderAbility } from '../../game/abilities';
+import { ALL_ABILITY_IDS, getSpiderAbility, getSpiderInnatePassive } from '../../game/abilities';
 import { spiderAbilityIcon } from '../../game/spiderIcons';
 import { SPIDERS, spiderSVG } from '../../gb';
 import { GagambakbakanScene } from '../../game/GagambakbakanScene';
@@ -91,18 +91,65 @@ export function renderGuideView(): string {
       <div class="guide-tabs guide-spider-tabs" role="tablist" aria-label="Choose spider" data-guide-group="spider">
         ${SPIDERS.map((spider, index) => `<button type="button" role="tab" id="guide-tab-${spider.id}" data-guide-value="${spider.id}" aria-controls="guide-panel-${spider.id}" aria-selected="${index === 0}" tabindex="${index === 0 ? 0 : -1}"><span class="guide-tab-portrait">${portrait(spider.id, `-guide-tab-${spider.id}`)}</span>${spider.name}</button>`).join('')}
       </div>
-      ${SPIDERS.map((spider, spiderIndex) => `<section class="guide-spider" id="guide-panel-${spider.id}" role="tabpanel" aria-labelledby="guide-tab-${spider.id}" data-guide-panel="spider" data-guide-value="${spider.id}" ${spiderIndex ? 'hidden' : ''}>
+      ${SPIDERS.map((spider, spiderIndex) => {
+        const innate = getSpiderInnatePassive(spider.id);
+        return `<section class="guide-spider" id="guide-panel-${spider.id}" role="tabpanel" aria-labelledby="guide-tab-${spider.id}" data-guide-panel="spider" data-guide-value="${spider.id}" ${spiderIndex ? 'hidden' : ''}>
         <div class="guide-spider-head">
-          <div class="guide-spider-intro"><div class="guide-spider-portrait">${portrait(spider.id, `-guide-hero-${spider.id}`)}</div><div><h2>${spider.name}</h2><p>${spider.description}</p><span>${ALL_ABILITY_IDS.length} skills</span></div></div>
-          <div class="guide-selected-skill" aria-live="polite"><p class="guide-skill-prompt" data-guide-prompt>Choose a skill below to see what it does and when to use it.</p>
-            <div data-guide-detail hidden><div class="guide-selected-top"><img data-guide-icon alt=""><div><small data-guide-cooldown></small><h3 data-guide-name></h3></div></div><p data-guide-desc></p><p class="guide-best-use"><b>Best time to use</b><span data-guide-best></span></p></div>
+          <div class="guide-spider-intro">
+            <div class="guide-spider-portrait">${portrait(spider.id, `-guide-hero-${spider.id}`)}</div>
+            <div>
+              <h2>${spider.name} <span class="guide-element-pill element-${spider.element.toLowerCase()}">${spider.element}</span></h2>
+              <p>${spider.description}</p>
+              ${innate ? `
+                <div class="guide-innate-box">
+                  <span class="guide-innate-badge">Innate Passive &middot; Heavy Attack</span>
+                  <div class="guide-innate-content">
+                    <strong>${innate.name}:</strong> <span>${innate.description}</span>
+                  </div>
+                </div>
+              ` : ''}
+              <span class="guide-skills-count">${ALL_ABILITY_IDS.length} skills</span>
+            </div>
+          </div>
+          <div class="guide-selected-skill" aria-live="polite">
+            <p class="guide-skill-prompt" data-guide-prompt>Choose a skill below to see its combat tags, damage scaling, range, and tactical usage.</p>
+            <div data-guide-detail hidden>
+              <div class="guide-selected-top">
+                <img data-guide-icon alt="">
+                <div>
+                  <div class="guide-selected-meta">
+                    <small data-guide-cooldown></small>
+                    <span class="guide-sector-badge" data-guide-sector></span>
+                  </div>
+                  <h3 data-guide-name></h3>
+                </div>
+              </div>
+              <div class="guide-skill-tags" data-guide-tags></div>
+              <div class="guide-skill-stat-grid" data-guide-stats>
+                <div class="guide-stat-card">
+                  <small>Damage / Effect</small>
+                  <strong data-guide-damage></strong>
+                </div>
+                <div class="guide-stat-card">
+                  <small>Range / AoE</small>
+                  <strong data-guide-range></strong>
+                </div>
+                <div class="guide-stat-card">
+                  <small>Duration / Cooldown</small>
+                  <strong data-guide-duration></strong>
+                </div>
+              </div>
+              <p data-guide-desc></p>
+              <p class="guide-best-use"><b>Best time to use</b><span data-guide-best></span></p>
+            </div>
           </div>
         </div>
         <div class="guide-skill-grid">${ALL_ABILITY_IDS.map((id, index) => {
           const ability = getSpiderAbility(spider.id, id);
           return `<button type="button" class="guide-skill" data-guide-ability="${id}" aria-pressed="false"><img src="${spiderAbilityIcon(spider.id, id)}" alt="" loading="lazy"><span><small>${index + 1} / ${ALL_ABILITY_IDS.length}</small><strong>${ability.name}</strong></span></button>`;
         }).join('')}</div>
-      </section>`).join('')}
+      </section>`;
+      }).join('')}
     </section>
     <section id="guide-panel-terrain" role="tabpanel" aria-labelledby="guide-tab-terrain" data-guide-panel="section" data-guide-value="terrain" hidden>
       <div class="guide-tabs guide-arena-tabs" role="tablist" aria-label="Choose terrain" data-guide-group="terrain">
@@ -143,6 +190,24 @@ export function bindGuideView(container: HTMLElement): () => void {
       panel.querySelector<HTMLElement>('[data-guide-cooldown]')!.textContent = `${ability.cd}s cooldown`;
       panel.querySelector<HTMLElement>('[data-guide-desc]')!.textContent = ability.desc;
       panel.querySelector<HTMLElement>('[data-guide-best]')!.textContent = bestUse[species][index];
+
+      const tagsEl = panel.querySelector<HTMLElement>('[data-guide-tags]');
+      if (tagsEl) {
+        tagsEl.innerHTML = (ability.tags || [])
+          .map(tag => `<span class="guide-tag">${tag}</span>`)
+          .join('');
+      }
+      const sectorEl = panel.querySelector<HTMLElement>('[data-guide-sector]');
+      if (sectorEl) {
+        sectorEl.textContent = ability.sectorName;
+        sectorEl.style.color = ability.sectorColor;
+      }
+      const damageEl = panel.querySelector<HTMLElement>('[data-guide-damage]');
+      if (damageEl) damageEl.textContent = ability.damage || '—';
+      const rangeEl = panel.querySelector<HTMLElement>('[data-guide-range]');
+      if (rangeEl) rangeEl.textContent = ability.range || '—';
+      const durationEl = panel.querySelector<HTMLElement>('[data-guide-duration]');
+      if (durationEl) durationEl.textContent = ability.duration || 'Instant';
     }));
   });
   const previews = new Map<TerrainId, (seconds: number) => void>();

@@ -1,5 +1,5 @@
 import { sound } from '../../audio';
-import { DEF_LOOK, customPatternSVG, getColor, getLevel, getLooks, getProgress, randomLook, saveLooks } from '../../gb';
+import { DEF_LOOK, customPatternSVG, getColor, getLevel, getLooks, getProgress, randomLook, saveLooks, COLORS, SPIDER_COLORS, type SpiderLook } from '../../gb';
 import { fetchPodiumChampionStatus, getCachedPodiumChampionStatus } from '../../auth';
 import { decodePatternArt, encodePatternArt, type PatternStroke } from '../../patternArt';
 
@@ -51,6 +51,27 @@ export function bindCustomizeEvents(container: HTMLElement, state: CustomizeStat
       if (capStrong) capStrong.textContent = lk.name;
     });
   }
+
+  // Species / Spider Type
+  container.querySelectorAll('.opt[data-species]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const speciesId = (btn as HTMLElement).dataset.species as SpiderLook['species'];
+      if (!speciesId || lk.species === speciesId) return;
+      lk.species = speciesId;
+      const allowed = SPIDER_COLORS[speciesId] || [];
+      if (!allowed.includes(lk.color)) {
+        const wasColorName = COLORS.some(c => c.label.toLowerCase() === lk.name.toLowerCase());
+        lk.color = allowed[0] || 'azure';
+        if (wasColorName) {
+          lk.name = getColor(lk.color).label;
+        }
+      }
+      looks[state.player] = lk;
+      saveLooks(looks);
+      sound.playTone(620, 0.06, 'triangle', 0.04, 180);
+      render();
+    });
+  });
 
   // Swatches
   container.querySelectorAll('.sw[data-col]').forEach(btn => {

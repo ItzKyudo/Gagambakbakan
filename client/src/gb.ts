@@ -290,16 +290,16 @@ export function isAccessoryUnlocked(
 }
 
 export const DEF_LOOK: { p1: SpiderLook; p2: SpiderLook } = {
-  p1: { name: 'Amber', species: 'weaver', color: 'amber', pattern: 'stripes', acc: 'none', customPattern: '' },
+  p1: { name: 'Azure', species: 'weaver', color: 'azure', pattern: 'stripes', acc: 'none', customPattern: '' },
   p2: { name: 'Jade', species: 'hunter', color: 'jade', pattern: 'stripes', acc: 'none', customPattern: '' }
 };
 
 export const SPIDERS = [
-  { id: 'weaver', name: 'Orb Weaver', skill: 'dash', description: 'Water trapper: soak and control space.', pool: ALL_ABILITY_IDS },
-  { id: 'hunter', name: 'Jumping Spider', skill: 'dash', description: 'Air skirmisher: leap, evade, and burst.', pool: ALL_ABILITY_IDS },
-  { id: 'guardian', name: 'Huntsman', skill: 'dash', description: 'Fire hunter: rush down and ignite rivals.', pool: ALL_ABILITY_IDS },
-  { id: 'wolf', name: 'Wolf Spider', skill: 'dash', description: 'Land bruiser: ground rivals and break armor.', pool: ALL_ABILITY_IDS },
-  { id: 'lynx', name: 'Lynx Spider', skill: 'dash', description: 'Nature stalker: toxin, briars, and leech.', pool: ALL_ABILITY_IDS }
+  { id: 'weaver', name: 'Orb Weaver', element: 'Water', skill: 'dash', description: 'Water trapper: soak and control space.', pool: ALL_ABILITY_IDS },
+  { id: 'hunter', name: 'Jumping Spider', element: 'Air', skill: 'dash', description: 'Air skirmisher: leap, evade, and burst.', pool: ALL_ABILITY_IDS },
+  { id: 'guardian', name: 'Huntsman', element: 'Fire', skill: 'dash', description: 'Fire hunter: rush down and ignite rivals.', pool: ALL_ABILITY_IDS },
+  { id: 'wolf', name: 'Wolf Spider', element: 'Land', skill: 'dash', description: 'Land bruiser: ground rivals and break armor.', pool: ALL_ABILITY_IDS },
+  { id: 'lynx', name: 'Lynx Spider', element: 'Nature', skill: 'dash', description: 'Nature stalker: toxin, briars, and leech.', pool: ALL_ABILITY_IDS }
 ] as const;
 
 export function spiderStarter(species: string): AbilityId {
@@ -360,12 +360,15 @@ export function saveLooks(l: { p1: SpiderLook; p2: SpiderLook }): void {
 }
 
 export function randomLook(playerLevel = 1, podium?: { isTop1Rank?: boolean; isTop1Level?: boolean }): SpiderLook {
-  const c = COLORS[Math.floor(Math.random() * COLORS.length)];
+  const species = SPIDERS[Math.floor(Math.random() * SPIDERS.length)].id;
+  const allowedColors = SPIDER_COLORS[species] || COLORS.map(c => c.id);
+  const colorId = allowedColors[Math.floor(Math.random() * allowedColors.length)];
+  const c = getColor(colorId);
   const unlocked = ACCS.filter(([id]) => isAccessoryUnlocked(id, playerLevel, podium).unlocked);
   const pickedAcc = (unlocked.length > 0 ? unlocked : [['none', 'None']])[Math.floor(Math.random() * (unlocked.length || 1))][0];
   return {
     name: c.label,
-    species: SPIDERS[Math.floor(Math.random() * SPIDERS.length)].id,
+    species,
     color: c.id,
     pattern: PATTERNS[Math.floor(Math.random() * (PATTERNS.length - 1))][0],
     acc: pickedAcc,
@@ -705,6 +708,14 @@ export const ACTIONS: [keyof KeyBindings, string][] = [
 export const DEF_KEYS: PlayerKeys = {
   p1: { left: 'KeyA', right: 'KeyD', strike: 'KeyF', heavy: 'KeyR', block: 'KeyG', climb: 'Space', s1: 'KeyQ', s2: 'KeyE' },
   p2: { left: 'ArrowLeft', right: 'ArrowRight', strike: 'KeyK', heavy: 'KeyI', block: 'KeyL', climb: 'Enter', s1: 'Comma', s2: 'Period' }
+};
+
+export const SPIDER_COLORS: Record<string, string[]> = {
+  weaver:   ['azure', 'cyan', 'pearl', 'midnight', 'bone'],
+  hunter:   ['jade', 'cyan', 'pearl', 'lime', 'bone'],
+  guardian: ['ruby', 'coral', 'crimson', 'amber', 'gold'],
+  wolf:     ['amber', 'gold', 'bone', 'obsidian', 'coral'],
+  lynx:     ['lime', 'toxic', 'jade', 'bone', 'gold'],
 };
 
 export const RESERVED_KEYS: string[] = ['Escape', 'KeyP', 'KeyH', 'Tab', 'F5', 'F12'];

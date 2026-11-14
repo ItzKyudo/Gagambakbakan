@@ -5,7 +5,10 @@ import {
   EXCLUSIVE_ACCS,
   COLORS,
   PATTERNS,
+  SPIDERS,
+  SPIDER_COLORS,
   accessorySVG,
+  getColor,
   getLevel,
   getLooks,
   getProgress,
@@ -17,12 +20,23 @@ import { renderPodiumBadge } from './leaderboardBadge';
 
 const LOCK_ICON = `<svg class="ico lock-ico" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`;
 
+const spiderCanonicalColors: Record<string, string> = {
+  weaver: 'azure',
+  hunter: 'jade',
+  guardian: 'ruby',
+  wolf: 'amber',
+  lynx: 'lime'
+};
+
 export function renderCustomizeView(customizePlayer: 'p1' | 'p2', drawColor: string): string {
   const looks = getLooks();
   const lk = looks[customizePlayer];
   const name = lk.name.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]!));
   const patternLabel = PATTERNS.find(([id]) => id === lk.pattern)?.[1];
   const accessoryLabel = ACCS.find(([id]) => id === lk.acc)?.[1];
+  const currentSpider = SPIDERS.find(s => s.id === lk.species) || SPIDERS[0];
+  const allowedColorIds = SPIDER_COLORS[lk.species] || COLORS.map(c => c.id);
+  const allowedColors = allowedColorIds.map(id => getColor(id));
   const prog = getProgress();
   const playerLvl = getLevel(prog.onlineExp);
   const podium = getCachedPodiumChampionStatus();
@@ -36,7 +50,7 @@ export function renderCustomizeView(customizePlayer: 'p1' | 'p2', drawColor: str
           <button type="button" class="btn ghost" id="btnBackToMain">Menu</button>
         </div>
       </header>
-      <p class="note customize-note">Build your fighter. Every change saves automatically and carries into battle.</p>
+      <p class="note customize-note">Build your fighter. Choose your spider species, elemental shade, and combat style.</p>
 
       <section class="custom" aria-label="Customize your spider">
         <div class="tabs" role="group" aria-label="Which player">
@@ -45,11 +59,11 @@ export function renderCustomizeView(customizePlayer: 'p1' | 'p2', drawColor: str
         </div>
 
         <div class="custom-preview-column">
-          <div class="preview ${lk.pattern === 'custom' ? 'pattern-editing' : ''}" id="preview" role="img" aria-label="${name}, ${patternLabel} pattern, ${accessoryLabel} accessory" ${lk.pattern === 'custom' ? 'aria-describedby="patternHelp"' : ''}>
+          <div class="preview ${lk.pattern === 'custom' ? 'pattern-editing' : ''}" id="preview" role="img" aria-label="${name}, ${currentSpider.name} (${currentSpider.element}), ${patternLabel} pattern, ${accessoryLabel} accessory" ${lk.pattern === 'custom' ? 'aria-describedby="patternHelp"' : ''}>
             ${spiderSVG(lk, '-cust', getLevel(getProgress().spiderProgress?.[lk.species]?.exp || 0))}
             <div class="preview-caption" aria-hidden="true">
               <strong>${name}</strong>
-              <span>${patternLabel} &middot; ${accessoryLabel}</span>
+              <span>${currentSpider.name} (${currentSpider.element}) &middot; ${patternLabel}</span>
             </div>
           </div>
 
@@ -59,9 +73,12 @@ export function renderCustomizeView(customizePlayer: 'p1' | 'p2', drawColor: str
           </div>
 
           <fieldset class="field custom-color-field">
-            <legend class="lbl">Shell color</legend>
+            <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:2px;">
+              <legend class="lbl" style="margin:0;">Shell color</legend>
+              <span class="note" style="font-size:11px; color:var(--muted); text-transform:uppercase;">${currentSpider.element} shades</span>
+            </div>
             <div class="swatches" id="sw">
-              ${COLORS.map(col => `
+              ${allowedColors.map(col => `
                 <button type="button" class="sw" data-col="${col.id}" style="--c:${col.main}" aria-label="${col.label}" title="${col.label}" aria-pressed="${lk.color === col.id}"></button>
               `).join('')}
             </div>
@@ -74,6 +91,26 @@ export function renderCustomizeView(customizePlayer: 'p1' | 'p2', drawColor: str
         </div>
 
         <div class="custom-options-column">
+          <!-- SPIDER TYPE SELECTOR -->
+          <fieldset class="field custom-species-field">
+            <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px;">
+              <legend class="lbl" style="margin:0;">Spider Type &amp; Element</legend>
+              <span class="note" style="font-size:11px; color:var(--muted);">5 combat classes</span>
+            </div>
+            <div class="opts visual-opts species-opts" id="speciesSelect">
+              ${SPIDERS.map(s => {
+                const isSelected = lk.species === s.id;
+                return `
+                  <button type="button" class="opt species-opt" data-species="${s.id}" aria-label="${s.name} (${s.element} type)" aria-pressed="${isSelected}">
+                    <span class="choice-preview species-preview" aria-hidden="true">${spiderSVG({ name: s.name, species: s.id, color: spiderCanonicalColors[s.id] || 'azure', pattern: 'stripes', acc: 'none', customPattern: '' }, `-cust-spec-${s.id}`)}</span>
+                    <span class="opt-name species-opt-name">${s.name}</span>
+                    <span class="species-element-badge element-${s.element.toLowerCase()}">${s.element}</span>
+                  </button>
+                `;
+              }).join('')}
+            </div>
+          </fieldset>
+
           <fieldset class="field">
             <legend class="lbl">Body pattern</legend>
             <div class="opts visual-opts" id="pat">

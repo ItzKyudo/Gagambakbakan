@@ -39,6 +39,16 @@ export interface AbilityDef {
   tip: string;
   x: number;
   y: number;
+  tags?: readonly string[];
+  damage?: string;
+  range?: string;
+  duration?: string;
+  innatePassive?: {
+    name: string;
+    trigger: string;
+    effect: string;
+    description: string;
+  };
 }
 
 export const ABILITIES: Record<AbilityId, AbilityDef> = {
@@ -329,13 +339,31 @@ export function getSpiderAbility(species: string, id: AbilityId): AbilityDef {
   const key = `${species}:${base.id}`;
   const cached = spiderAbilityCache.get(key);
   if (cached) return cached;
-  const node = SKILL_CATALOG[species as SkillSpecies]?.nodes[nodeForAbility(base.id)!] || SKILL_CATALOG.weaver.nodes.S1;
+  const catalogEntry = SKILL_CATALOG[species as SkillSpecies] || SKILL_CATALOG.weaver;
+  const node = catalogEntry.nodes[nodeForAbility(base.id)!] || SKILL_CATALOG.weaver.nodes.S1;
   const tierNames = ['STARTER CORE', 'INNER HEX', 'OUTER HEX', 'APEX'];
   const tierColors = ['#ffd694', '#4cc7b2', '#b8a5ff', '#ffae79'];
-  const ability = { ...base, name: node.name, cd: node.cooldown, desc: node.description.replaceAll('**', ''),
-    tip: node.animation, sectorName: tierNames[node.tier - 1], sectorColor: tierColors[node.tier - 1] };
+  const ability: AbilityDef = {
+    ...base,
+    name: node.name,
+    cd: node.cooldown,
+    desc: node.description.replaceAll('**', ''),
+    tip: node.animation,
+    sectorName: tierNames[node.tier - 1],
+    sectorColor: tierColors[node.tier - 1],
+    tags: (node as any).tags,
+    damage: (node as any).damage,
+    range: (node as any).range,
+    duration: (node as any).duration,
+    innatePassive: (catalogEntry as any).innatePassive
+  };
   spiderAbilityCache.set(key, ability);
   return ability;
+}
+
+export function getSpiderInnatePassive(species: string): { name: string; trigger: string; effect: string; description: string } {
+  const catalogEntry = SKILL_CATALOG[species as SkillSpecies] || SKILL_CATALOG.weaver;
+  return (catalogEntry as any).innatePassive;
 }
 
 export const WEB_EDGES: [AbilityId, AbilityId][] = Object.entries(SKILL_CATALOG.weaver.nodes).flatMap(([id, node]) =>
